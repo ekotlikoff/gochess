@@ -38,11 +38,11 @@ func NewFullBoard() board {
 	}
 	// Create the rest.
 	for i := uint8(0); i < 4; i++ {
-		board[i][7] = &Piece{NewPosition(uint8(i), 7), Black, PieceType(i + 1), true}
-		board[i][0] = &Piece{NewPosition(uint8(i), 0), White, PieceType(i + 1), true}
-		pieceType := PieceType(i + 1)
+		board[i][7] = &Piece{NewPosition(uint8(i), 7), Black, PieceType(i), true}
+		board[i][0] = &Piece{NewPosition(uint8(i), 0), White, PieceType(i), true}
+		pieceType := PieceType(i)
 		if i == 3 {
-			pieceType = PieceType(i + 2)
+			pieceType = PieceType(i + 1)
 		}
 		board[7-i][7] = &Piece{NewPosition(uint8(7-i), 7), Black, pieceType, true}
 		board[7-i][0] = &Piece{NewPosition(uint8(7-i), 0), White, pieceType, true}

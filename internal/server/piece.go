@@ -10,7 +10,6 @@ type Piece struct {
 type PieceType uint8
 
 const (
-	Empty  = PieceType(iota)
 	Rook   = PieceType(iota)
 	Knight = PieceType(iota)
 	Bishop = PieceType(iota)
@@ -65,8 +64,8 @@ func (piece *Piece) String() string {
 	}
 }
 
-func (piece Piece) StringSimple() string {
-	if piece.pieceType == Empty {
+func (piece *Piece) StringSimple() string {
+	if piece == nil {
 		return "-"
 	}
 	colorPurple := "\033[35m"
@@ -174,7 +173,7 @@ func (piece *Piece) validCaptureMovesPawn(board *board) []Move {
 		destX := uint8(int8(piece.Position().File) + captureMove.x)
 		destY := uint8(int8(piece.Position().Rank) + captureMove.y)
 		pieceAtDest := board[destX][destY]
-		if pieceAtDest.pieceType != Empty && pieceAtDest.Color() != piece.Color() {
+		if pieceAtDest != nil && pieceAtDest.Color() != piece.Color() {
 			captureMoves = append(captureMoves, captureMove)
 		}
 	}
