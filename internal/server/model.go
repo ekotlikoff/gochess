@@ -21,15 +21,10 @@ func NewPosition(file, rank uint8) position {
 	return position{file, rank}
 }
 
-type Move struct {
-	Piece       Piece
-	NewPosition position
-}
-
-type board [8][8]Piece
+type board [8][8]*Piece
 
 func NewFullBoard() board {
-	var board [8][8]Piece
+	var board [8][8]*Piece
 	// Create the pawns.
 	for i := uint8(0); i < 16; i++ {
 		color := Black
@@ -38,19 +33,19 @@ func NewFullBoard() board {
 			color = White
 			rank = 1
 		}
-		piece := Piece{NewPosition(uint8(i%8), rank), color, Pawn, true}
+		piece := &Piece{NewPosition(uint8(i%8), rank), color, Pawn, true}
 		board[piece.position.File][piece.position.Rank] = piece
 	}
 	// Create the rest.
 	for i := uint8(0); i < 4; i++ {
-		board[i][7] = Piece{NewPosition(uint8(i), 7), Black, PieceType(i + 1), true}
-		board[i][0] = Piece{NewPosition(uint8(i), 0), White, PieceType(i + 1), true}
+		board[i][7] = &Piece{NewPosition(uint8(i), 7), Black, PieceType(i + 1), true}
+		board[i][0] = &Piece{NewPosition(uint8(i), 0), White, PieceType(i + 1), true}
 		pieceType := PieceType(i + 1)
 		if i == 3 {
 			pieceType = PieceType(i + 2)
 		}
-		board[7-i][7] = Piece{NewPosition(uint8(7-i), 7), Black, pieceType, true}
-		board[7-i][0] = Piece{NewPosition(uint8(7-i), 0), White, pieceType, true}
+		board[7-i][7] = &Piece{NewPosition(uint8(7-i), 7), Black, pieceType, true}
+		board[7-i][0] = &Piece{NewPosition(uint8(7-i), 0), White, pieceType, true}
 	}
 	return board
 }
