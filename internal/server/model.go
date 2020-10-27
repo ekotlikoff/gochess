@@ -14,9 +14,9 @@ type position struct {
 func NewPosition(file, rank uint8) position {
 	switch {
 	case file >= 8:
-		panic("Invalid file " + string(file))
+		panic("Error: Invalid file " + string(file))
 	case rank >= 8:
-		panic("Invalid rank " + string(rank))
+		panic("Error: Invalid rank " + string(rank))
 	}
 	return position{file, rank}
 }
@@ -33,19 +33,19 @@ func NewFullBoard() board {
 			color = White
 			rank = 1
 		}
-		piece := &Piece{NewPosition(uint8(i%8), rank), color, Pawn, true}
+		piece := NewPiece(Pawn, NewPosition(uint8(i%8), rank), color)
 		board[piece.position.File][piece.position.Rank] = piece
 	}
 	// Create the rest.
 	for i := uint8(0); i < 4; i++ {
-		board[i][7] = &Piece{NewPosition(uint8(i), 7), Black, PieceType(i), true}
-		board[i][0] = &Piece{NewPosition(uint8(i), 0), White, PieceType(i), true}
+		board[i][7] = NewPiece(PieceType(i), NewPosition(uint8(i), 7), Black)
+		board[i][0] = NewPiece(PieceType(i), NewPosition(uint8(i), 0), White)
 		pieceType := PieceType(i)
 		if i == 3 {
 			pieceType = PieceType(i + 1)
 		}
-		board[7-i][7] = &Piece{NewPosition(uint8(7-i), 7), Black, pieceType, true}
-		board[7-i][0] = &Piece{NewPosition(uint8(7-i), 0), White, pieceType, true}
+		board[7-i][7] = NewPiece(pieceType, NewPosition(uint8(7-i), 7), Black)
+		board[7-i][0] = NewPiece(pieceType, NewPosition(uint8(7-i), 0), White)
 	}
 	return board
 }
@@ -54,7 +54,7 @@ func (board board) String() string {
 	out := ""
 	for rank := 7; rank >= 0; rank-- {
 		for file := 0; file < 8; file++ {
-			out += board[file][rank].String()
+			out += board[file][rank].String() + " "
 		}
 		out += "\n"
 	}
