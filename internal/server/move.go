@@ -74,6 +74,7 @@ func (piece *Piece) IsMoveValid(
 func (piece *Piece) validMoves(board *board) []Move {
 	return piece.ValidMoves(board, Move{}, nil)
 }
+
 func (piece *Piece) ValidMoves(
 	board *board, previousMove Move, previousMover *Piece,
 ) []Move {
@@ -128,7 +129,8 @@ func (piece *Piece) validCaptureMovesPawn(
 		newX, newY := addMoveToPosition(piece, captureMove)
 		pieceAtDest := board[newX][newY]
 		enPassantTarget := board[newX][newY+uint8(-1*yDirection)]
-		canEnPassant := piece.canEnPassant(previousMove, previousMover, enPassantTarget)
+		canEnPassant :=
+			piece.canEnPassant(previousMove, previousMover, enPassantTarget)
 		canCapture := pieceAtDest != nil && pieceAtDest.Color() != piece.Color()
 		if canCapture || canEnPassant {
 			captureMoves = append(captureMoves, captureMove)
@@ -175,7 +177,8 @@ func (piece *Piece) validMovesSlide(
 		if destIsValidNoCapture {
 			validSlides = append(validSlides, slideMove)
 		} else {
-			destIsValidCapture := pieceAtDest.Color() != piece.Color() && canSlideCapture
+			destIsValidCapture :=
+				pieceAtDest.Color() != piece.Color() && canSlideCapture
 			if destIsValidCapture {
 				validSlides = append(validSlides, slideMove)
 			}
@@ -183,4 +186,59 @@ func (piece *Piece) validMovesSlide(
 		}
 	}
 	return validSlides
+}
+
+func getThreatenedPositions() map[Position]bool {
+	out := map[Position]bool{}
+	// for each enemy piece
+	// get validMoves
+	// put validMoveDestinationPosition in return map
+	return out
+}
+
+func (piece *Piece) canCastle(board *board) (casteLeft, castleRight bool) {
+	if piece.pieceType != King || piece.movesTaken > 0 {
+		return false, false
+	}
+	rookPieces := [2]*Piece{board[0][piece.Rank()], board[7][piece.Rank()]}
+	casteLeft, castleRight = true
+	for i, rook := range rookPieces {
+		if rook.pieceType != Rook || rook.movesTaken != 0 {
+			if i == 0 {
+				castleLeft = false
+			} else {
+				castleRight = false
+			}
+		}
+	}
+	if !castleLeft && !castleRight {
+		return
+	}
+	// getThreatenedPositions()
+	// TODO if king is threatened, return false, false
+	hitLeft, hitRight = false
+	for i := 1; i < 5; i++ {
+		if castleLeft && !hitLeft {
+			// TODO if space is threatened, set false
+			castleLeft, hitLeft =
+				isCastleStillPossible(board, -i, rookPieces[0])
+		}
+		if castleRight && !hitRight {
+			// TODO if space is threatened, set false
+			castleRight, hitRight =
+				isCastleStillPossible(board, i, rookPieces[1])
+		}
+	}
+}
+
+func (piece *Piece) isCastleStillPossible(
+	board *board, xDiff uint8, rook Piece,
+) (canStill, hit bool) {
+	if board[piece.File()+xDiff][piece.Rank()] != nil &&
+		board[piece.File()+xDiff][piece.Rank()] != rook {
+		return
+	} else if board[piece.File()-i][piece.Rank()] == rookPieces[0] {
+		hit = true
+	}
+	canStill = true
 }
