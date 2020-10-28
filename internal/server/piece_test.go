@@ -53,7 +53,7 @@ func TestValidMovesPawnEnPassant(t *testing.T) {
 	if debug {
 		fmt.Println(board)
 	}
-	validMoves := board[4][3].ValidMoves(&board, Move{0, 2}, board[3][3])
+	validMoves := board[4][3].ValidMoves(&board, Move{0, 2}, board[3][3], false)
 	if (len(validMoves) != 2 || validMoves[0] != Move{-1, -1}) {
 		t.Error("Expected en passant moves got ", validMoves)
 	}
@@ -71,7 +71,7 @@ func TestValidMovesPawnNoEnPassant(t *testing.T) {
 	if debug {
 		fmt.Println(board)
 	}
-	validMoves := board[4][3].ValidMoves(&board, Move{0, 1}, board[3][3])
+	validMoves := board[4][3].ValidMoves(&board, Move{0, 1}, board[3][3], false)
 	if (len(validMoves) != 1 || validMoves[0] != Move{0, -1}) {
 		t.Error("Expected no en passant moves got ", validMoves)
 	}
@@ -86,6 +86,22 @@ func TestValidMovesPawnMoved(t *testing.T) {
 	validMoves := board[0][2].validMoves(&board)
 	if (len(validMoves) != 1 || validMoves[0] != Move{0, 1}) {
 		t.Error("Expected moves = {0, 1} got ", validMoves)
+	}
+}
+
+func TestThreatenedPositionsPawn(t *testing.T) {
+	board := NewFullBoard()
+	if debug {
+		fmt.Println(board)
+	}
+	threatenedPositions := board[1][1].ThreatenedPositions(&board, Move{}, nil)
+	if len(threatenedPositions) != 2 {
+		t.Error("Expected pawn threatens, got ", threatenedPositions)
+	}
+	movePiece(&board, 1, 1, 5, 5)
+	threatenedPositions = board[5][5].ThreatenedPositions(&board, Move{}, nil)
+	if len(threatenedPositions) != 2 {
+		t.Error("Expected pawn threatens, got ", threatenedPositions)
 	}
 }
 
@@ -125,6 +141,18 @@ func TestValidMovesRookMultiple(t *testing.T) {
 	}
 }
 
+func TestThreatenedPositionsRook(t *testing.T) {
+	board := NewFullBoard()
+	if debug {
+		fmt.Println(board)
+	}
+	movePiece(&board, 0, 0, 4, 4)
+	threatenedPositions := board[4][4].ThreatenedPositions(&board, Move{}, nil)
+	if len(threatenedPositions) != 11 {
+		t.Error("Expected rook threatens, got ", threatenedPositions)
+	}
+}
+
 func TestValidMovesKnight(t *testing.T) {
 	board := NewFullBoard()
 	if debug {
@@ -145,6 +173,18 @@ func TestValidMovesKnightMultple(t *testing.T) {
 	validMoves := board[3][3].validMoves(&board)
 	if (len(validMoves) != 8 || validMoves[0] != Move{1, 2}) {
 		t.Error("Expected knight moves, got ", validMoves)
+	}
+}
+
+func TestThreatenedPositionsKnight(t *testing.T) {
+	board := NewFullBoard()
+	if debug {
+		fmt.Println(board)
+	}
+	movePiece(&board, 6, 7, 3, 3)
+	threatenedPositions := board[3][3].ThreatenedPositions(&board, Move{}, nil)
+	if len(threatenedPositions) != 8 {
+		t.Error("Expected knight threatens, got ", threatenedPositions)
 	}
 }
 
@@ -205,6 +245,22 @@ func TestValidMovesKingMultiple(t *testing.T) {
 	}
 	validMoves := board[1][2].validMoves(&board)
 	if len(validMoves) != 8 {
+		t.Error("Expected king moves, got ", validMoves)
+	}
+}
+
+func TestValidMovesKingCastle(t *testing.T) {
+	board := NewFullBoard()
+	movePiece(&board, 6, 0, 4, 5)
+	movePiece(&board, 5, 0, 4, 6)
+	movePiece(&board, 1, 0, 4, 6)
+	movePiece(&board, 2, 0, 4, 6)
+	movePiece(&board, 3, 0, 4, 6)
+	if debug {
+		fmt.Println(board)
+	}
+	validMoves := board[4][0].validMoves(&board)
+	if len(validMoves) != 4 {
 		t.Error("Expected king moves, got ", validMoves)
 	}
 }
