@@ -1,4 +1,4 @@
-package server
+package model
 
 type Move struct {
 	x, y int8
