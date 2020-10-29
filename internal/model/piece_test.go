@@ -41,7 +41,8 @@ func TestValidMovesPawnCapture(t *testing.T) {
 		fmt.Println(board)
 	}
 	validMoves := board[1][5].validMoves(&board)
-	if (len(validMoves) != 2 || validMoves[0] != Move{-1, 1} || validMoves[1] != Move{1, 1}) {
+	if (len(validMoves) != 2 ||
+		validMoves[0] != Move{-1, 1} || validMoves[1] != Move{1, 1}) {
 		t.Error("Expected capture moves got ", validMoves)
 	}
 }
@@ -53,11 +54,12 @@ func TestValidMovesPawnEnPassant(t *testing.T) {
 	if debug {
 		fmt.Println(board)
 	}
-	validMoves := board[4][3].ValidMoves(&board, Move{0, 2}, board[3][3], false)
+	validMoves :=
+		board[4][3].ValidMoves(&board, Move{0, 2}, board[3][3], false, nil)
 	if (len(validMoves) != 2 || validMoves[0] != Move{-1, -1}) {
 		t.Error("Expected en passant moves got ", validMoves)
 	}
-	board[4][3].takeMove(&board, Move{-1, -1}, Move{0, 2}, board[3][3])
+	board[4][3].takeMove(&board, Move{-1, -1}, Move{0, 2}, board[3][3], nil)
 	if board[3][3] != nil {
 		t.Error("Expected en passant to take the en passant target")
 	}
@@ -71,7 +73,8 @@ func TestValidMovesPawnNoEnPassant(t *testing.T) {
 	if debug {
 		fmt.Println(board)
 	}
-	validMoves := board[4][3].ValidMoves(&board, Move{0, 1}, board[3][3], false)
+	validMoves :=
+		board[4][3].ValidMoves(&board, Move{0, 1}, board[3][3], false, nil)
 	if (len(validMoves) != 1 || validMoves[0] != Move{0, -1}) {
 		t.Error("Expected no en passant moves got ", validMoves)
 	}
@@ -262,5 +265,31 @@ func TestValidMovesKingCastle(t *testing.T) {
 	validMoves := board[4][0].validMoves(&board)
 	if len(validMoves) != 4 {
 		t.Error("Expected king moves, got ", validMoves)
+	}
+}
+
+func TestValidMovesKingCheck(t *testing.T) {
+	board := NewFullBoard()
+	movePiece(&board, 4, 0, 0, 4)
+	if debug {
+		fmt.Println(board)
+	}
+	validMoves := board[0][4].ValidMoves(&board, Move{}, nil, false, board[0][4])
+	if len(validMoves) != 3 {
+		t.Error("Expected limited king moves, got ", validMoves)
+	}
+}
+
+func TestValidMovesPawnCheck(t *testing.T) {
+	board := NewFullBoard()
+	movePiece(&board, 4, 0, 0, 4)
+	movePiece(&board, 1, 1, 1, 5)
+	movePiece(&board, 2, 6, 6, 6)
+	if debug {
+		fmt.Println(board)
+	}
+	validMoves := board[1][5].ValidMoves(&board, Move{}, nil, false, board[0][4])
+	if len(validMoves) != 0 {
+		t.Error("Expected no valid moves, got ", validMoves)
 	}
 }

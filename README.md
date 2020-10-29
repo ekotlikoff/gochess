@@ -1,2 +1,3 @@
 TODO
-* Castle
+* Server
+* Client

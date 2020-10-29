@@ -29,40 +29,62 @@ var maxSlideMap = map[PieceType]uint8{
 }
 
 func (piece *Piece) takeMoveShort(board *board, move Move) {
-	piece.takeMove(board, move, Move{}, nil)
+	piece.takeMove(board, move, Move{}, nil, nil)
 }
 
 func (piece *Piece) takeMove(
 	board *board, move Move, previousMove Move, previousMover *Piece,
+	king *Piece,
 ) {
-	if !piece.IsMoveValid(board, move, previousMove, previousMover) {
+	if !piece.IsMoveValid(board, move, previousMove, previousMover, king) {
 		panic("Error: Piece attempted invalid move.")
 	}
+	newPosition, _ := piece.takeMoveUnsafe(board, move, previousMove, previousMover)
+	piece.position = newPosition
+	piece.movesTaken += 1
+}
+
+func (piece *Piece) takeMoveUnsafe(
+	board *board, move Move, previousMove Move, previousMover *Piece,
+) (newPosition position, capturedPiece *Piece) {
 	yDirection := int8(1)
 	if piece.Color() == Black {
 		yDirection *= -1
 	}
 	newX, newY := addMoveToPosition(piece, move)
 	enPassantTarget := board[newX][newY+uint8(-1*yDirection)]
-	isEnPassant := (piece.pieceType == Pawn &&
-		newX != piece.File() &&
-		enPassantTarget == previousMover &&
+	isEnPassant := (piece.pieceType == Pawn && newX != piece.File() &&
+		enPassantTarget != nil && enPassantTarget == previousMover &&
 		enPassantTarget.pieceType == Pawn &&
 		(previousMove.y == 2 || previousMove.y == -2))
+	isCastle := piece.pieceType == King && (move.x < -1 || move.x > 1)
 	if isEnPassant {
+		capturedPiece = board[enPassantTarget.File()][enPassantTarget.Rank()]
 		board[enPassantTarget.File()][enPassantTarget.Rank()] = nil
+	} else if isCastle {
+		if move.x < 0 {
+			board[3][piece.Rank()] = board[0][piece.Rank()]
+			board[0][piece.Rank()] = nil
+		} else {
+			board[5][piece.Rank()] = board[7][piece.Rank()]
+			board[7][piece.Rank()] = nil
+		}
+	}
+	if board[newX][newY] != nil {
+		capturedPiece = board[newX][newY]
 	}
 	board[newX][newY] = piece
 	board[piece.File()][piece.Rank()] = nil
-	newPosition := position{newX, newY}
-	piece.position = newPosition
-	piece.movesTaken += 1
+	newPosition = position{newX, newY}
+	return newPosition, capturedPiece
 }
 
 func (piece *Piece) IsMoveValid(
 	board *board, move Move, previousMove Move, previousMover *Piece,
+	king *Piece,
 ) bool {
-	validMoves := piece.ValidMoves(board, previousMove, previousMover, false)
+	validMoves :=
+		piece.ValidMoves(board, previousMove, previousMover, false, king)
 	for _, validMove := range validMoves {
 		if validMove == move {
 			return true
@@ -72,16 +94,14 @@ func (piece *Piece) IsMoveValid(
 }
 
 func (piece *Piece) validMoves(board *board) []Move {
-	return piece.ValidMoves(board, Move{}, nil, false)
+	return piece.ValidMoves(board, Move{}, nil, false, nil)
 }
 
 func (piece *Piece) ValidMoves(
-	board *board, previousMove Move, previousMover *Piece, allThreatened bool,
+	board *board, previousMove Move, previousMover *Piece,
+	allThreatened bool, king *Piece,
 ) []Move {
 	validMoves := []Move{}
-	if piece == nil {
-		return validMoves
-	}
 	baseMoves := moveMap[piece.PieceType()]
 	canSlideCapture := true
 	if piece.PieceType() == Pawn {
@@ -89,13 +109,9 @@ func (piece *Piece) ValidMoves(
 	}
 	for _, baseMove := range baseMoves {
 		validMoves = append(validMoves, piece.validMovesSlide(
-			baseMove,
-			previousMove,
-			previousMover,
-			board,
-			maxSlideMap[piece.PieceType()],
-			canSlideCapture,
-			allThreatened,
+			baseMove, previousMove, previousMover, board,
+			maxSlideMap[piece.PieceType()], canSlideCapture,
+			allThreatened, king,
 		)...)
 	}
 	if !allThreatened {
@@ -135,6 +151,7 @@ func (piece *Piece) isMoveInBounds(move Move) bool {
 
 func (piece *Piece) validCaptureMovesPawn(
 	board *board, previousMove Move, previousMover *Piece, allThreatened bool,
+	king *Piece,
 ) []Move {
 	yDirection := int8(1)
 	if piece.Color() == Black {
@@ -143,7 +160,12 @@ func (piece *Piece) validCaptureMovesPawn(
 	captureMoves := []Move{}
 	for xDirection := int8(-1); xDirection <= 1; xDirection += 2 {
 		captureMove := Move{xDirection, yDirection}
-		if !piece.isMoveInBounds(captureMove) {
+		wouldBeInCheck := func() bool {
+			return !allThreatened && piece.wouldBeInCheck(
+				board, captureMove, previousMove, previousMover, king,
+			)
+		}
+		if !piece.isMoveInBounds(captureMove) || wouldBeInCheck() {
 			break
 		}
 		newX, newY := addMoveToPosition(piece, captureMove)
@@ -170,7 +192,7 @@ func (piece *Piece) canEnPassant(
 
 func (piece *Piece) validMovesSlide(
 	move Move, previousMove Move, previousMover *Piece, board *board,
-	maxSlide uint8, canSlideCapture bool, allThreatened bool,
+	maxSlide uint8, canSlideCapture bool, allThreatened bool, king *Piece,
 ) []Move {
 	validSlides := []Move{}
 	yDirectionModifier := int8(1)
@@ -184,13 +206,18 @@ func (piece *Piece) validMovesSlide(
 		validSlides = append(
 			validSlides,
 			piece.validCaptureMovesPawn(
-				board, previousMove, previousMover, allThreatened,
+				board, previousMove, previousMover, allThreatened, king,
 			)...,
 		)
 	}
 	for i := int8(1); i <= int8(maxSlide); i++ {
 		slideMove := Move{move.x * i, move.y * i * yDirectionModifier}
-		if !piece.isMoveInBounds(slideMove) {
+		wouldBeInCheck := func() bool {
+			return !allThreatened && piece.wouldBeInCheck(
+				board, slideMove, previousMove, previousMover, king,
+			)
+		}
+		if !piece.isMoveInBounds(slideMove) || wouldBeInCheck() {
 			break
 		}
 		newX, newY := addMoveToPosition(piece, slideMove)
@@ -233,7 +260,7 @@ func (piece *Piece) ThreatenedPositions(
 	board *board, previousMove Move, previousMover *Piece,
 ) []position {
 	positions := []position{}
-	moves := piece.ValidMoves(board, previousMove, previousMover, true)
+	moves := piece.ValidMoves(board, previousMove, previousMover, true, nil)
 	for _, move := range moves {
 		threatenedX, threatenedY := addMoveToPosition(piece, move)
 		positions = append(positions, position{threatenedX, threatenedY})
@@ -309,4 +336,33 @@ func (piece *Piece) wouldNotCastleThroughCheck(
 		}
 	}
 	return left, right
+}
+
+func (piece *Piece) wouldBeInCheck(
+	board *board, move Move, previousMove Move, previousMover *Piece,
+	king *Piece,
+) bool {
+	if king == nil {
+		return false
+	}
+	newPosition, capturedPiece :=
+		piece.takeMoveUnsafe(board, move, previousMove, previousMover)
+	enemyColor := Black
+	if piece.color == Black {
+		enemyColor = White
+	}
+	threatenedPositions := AllThreatenedPositions(
+		board, enemyColor, move, piece,
+	)
+	kingPosition := king.position
+	if king == piece {
+		kingPosition = newPosition
+	}
+	wouldBeInCheck := false
+	if threatenedPositions[kingPosition] {
+		wouldBeInCheck = true
+	}
+	board[newPosition.File][newPosition.Rank] = capturedPiece
+	board[piece.File()][piece.Rank()] = piece
+	return wouldBeInCheck
 }
