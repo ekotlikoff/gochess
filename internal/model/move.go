@@ -52,7 +52,11 @@ func (piece *Piece) takeMoveUnsafe(
 		yDirection *= -1
 	}
 	newX, newY := addMoveToPosition(piece, move)
-	enPassantTarget := board[newX][newY+uint8(-1*yDirection)]
+	enPassantTargetY := uint8(int8(newY) + int8(-1*yDirection))
+	enPassantTarget := &Piece{}
+	if newX >= 0 && newX <= 7 && enPassantTargetY >= 0 && enPassantTargetY <= 7 {
+		enPassantTarget = board[newX][enPassantTargetY]
+	}
 	isEnPassant := (piece.pieceType == Pawn && newX != piece.File() &&
 		enPassantTarget != nil && enPassantTarget == previousMover &&
 		enPassantTarget.pieceType == Pawn &&
@@ -237,16 +241,17 @@ func (piece *Piece) validMovesSlide(
 	return validSlides
 }
 
-func AllThreatenedPositions(
-	board *board, enemyColor Color, previousMove Move, previousMover *Piece,
+func AllMoves(
+	board *board, color Color, previousMove Move, previousMover *Piece,
+	allThreatened bool, king *Piece,
 ) map[position]bool {
 	out := map[position]bool{}
 	// for each enemy piece
 	for _, file := range board {
 		for _, piece := range file {
-			if piece != nil && piece.color == enemyColor {
-				for _, position := range piece.ThreatenedPositions(
-					board, previousMove, previousMover,
+			if piece != nil && piece.color == color {
+				for _, position := range piece.Moves(
+					board, previousMove, previousMover, allThreatened, king,
 				) {
 					out[position] = true
 				}
@@ -256,11 +261,14 @@ func AllThreatenedPositions(
 	return out
 }
 
-func (piece *Piece) ThreatenedPositions(
-	board *board, previousMove Move, previousMover *Piece,
+func (piece *Piece) Moves(
+	board *board, previousMove Move, previousMover *Piece, allThreatened bool,
+	king *Piece,
 ) []position {
 	positions := []position{}
-	moves := piece.ValidMoves(board, previousMove, previousMover, true, nil)
+	moves :=
+		piece.ValidMoves(board, previousMove, previousMover, allThreatened,
+			king)
 	for _, move := range moves {
 		threatenedX, threatenedY := addMoveToPosition(piece, move)
 		positions = append(positions, position{threatenedX, threatenedY})
@@ -286,18 +294,15 @@ func (piece *Piece) canCastle(
 		}
 	}
 	if !castleLeft && !castleRight {
-		return
+		return false, false
 	}
 	noBlockLeft, noBlockRight := piece.noPiecesBlockingCastle(board)
 	if !noBlockLeft && !noBlockRight {
-		return
+		return false, false
 	}
-	enemyColor := Black
-	if piece.color == enemyColor {
-		enemyColor = White
-	}
-	threatenedPositions := AllThreatenedPositions(
-		board, enemyColor, previousMove, previousMover,
+	enemyColor := getOppositeColor(piece.color)
+	threatenedPositions := AllMoves(
+		board, enemyColor, previousMove, previousMover, true, nil,
 	)
 	noCheckLeft, noCheckRight :=
 		piece.wouldNotCastleThroughCheck(threatenedPositions)
@@ -347,12 +352,9 @@ func (piece *Piece) wouldBeInCheck(
 	}
 	newPosition, capturedPiece :=
 		piece.takeMoveUnsafe(board, move, previousMove, previousMover)
-	enemyColor := Black
-	if piece.color == Black {
-		enemyColor = White
-	}
-	threatenedPositions := AllThreatenedPositions(
-		board, enemyColor, move, piece,
+	enemyColor := getOppositeColor(piece.color)
+	threatenedPositions := AllMoves(
+		board, enemyColor, move, piece, true, nil,
 	)
 	kingPosition := king.position
 	if king == piece {

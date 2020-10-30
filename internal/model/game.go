@@ -16,20 +16,31 @@ func (game *game) Move(piece *Piece, move Move) {
 		panic("It's not your turn")
 	}
 	king := game.blackKing
+	enemyKing := game.whiteKing
 	if game.turn == White {
 		king = game.whiteKing
+		enemyKing = game.blackKing
 	}
-	// TODO Check for checkmate and configure gameOver/winner
 	piece.takeMove(
 		game.board, move, game.previousMove, game.previousMover, king,
 	)
+	enemyColor := getOppositeColor(piece.color)
+	if len(AllMoves(game.board, enemyColor, move, piece, false, enemyKing)) == 0 {
+		game.gameOver = true
+		game.winner = game.turn
+	}
 	game.previousMove = move
 	game.previousMover = piece
-	if game.turn == Black {
-		game.turn = White
+	game.turn = enemyColor
+}
+
+func getOppositeColor(color Color) (opposite Color) {
+	if color == Black {
+		opposite = White
 	} else {
-		game.turn = Black
+		opposite = Black
 	}
+	return opposite
 }
 
 func NewGame() game {

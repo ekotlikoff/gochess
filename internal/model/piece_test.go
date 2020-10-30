@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-const debug bool = false
-
 func movePiece(board *board, oldX uint8, oldY uint8, newX uint8, newY uint8) {
 	board[newX][newY] = board[oldX][oldY]
 	board[oldX][oldY] = nil
@@ -97,12 +95,12 @@ func TestThreatenedPositionsPawn(t *testing.T) {
 	if debug {
 		fmt.Println(board)
 	}
-	threatenedPositions := board[1][1].ThreatenedPositions(&board, Move{}, nil)
+	threatenedPositions := board[1][1].Moves(&board, Move{}, nil, true, nil)
 	if len(threatenedPositions) != 2 {
 		t.Error("Expected pawn threatens, got ", threatenedPositions)
 	}
 	movePiece(&board, 1, 1, 5, 5)
-	threatenedPositions = board[5][5].ThreatenedPositions(&board, Move{}, nil)
+	threatenedPositions = board[5][5].Moves(&board, Move{}, nil, true, nil)
 	if len(threatenedPositions) != 2 {
 		t.Error("Expected pawn threatens, got ", threatenedPositions)
 	}
@@ -150,7 +148,7 @@ func TestThreatenedPositionsRook(t *testing.T) {
 		fmt.Println(board)
 	}
 	movePiece(&board, 0, 0, 4, 4)
-	threatenedPositions := board[4][4].ThreatenedPositions(&board, Move{}, nil)
+	threatenedPositions := board[4][4].Moves(&board, Move{}, nil, true, nil)
 	if len(threatenedPositions) != 11 {
 		t.Error("Expected rook threatens, got ", threatenedPositions)
 	}
@@ -185,7 +183,7 @@ func TestThreatenedPositionsKnight(t *testing.T) {
 		fmt.Println(board)
 	}
 	movePiece(&board, 6, 7, 3, 3)
-	threatenedPositions := board[3][3].ThreatenedPositions(&board, Move{}, nil)
+	threatenedPositions := board[3][3].Moves(&board, Move{}, nil, true, nil)
 	if len(threatenedPositions) != 8 {
 		t.Error("Expected knight threatens, got ", threatenedPositions)
 	}
@@ -291,5 +289,57 @@ func TestValidMovesPawnCheck(t *testing.T) {
 	validMoves := board[1][5].ValidMoves(&board, Move{}, nil, false, board[0][4])
 	if len(validMoves) != 0 {
 		t.Error("Expected no valid moves, got ", validMoves)
+	}
+}
+
+func TestAllThreatenedPositions(t *testing.T) {
+	board := NewFullBoard()
+	threatenedPositions := AllMoves(
+		&board, White, Move{}, nil, true, nil,
+	)
+	if len(threatenedPositions) != 8 {
+		t.Error("Expected 8 threatened positions, got ", threatenedPositions)
+	}
+}
+
+func TestNoPiecesBlockingCastle(t *testing.T) {
+	board := NewFullBoard()
+	movePiece(&board, 1, 7, 0, 4)
+	movePiece(&board, 2, 7, 1, 5)
+	movePiece(&board, 3, 7, 6, 6)
+	if debug {
+		fmt.Println(board)
+	}
+	left, right := board[4][7].noPiecesBlockingCastle(&board)
+	if !left || right {
+		t.Error("Should not be able to castle right, got ", left, right)
+	}
+}
+func TestAllMoves(t *testing.T) {
+	board := NewFullBoard()
+	if debug {
+		fmt.Println(board)
+	}
+	threatenedPositions := AllMoves(
+		&board, Black, Move{}, nil, false, board[4][7],
+	)
+	if len(threatenedPositions) != 16 {
+		t.Error("Expected 16 positions, got ", threatenedPositions)
+	}
+}
+
+func TestAllMovesMore(t *testing.T) {
+	board := NewFullBoard()
+	movePiece(&board, 1, 6, 0, 6)
+	movePiece(&board, 2, 6, 1, 6)
+	movePiece(&board, 3, 6, 6, 6)
+	if false {
+		fmt.Println(board)
+	}
+	threatenedPositions := AllMoves(
+		&board, Black, Move{}, nil, false, board[4][7],
+	)
+	if len(threatenedPositions) != 22 {
+		t.Error("Expected 22 positions, got ", len(threatenedPositions))
 	}
 }
