@@ -4,15 +4,22 @@ type game struct {
 	board         *board
 	turn          Color
 	gameOver      bool
-	winner        Color
+	result        gameResult
 	previousMove  Move
 	previousMover *Piece
 	blackKing     *Piece
 	whiteKing     *Piece
 }
 
+type gameResult struct {
+	winner Color
+	draw   bool
+}
+
 func (game *game) Move(piece *Piece, move Move) {
-	if piece.color != game.turn {
+	if piece == nil {
+		panic("Cannot move nil piece")
+	} else if piece.color != game.turn {
 		panic("It's not your turn")
 	}
 	king := game.blackKing
@@ -31,9 +38,10 @@ func (game *game) Move(piece *Piece, move Move) {
 	if len(possibleEnemyMoves) == 0 &&
 		enemyKing.isThreatened(game.board, move, piece) {
 		game.gameOver = true
-		game.winner = game.turn
+		game.result.winner = game.turn
 	} else if len(possibleEnemyMoves) == 0 {
-		// TODO handle stalemate
+		game.gameOver = true
+		game.result.draw = true
 	}
 	game.previousMove = move
 	game.previousMover = piece
@@ -52,7 +60,14 @@ func getOppositeColor(color Color) (opposite Color) {
 func NewGame() game {
 	board := NewFullBoard()
 	return game{
-		&board, White, false, White, Move{}, nil, board[4][7], board[4][0],
+		&board, White, false, gameResult{}, Move{}, nil, board[4][7], board[4][0],
+	}
+}
+
+func NewGameNoPawns() game {
+	board := NewBoardNoPawns()
+	return game{
+		&board, White, false, gameResult{}, Move{}, nil, board[4][7], board[4][0],
 	}
 }
 
@@ -69,5 +84,5 @@ func (game *game) GameOver() bool {
 }
 
 func (game *game) Winner() Color {
-	return game.winner
+	return game.result.winner
 }

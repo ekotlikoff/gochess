@@ -44,7 +44,33 @@ func TestCheckMate(t *testing.T) {
 	if debug {
 		fmt.Println(game.board)
 	}
-	if game.gameOver == false || game.winner != White {
+	if game.gameOver == false || game.result.winner != White {
 		t.Error("Game should be over")
+	}
+}
+
+func TestStalemate(t *testing.T) {
+	game := NewGameNoPawns()
+	if game.gameOver != false || game.result.draw == true {
+		t.Error("Game should not be over")
+	}
+	for i := 0; i < 3; i++ {
+		game.board[i][0] = nil
+		game.board[7-i][0] = nil
+	}
+	game.board[3][0] = nil
+	game.Move(game.board[4][0], Move{1, 0})
+	game.Move(game.board[7][7], Move{0, -6})
+	game.Move(game.board[5][0], Move{1, 0})
+	game.Move(game.board[0][7], Move{0, -6})
+	game.Move(game.board[6][0], Move{-1, 0})
+	game.Move(game.board[3][7], Move{0, -6})
+	game.Move(game.board[5][0], Move{1, 0})
+	game.Move(game.board[3][1], Move{1, 0})
+	if debug {
+		fmt.Println(game.board)
+	}
+	if game.gameOver == false || game.result.draw != true {
+		t.Error("Game should be a draw")
 	}
 }

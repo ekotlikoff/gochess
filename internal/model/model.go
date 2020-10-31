@@ -24,7 +24,7 @@ func NewPosition(file, rank uint8) position {
 type board [8][8]*Piece
 
 func NewFullBoard() board {
-	var board [8][8]*Piece
+	var board board
 	// Create the pawns.
 	for i := uint8(0); i < 16; i++ {
 		color := Black
@@ -37,6 +37,17 @@ func NewFullBoard() board {
 		board[piece.position.File][piece.position.Rank] = piece
 	}
 	// Create the rest.
+	createTheBackLine(&board)
+	return board
+}
+
+func NewBoardNoPawns() board {
+	var board board
+	createTheBackLine(&board)
+	return board
+}
+
+func createTheBackLine(board *board) {
 	for i := uint8(0); i < 4; i++ {
 		board[i][7] = NewPiece(PieceType(i), NewPosition(uint8(i), 7), Black)
 		board[i][0] = NewPiece(PieceType(i), NewPosition(uint8(i), 0), White)
@@ -47,7 +58,6 @@ func NewFullBoard() board {
 		board[7-i][7] = NewPiece(pieceType, NewPosition(uint8(7-i), 7), Black)
 		board[7-i][0] = NewPiece(pieceType, NewPosition(uint8(7-i), 0), White)
 	}
-	return board
 }
 
 func (board board) String() string {
