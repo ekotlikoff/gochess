@@ -350,21 +350,30 @@ func (piece *Piece) wouldBeInCheck(
 	if king == nil {
 		return false
 	}
+	originalPosition := piece.position
 	newPosition, capturedPiece :=
 		piece.takeMoveUnsafe(board, move, previousMove, previousMover)
-	enemyColor := getOppositeColor(piece.color)
-	threatenedPositions := AllMoves(
-		board, enemyColor, move, piece, true, nil,
-	)
-	kingPosition := king.position
-	if king == piece {
-		kingPosition = newPosition
-	}
-	wouldBeInCheck := false
-	if threatenedPositions[kingPosition] {
-		wouldBeInCheck = true
-	}
+	piece.position = newPosition
+	wouldBeInCheck := king.isThreatened(board, move, piece)
 	board[newPosition.File][newPosition.Rank] = capturedPiece
-	board[piece.File()][piece.Rank()] = piece
+	board[originalPosition.File][originalPosition.Rank] = piece
+	piece.position = originalPosition
 	return wouldBeInCheck
+}
+
+func (piece *Piece) isThreatened(board *board, previousMove Move,
+	previousMover *Piece,
+) bool {
+	enemyColor := Black
+	if piece.color == Black {
+		enemyColor = White
+	}
+	threatenedPositions := AllMoves(
+		board, enemyColor, previousMove, previousMover, true, nil,
+	)
+	inCheck := false
+	if threatenedPositions[piece.position] {
+		inCheck = true
+	}
+	return inCheck
 }

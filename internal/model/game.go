@@ -25,9 +25,15 @@ func (game *game) Move(piece *Piece, move Move) {
 		game.board, move, game.previousMove, game.previousMover, king,
 	)
 	enemyColor := getOppositeColor(piece.color)
-	if len(AllMoves(game.board, enemyColor, move, piece, false, enemyKing)) == 0 {
+	possibleEnemyMoves := AllMoves(
+		game.board, enemyColor, move, piece, false, enemyKing,
+	)
+	if len(possibleEnemyMoves) == 0 &&
+		enemyKing.isThreatened(game.board, move, piece) {
 		game.gameOver = true
 		game.winner = game.turn
+	} else if len(possibleEnemyMoves) == 0 {
+		// TODO handle stalemate
 	}
 	game.previousMove = move
 	game.previousMover = piece

@@ -19,7 +19,13 @@ func TestNewGame(t *testing.T) {
 
 func TestMoves(t *testing.T) {
 	game := NewGame()
+	if debug {
+		fmt.Println(game.board)
+	}
 	game.Move(game.board[0][1], Move{0, 2})
+	if debug {
+		fmt.Println(game.board)
+	}
 	game.Move(game.board[0][6], Move{0, -2})
 	if game.board[0][3] == nil || game.board[0][4] == nil {
 		t.Error("Pawns did not move as expected")
