@@ -46,7 +46,7 @@ func (piece *Piece) takeMove(
 
 func (piece *Piece) takeMoveUnsafe(
 	board *board, move Move, previousMove Move, previousMover *Piece,
-) (newPosition position, capturedPiece *Piece) {
+) (newPosition Position, capturedPiece *Piece) {
 	yDirection := int8(1)
 	if piece.Color() == Black {
 		yDirection *= -1
@@ -79,7 +79,7 @@ func (piece *Piece) takeMoveUnsafe(
 	}
 	board[newX][newY] = piece
 	board[piece.File()][piece.Rank()] = nil
-	newPosition = position{newX, newY}
+	newPosition = Position{newX, newY}
 	return newPosition, capturedPiece
 }
 
@@ -244,8 +244,8 @@ func (piece *Piece) validMovesSlide(
 func AllMoves(
 	board *board, color Color, previousMove Move, previousMover *Piece,
 	allThreatened bool, king *Piece,
-) map[position]bool {
-	out := map[position]bool{}
+) map[Position]bool {
+	out := map[Position]bool{}
 	// for each enemy piece
 	for _, file := range board {
 		for _, piece := range file {
@@ -264,14 +264,14 @@ func AllMoves(
 func (piece *Piece) Moves(
 	board *board, previousMove Move, previousMover *Piece, allThreatened bool,
 	king *Piece,
-) []position {
-	positions := []position{}
+) []Position {
+	positions := []Position{}
 	moves :=
 		piece.ValidMoves(board, previousMove, previousMover, allThreatened,
 			king)
 	for _, move := range moves {
 		threatenedX, threatenedY := addMoveToPosition(piece, move)
-		positions = append(positions, position{threatenedX, threatenedY})
+		positions = append(positions, Position{threatenedX, threatenedY})
 	}
 	return positions
 }
@@ -327,16 +327,16 @@ func (piece *Piece) noPiecesBlockingCastle(board *board) (left, right bool) {
 }
 
 func (piece *Piece) wouldNotCastleThroughCheck(
-	threatenedPositions map[position]bool,
+	threatenedPositions map[Position]bool,
 ) (left, right bool) {
 	left, right = true, true
 	for i := int8(0); i < 3; i++ {
 		leftX, leftY := addMoveToPosition(piece, Move{-i, 0})
 		rightX, rightY := addMoveToPosition(piece, Move{i, 0})
-		if threatenedPositions[position{leftX, leftY}] {
+		if threatenedPositions[Position{leftX, leftY}] {
 			left = false
 		}
-		if threatenedPositions[position{rightX, rightY}] {
+		if threatenedPositions[Position{rightX, rightY}] {
 			right = false
 		}
 	}

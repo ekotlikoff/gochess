@@ -1,6 +1,6 @@
 package model
 
-type game struct {
+type Game struct {
 	board         *board
 	turn          Color
 	gameOver      bool
@@ -16,7 +16,8 @@ type gameResult struct {
 	draw   bool
 }
 
-func (game *game) Move(piece *Piece, move Move) {
+func (game *Game) Move(position Position, move Move) {
+	piece := game.board[position.File][position.Rank]
 	if piece == nil {
 		panic("Cannot move nil piece")
 	} else if piece.color != game.turn {
@@ -57,32 +58,32 @@ func getOppositeColor(color Color) (opposite Color) {
 	return opposite
 }
 
-func NewGame() game {
+func NewGame() Game {
 	board := NewFullBoard()
-	return game{
+	return Game{
 		&board, White, false, gameResult{}, Move{}, nil, board[4][7], board[4][0],
 	}
 }
 
-func NewGameNoPawns() game {
+func NewGameNoPawns() Game {
 	board := NewBoardNoPawns()
-	return game{
+	return Game{
 		&board, White, false, gameResult{}, Move{}, nil, board[4][7], board[4][0],
 	}
 }
 
-func (game *game) Board() *board {
+func (game *Game) Board() *board {
 	return game.board
 }
 
-func (game *game) Turn() Color {
+func (game *Game) Turn() Color {
 	return game.turn
 }
 
-func (game *game) GameOver() bool {
+func (game *Game) GameOver() bool {
 	return game.gameOver
 }
 
-func (game *game) Winner() Color {
+func (game *Game) Winner() Color {
 	return game.result.winner
 }

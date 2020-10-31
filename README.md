@@ -14,5 +14,7 @@ TODO
         Just need a hash function to go from position -> positionId
 * Server
     - [ ] http server
+    - [ ] client agnostic matching server (IN PROGRESS)
+        - [ ] testing
 * Client
     - [ ] Golang WebAssembly web client
