@@ -13,4 +13,6 @@ TODO
         Let's do this with a map[positionId]uint8
         Just need a hash function to go from position -> positionId
 * Server
+    - [ ] http server
 * Client
+    - [ ] Golang WebAssembly web client
