@@ -1,16 +1,16 @@
 package server
 
 import (
+	"fmt"
 	"gochess/internal/model"
 	"time"
 )
 
-const maxTimeMs = 1200000
-
 type Match struct {
-	black *Player
-	white *Player
-	game  *model.Game
+	black     *Player
+	white     *Player
+	game      *model.Game
+	maxTimeMs int64
 }
 
 func newMatch(black *Player, white *Player) Match {
@@ -19,7 +19,7 @@ func newMatch(black *Player, white *Player) Match {
 	black.elapsedMs = 0
 	white.elapsedMs = 0
 	game := model.NewGame()
-	return Match{black, white, &game}
+	return Match{black, white, &game, 1200000}
 }
 
 func (match *Match) play() {
@@ -34,7 +34,8 @@ func (match *Match) handleTurn() {
 		player = match.white
 	}
 	turnStart := time.Now()
-	timer := time.NewTimer(time.Duration(maxTimeMs-player.elapsedMs) * time.Millisecond)
+	timeRemaining := match.maxTimeMs - player.elapsedMs
+	timer := time.NewTimer(time.Duration(timeRemaining) * time.Millisecond)
 	go func() {
 		<-timer.C
 		// TODO handle timeout
@@ -46,6 +47,8 @@ func (match *Match) handleTurn() {
 		match.game.Move(request.position, request.move)
 	}
 	// TODO send response to player.responseChan
+	fmt.Println(player.name)
+	player.responseChan <- Response{success: true}
 	timer.Stop()
 	player.elapsedMs += time.Now().Sub(turnStart).Milliseconds()
 }
