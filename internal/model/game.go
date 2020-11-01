@@ -1,5 +1,7 @@
 package model
 
+import "errors"
+
 type Game struct {
 	board         *board
 	turn          Color
@@ -16,12 +18,16 @@ type gameResult struct {
 	draw   bool
 }
 
-func (game *Game) Move(position Position, move Move) {
+var ErrGameOver = errors.New("The game is over")
+
+func (game *Game) Move(position Position, move Move) error {
 	piece := game.board[position.File][position.Rank]
-	if piece == nil {
-		panic("Cannot move nil piece")
+	if game.gameOver {
+		return ErrGameOver
+	} else if piece == nil {
+		return errors.New("Cannot move nil piece")
 	} else if piece.color != game.turn {
-		panic("It's not your turn")
+		return errors.New("It's not your turn")
 	}
 	king := game.blackKing
 	enemyKing := game.whiteKing
@@ -47,6 +53,7 @@ func (game *Game) Move(position Position, move Move) {
 	game.previousMove = move
 	game.previousMover = piece
 	game.turn = enemyColor
+	return nil
 }
 
 func getOppositeColor(color Color) (opposite Color) {
@@ -82,6 +89,12 @@ func (game *Game) Turn() Color {
 
 func (game *Game) GameOver() bool {
 	return game.gameOver
+}
+
+func (game *Game) SetGameResult(winner Color, draw bool) {
+	game.gameOver = true
+	game.result.winner = winner
+	game.result.draw = draw
 }
 
 func (game *Game) Winner() Color {

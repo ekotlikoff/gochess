@@ -1,11 +1,12 @@
 package server
 
 import (
-	"fmt"
+	"strconv"
 	"testing"
+	"time"
 )
 
-func TestServer(t *testing.T) {
+func TestMatchingServer(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingChan <- &player1
@@ -13,16 +14,52 @@ func TestServer(t *testing.T) {
 	matchingServer := NewMatchingServer()
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	fmt.Println(matchingServer.liveMatches)
 	matchingServer.Serve(matchingChan, 1, exitChan)
-	fmt.Println(matchingServer.liveMatches)
-	go func() { player1.requestChan <- Request{resign: true} }()
-	go func() { player2.requestChan <- Request{resign: true} }()
-	fmt.Println(matchingServer.liveMatches)
-	select {
-	case <-player1.responseChan:
-	case <-player2.responseChan:
+	for len(matchingServer.LiveMatches()) == 0 {
 	}
-	fmt.Println(matchingServer.liveMatches)
-	t.Error("Expected blah got ")
+	liveMatch := matchingServer.LiveMatches()[0]
+	if liveMatch.black.name != "player1" && liveMatch.white.name != "player1" {
+		t.Error("Expected our players got ", liveMatch.black.name)
+	}
+}
+
+func TestMatchingServerResignation(t *testing.T) {
+	player1 := NewPlayer("player1")
+	player2 := NewPlayer("player2")
+	matchingChan <- &player1
+	matchingChan <- &player2
+	matchingServer := NewMatchingServer()
+	exitChan := make(chan bool, 1)
+	exitChan <- true
+	matchingServer.Serve(matchingChan, 1, exitChan)
+	go func() { player1.requestChanAsync <- RequestAsync{resign: true} }()
+	response := ResponseAsync{}
+	select {
+	case response = <-player1.responseChanAsync:
+	}
+	liveMatch := matchingServer.LiveMatches()[0]
+	if !liveMatch.game.GameOver() || !response.gameOver ||
+		!response.resignation {
+		t.Error("Expected our players got ", liveMatch.black.name)
+	}
+}
+
+func TestMatchingServerMultiple(t *testing.T) {
+	players := []Player{}
+	for i := 0; i < 7; i++ {
+		players = append(players, NewPlayer("player"+strconv.Itoa(i)))
+		matchingChan <- &players[i]
+	}
+	matchingServer := NewMatchingServer()
+	exitChan := make(chan bool, 1)
+	exitChan <- true
+	matchingServer.Serve(matchingChan, 5, exitChan)
+	tries := 0
+	for len(matchingServer.LiveMatches()) != 3 && tries < 5 {
+		time.Sleep(time.Millisecond * 10)
+		tries++
+	}
+	if len(matchingServer.LiveMatches()) != 3 {
+		t.Error("Expected all players matched got ", len(matchingServer.LiveMatches()))
+	}
 }

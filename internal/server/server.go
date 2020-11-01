@@ -7,30 +7,39 @@ import (
 )
 
 type Player struct {
-	name         string
-	color        model.Color
-	elapsedMs    int64
-	requestChan  chan Request
-	responseChan chan Response
+	name              string
+	color             model.Color
+	elapsedMs         int64
+	requestChanSync   chan RequestSync
+	responseChanSync  chan ResponseSync
+	requestChanAsync  chan RequestAsync
+	responseChanAsync chan ResponseAsync
 }
 
 func NewPlayer(name string) Player {
 	return Player{
-		name, model.Black, int64(0), make(chan Request),
-		make(chan Response)}
+		name, model.Black, int64(0),
+		make(chan RequestSync), make(chan ResponseSync),
+		make(chan RequestAsync), make(chan ResponseAsync),
+	}
 }
 
-type Request struct {
-	position      model.Position
-	move          model.Move
-	requestToDraw bool
-	resign        bool
+type RequestSync struct {
+	position model.Position
+	move     model.Move
 }
 
-type Response struct {
-	success  bool
-	gameOver bool
-	winner   string
+type ResponseSync struct {
+	moveSuccess bool
+}
+
+type RequestAsync struct {
+	requestToDraw, resign bool
+}
+
+type ResponseAsync struct {
+	gameOver, draw, resignation, timeout bool
+	winner                               string
 }
 
 type MatchingServer struct {
@@ -44,6 +53,14 @@ func NewMatchingServer() MatchingServer {
 
 var matchingChan = make(chan *Player, 20)
 
+func (matchingServer *MatchingServer) LiveMatches() []*Match {
+	liveMatches := []*Match{}
+	matchingServer.mutex.Lock()
+	liveMatches = matchingServer.liveMatches
+	matchingServer.mutex.Unlock()
+	return liveMatches
+}
+
 func (matchingServer *MatchingServer) matchAndPlay(players <-chan *Player) {
 	fmt.Println("Matching and playing!")
 	var player1, player2 *Player
@@ -55,6 +72,7 @@ func (matchingServer *MatchingServer) matchAndPlay(players <-chan *Player) {
 			player2 = player
 			match := newMatch(player1, player2)
 			matchingServer.mutex.Lock()
+			fmt.Println("Adding to livematches")
 			matchingServer.liveMatches = append(matchingServer.liveMatches, &match)
 			matchingServer.mutex.Unlock()
 			(&match).play()
