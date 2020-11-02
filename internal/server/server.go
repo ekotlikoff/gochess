@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"gochess/internal/model"
 	"sync"
 )
@@ -62,7 +61,6 @@ func (matchingServer *MatchingServer) LiveMatches() []*Match {
 func (matchingServer *MatchingServer) matchAndPlay(
 	players <-chan *Player, matchGenerator MatchGenerator,
 ) {
-	fmt.Println("Matching and playing!")
 	var player1, player2 *Player
 	for player := range players {
 		if player1 == nil {
@@ -71,11 +69,9 @@ func (matchingServer *MatchingServer) matchAndPlay(
 			player2 = player
 			match := matchGenerator(player1, player2)
 			matchingServer.mutex.Lock()
-			fmt.Println("Adding to livematches")
 			matchingServer.liveMatches = append(matchingServer.liveMatches, &match)
 			matchingServer.mutex.Unlock()
 			(&match).play()
-			fmt.Println("Removing from livematches")
 			matchingServer.mutex.Lock()
 			matchingServer.removeMatch(&match)
 			matchingServer.mutex.Unlock()

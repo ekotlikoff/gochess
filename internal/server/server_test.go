@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"gochess/internal/model"
 	"strconv"
 	"testing"
@@ -10,7 +9,6 @@ import (
 
 func TestMatchingServer(t *testing.T) {
 	matchingChan := make(chan *Player, 20)
-	fmt.Println("TestMatchingServer")
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingChan <- &player1
@@ -29,7 +27,6 @@ func TestMatchingServer(t *testing.T) {
 
 func TestMatchingServerTimeout(t *testing.T) {
 	matchingChan := make(chan *Player, 20)
-	fmt.Println("TestMatchingServerTimeout")
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingChan <- &player1
@@ -58,7 +55,6 @@ func TestMatchingServerTimeout(t *testing.T) {
 
 func TestMatchingServerResignation(t *testing.T) {
 	matchingChan := make(chan *Player, 20)
-	fmt.Println("TestMatchingServerResignation")
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingChan <- &player1
@@ -86,7 +82,6 @@ func TestMatchingServerResignation(t *testing.T) {
 
 func TestMatchingServerValidMoves(t *testing.T) {
 	matchingChan := make(chan *Player, 20)
-	fmt.Println("TestValidMoves")
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingChan <- &player1
@@ -112,7 +107,6 @@ func TestMatchingServerValidMoves(t *testing.T) {
 
 func TestMatchingServerInvalidMoves(t *testing.T) {
 	matchingChan := make(chan *Player, 20)
-	fmt.Println("TestInvalidMoves")
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingChan <- &player1
@@ -140,20 +134,52 @@ func TestMatchingServerInvalidMoves(t *testing.T) {
 	}
 }
 
-// func TestMatchingServerCheckMate
-// func TestMatchingServerOutOfTurnMoves
+func TestMatchingServerCheckmate(t *testing.T) {
+	matchingChan := make(chan *Player, 20)
+	player1 := NewPlayer("player1")
+	player2 := NewPlayer("player2")
+	matchingChan <- &player1
+	matchingChan <- &player2
+	matchingServer := NewMatchingServer()
+	exitChan := make(chan bool, 1)
+	exitChan <- true
+	matchingServer.Serve(matchingChan, 1, exitChan)
+	tries := 0
+	for len(matchingServer.LiveMatches()) == 0 && tries < 5 {
+		time.Sleep(time.Millisecond * 10)
+		tries++
+	}
+	liveMatch := matchingServer.LiveMatches()[0]
+	black := liveMatch.black
+	white := liveMatch.white
+	makeMove(white, model.Position{4, 1}, model.Move{0, 2})
+	makeMove(black, model.Position{0, 6}, model.Move{0, -1})
+	makeMove(white, model.Position{3, 0}, model.Move{4, 4})
+	makeMove(black, model.Position{0, 5}, model.Move{0, -1})
+	makeMove(white, model.Position{5, 0}, model.Move{-3, 3})
+	makeMove(black, model.Position{0, 4}, model.Move{0, -1})
+	makeMove(white, model.Position{7, 4}, model.Move{-2, 2})
+	if !liveMatch.game.GameOver() {
+		t.Error("Expected gameover got ", liveMatch)
+	}
+	response := ResponseAsync{}
+	select {
+	case response = <-black.responseChanAsync:
+	}
+	if !response.gameOver || !(response.winner == white.name) {
+		t.Error("Expected checkmate got ", response)
+	}
+}
 
 func makeMove(
 	player *Player, position model.Position, move model.Move,
 ) ResponseSync {
 	player.requestChanSync <- RequestSync{position, move}
-	fmt.Println("making out of turn move")
 	return <-player.responseChanSync
 }
 
 func TestMatchingServerMultiple(t *testing.T) {
 	matchingChan := make(chan *Player, 20)
-	fmt.Println("TestMatchingServerMultiple")
 	players := []Player{}
 	for i := 0; i < 7; i++ {
 		players = append(players, NewPlayer("player"+strconv.Itoa(i)))
