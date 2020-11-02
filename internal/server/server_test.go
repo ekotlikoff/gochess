@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"gochess/internal/model"
 	"strconv"
 	"testing"
 	"time"
@@ -81,6 +82,73 @@ func TestMatchingServerResignation(t *testing.T) {
 		!response.resignation {
 		t.Error("Expected our players got ", liveMatch.black.name)
 	}
+}
+
+func TestMatchingServerValidMoves(t *testing.T) {
+	matchingChan := make(chan *Player, 20)
+	fmt.Println("TestValidMoves")
+	player1 := NewPlayer("player1")
+	player2 := NewPlayer("player2")
+	matchingChan <- &player1
+	matchingChan <- &player2
+	matchingServer := NewMatchingServer()
+	exitChan := make(chan bool, 1)
+	exitChan <- true
+	matchingServer.Serve(matchingChan, 1, exitChan)
+	tries := 0
+	for len(matchingServer.LiveMatches()) == 0 && tries < 5 {
+		time.Sleep(time.Millisecond * 10)
+		tries++
+	}
+	liveMatch := matchingServer.LiveMatches()[0]
+	black := liveMatch.black
+	white := liveMatch.white
+	makeMove(white, model.Position{3, 1}, model.Move{0, 2})
+	response := makeMove(black, model.Position{3, 6}, model.Move{0, -2})
+	if !response.moveSuccess {
+		t.Error("Expected a valid move got", response)
+	}
+}
+
+func TestMatchingServerInvalidMoves(t *testing.T) {
+	matchingChan := make(chan *Player, 20)
+	fmt.Println("TestInvalidMoves")
+	player1 := NewPlayer("player1")
+	player2 := NewPlayer("player2")
+	matchingChan <- &player1
+	matchingChan <- &player2
+	matchingServer := NewMatchingServer()
+	exitChan := make(chan bool, 1)
+	exitChan <- true
+	matchingServer.Serve(matchingChan, 1, exitChan)
+	tries := 0
+	for len(matchingServer.LiveMatches()) == 0 && tries < 5 {
+		time.Sleep(time.Millisecond * 10)
+		tries++
+	}
+	liveMatch := matchingServer.LiveMatches()[0]
+	black := liveMatch.black
+	white := liveMatch.white
+	makeMove(white, model.Position{3, 1}, model.Move{0, 2})
+	response := makeMove(black, model.Position{3, 6}, model.Move{0, -3})
+	if response.moveSuccess {
+		t.Error("Expected a invalid move got", response)
+	}
+	response = makeMove(black, model.Position{3, 6}, model.Move{0, -1})
+	if !response.moveSuccess {
+		t.Error("Expected a valid move got", response)
+	}
+}
+
+// func TestMatchingServerCheckMate
+// func TestMatchingServerOutOfTurnMoves
+
+func makeMove(
+	player *Player, position model.Position, move model.Move,
+) ResponseSync {
+	player.requestChanSync <- RequestSync{position, move}
+	fmt.Println("making out of turn move")
+	return <-player.responseChanSync
 }
 
 func TestMatchingServerMultiple(t *testing.T) {

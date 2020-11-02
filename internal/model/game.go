@@ -35,9 +35,12 @@ func (game *Game) Move(position Position, move Move) error {
 		king = game.whiteKing
 		enemyKing = game.blackKing
 	}
-	piece.takeMove(
+	err := piece.takeMove(
 		game.board, move, game.previousMove, game.previousMover, king,
 	)
+	if err != nil {
+		return err
+	}
 	enemyColor := getOppositeColor(piece.color)
 	possibleEnemyMoves := AllMoves(
 		game.board, enemyColor, move, piece, false, enemyKing,
