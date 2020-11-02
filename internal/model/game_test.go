@@ -44,14 +44,14 @@ func TestCheckMate(t *testing.T) {
 	if debug {
 		fmt.Println(game.board)
 	}
-	if game.gameOver == false || game.result.winner != White {
+	if game.gameOver == false || game.result.Winner != White {
 		t.Error("Game should be over")
 	}
 }
 
 func TestStalemate(t *testing.T) {
 	game := NewGameNoPawns()
-	if game.gameOver != false || game.result.draw == true {
+	if game.gameOver != false || game.result.Draw == true {
 		t.Error("Game should not be over")
 	}
 	for i := 0; i < 3; i++ {
@@ -70,7 +70,7 @@ func TestStalemate(t *testing.T) {
 	if debug {
 		fmt.Println(game.board)
 	}
-	if game.gameOver == false || game.result.draw != true {
+	if game.gameOver == false || game.result.Draw != true {
 		t.Error("Game should be a draw")
 	}
 }

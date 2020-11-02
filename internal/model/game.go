@@ -6,16 +6,16 @@ type Game struct {
 	board         *board
 	turn          Color
 	gameOver      bool
-	result        gameResult
+	result        GameResult
 	previousMove  Move
 	previousMover *Piece
 	blackKing     *Piece
 	whiteKing     *Piece
 }
 
-type gameResult struct {
-	winner Color
-	draw   bool
+type GameResult struct {
+	Winner Color
+	Draw   bool
 }
 
 var ErrGameOver = errors.New("The game is over")
@@ -45,10 +45,10 @@ func (game *Game) Move(position Position, move Move) error {
 	if len(possibleEnemyMoves) == 0 &&
 		enemyKing.isThreatened(game.board, move, piece) {
 		game.gameOver = true
-		game.result.winner = game.turn
+		game.result.Winner = game.turn
 	} else if len(possibleEnemyMoves) == 0 {
 		game.gameOver = true
-		game.result.draw = true
+		game.result.Draw = true
 	}
 	game.previousMove = move
 	game.previousMover = piece
@@ -68,14 +68,14 @@ func getOppositeColor(color Color) (opposite Color) {
 func NewGame() Game {
 	board := NewFullBoard()
 	return Game{
-		&board, White, false, gameResult{}, Move{}, nil, board[4][7], board[4][0],
+		&board, White, false, GameResult{}, Move{}, nil, board[4][7], board[4][0],
 	}
 }
 
 func NewGameNoPawns() Game {
 	board := NewBoardNoPawns()
 	return Game{
-		&board, White, false, gameResult{}, Move{}, nil, board[4][7], board[4][0],
+		&board, White, false, GameResult{}, Move{}, nil, board[4][7], board[4][0],
 	}
 }
 
@@ -93,10 +93,10 @@ func (game *Game) GameOver() bool {
 
 func (game *Game) SetGameResult(winner Color, draw bool) {
 	game.gameOver = true
-	game.result.winner = winner
-	game.result.draw = draw
+	game.result.Winner = winner
+	game.result.Draw = draw
 }
 
-func (game *Game) Winner() Color {
-	return game.result.winner
+func (game *Game) Result() GameResult {
+	return game.result
 }

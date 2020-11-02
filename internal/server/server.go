@@ -51,8 +51,6 @@ func NewMatchingServer() MatchingServer {
 	return MatchingServer{nil, &sync.Mutex{}}
 }
 
-var matchingChan = make(chan *Player, 20)
-
 func (matchingServer *MatchingServer) LiveMatches() []*Match {
 	liveMatches := []*Match{}
 	matchingServer.mutex.Lock()
@@ -61,21 +59,23 @@ func (matchingServer *MatchingServer) LiveMatches() []*Match {
 	return liveMatches
 }
 
-func (matchingServer *MatchingServer) matchAndPlay(players <-chan *Player) {
+func (matchingServer *MatchingServer) matchAndPlay(
+	players <-chan *Player, matchGenerator MatchGenerator,
+) {
 	fmt.Println("Matching and playing!")
 	var player1, player2 *Player
 	for player := range players {
 		if player1 == nil {
-			fmt.Println("Found p1!")
 			player1 = player
 		} else if player2 == nil {
 			player2 = player
-			match := newMatch(player1, player2)
+			match := matchGenerator(player1, player2)
 			matchingServer.mutex.Lock()
 			fmt.Println("Adding to livematches")
 			matchingServer.liveMatches = append(matchingServer.liveMatches, &match)
 			matchingServer.mutex.Unlock()
 			(&match).play()
+			fmt.Println("Removing from livematches")
 			matchingServer.mutex.Lock()
 			matchingServer.removeMatch(&match)
 			matchingServer.mutex.Unlock()
@@ -87,9 +87,18 @@ func (matchingServer *MatchingServer) matchAndPlay(players <-chan *Player) {
 func (matchingServer *MatchingServer) Serve(
 	players <-chan *Player, maxConcurrentGames int, quit chan bool,
 ) {
+	matchingServer.ServeCustomMatch(
+		players, maxConcurrentGames, DefaultMatchGenerator, quit,
+	)
+}
+
+func (matchingServer *MatchingServer) ServeCustomMatch(
+	players <-chan *Player, maxConcurrentGames int,
+	matchGenerator MatchGenerator, quit chan bool,
+) {
 	// Start handlers
 	for i := 0; i < maxConcurrentGames; i++ {
-		go matchingServer.matchAndPlay(players)
+		go matchingServer.matchAndPlay(players, matchGenerator)
 	}
 	<-quit // Wait to be told to exit.
 }

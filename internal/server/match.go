@@ -10,10 +10,13 @@ type Match struct {
 	black     *Player
 	white     *Player
 	game      *model.Game
+	gameOver  chan struct{}
 	maxTimeMs int64
 }
 
-func newMatch(black *Player, white *Player) Match {
+type MatchGenerator func(black *Player, white *Player) Match
+
+func newMatch(black *Player, white *Player, maxTime int64) Match {
 	black.color = model.Black
 	white.color = model.White
 	if black.name == white.name {
@@ -23,7 +26,11 @@ func newMatch(black *Player, white *Player) Match {
 	black.elapsedMs = 0
 	white.elapsedMs = 0
 	game := model.NewGame()
-	return Match{black, white, &game, 1200000}
+	return Match{black, white, &game, make(chan struct{}), maxTime}
+}
+
+func DefaultMatchGenerator(black *Player, white *Player) Match {
+	return newMatch(black, white, 1200000)
 }
 
 func (match *Match) play() {
@@ -45,25 +52,41 @@ func (match *Match) handleTurn() {
 	timer := time.AfterFunc(time.Duration(timeRemaining)*time.Millisecond,
 		match.handleTimeout(opponent))
 	defer timer.Stop()
-	request := <-player.requestChanSync
+	request := RequestSync{}
+	select {
+	case request = <-player.requestChanSync:
+	case <-match.gameOver:
+		return
+	}
 	response := ResponseSync{moveSuccess: true}
 	err := errors.New("")
 	for err != nil {
 		err = match.game.Move(request.position, request.move)
-		if err == model.ErrGameOver {
-			return
-		} else if err != nil {
+		if err != nil {
 			player.responseChanSync <- ResponseSync{moveSuccess: false}
-			request = <-player.requestChanSync
+			select {
+			case request = <-player.requestChanSync:
+			case <-match.gameOver:
+				return
+			}
 		}
 	}
 	player.responseChanSync <- response
+	if match.game.GameOver() {
+		result := match.game.Result()
+		winner := match.black
+		if result.Winner == model.White {
+			winner = match.white
+		}
+		match.handleGameOver(result.Draw, false, false, winner.name)
+	}
 	player.elapsedMs += time.Now().Sub(turnStart).Milliseconds()
 }
 
 func (match *Match) handleTimeout(opponent *Player) func() {
 	return func() {
 		match.game.SetGameResult(opponent.color, false)
+		match.handleGameOver(false, false, true, opponent.name)
 	}
 }
 
@@ -75,6 +98,8 @@ func (match *Match) handleAsyncRequests() {
 		case request = <-match.black.requestChanAsync:
 		case request = <-match.white.requestChanAsync:
 			opponent = match.black
+		case <-match.gameOver:
+			return
 		}
 		if request.resign {
 			match.game.SetGameResult(opponent.color, false)
@@ -90,11 +115,12 @@ func (match *Match) handleGameOver(
 	draw, resignation, timeout bool, winner string,
 ) {
 	response := ResponseAsync{gameOver: true, draw: draw,
-		resignation: resignation, winner: winner}
+		resignation: resignation, timeout: timeout, winner: winner}
 	go func() {
 		match.black.responseChanAsync <- response
 	}()
 	go func() {
 		match.white.responseChanAsync <- response
 	}()
+	close(match.gameOver)
 }
