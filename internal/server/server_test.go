@@ -40,16 +40,54 @@ func TestMatchingServerTimeout(t *testing.T) {
 	matchingServer.ServeCustomMatch(matchingChan, 1, generator, exitChan)
 	tries := 0
 	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
-		time.Sleep(time.Millisecond * 5)
+		time.Sleep(time.Millisecond)
 		tries++
 	}
 	liveMatch := matchingServer.LiveMatches()[0]
-	response := ResponseAsync{}
-	select {
-	case response = <-player1.responseChanAsync:
-	}
+	response := <-player1.responseChanAsync
 	if !liveMatch.game.GameOver() || !response.gameOver || !response.timeout {
 		t.Error("Expected timed out game got", response)
+	}
+}
+
+func TestMatchingServerDraw(t *testing.T) {
+	matchingChan := make(chan *Player, 20)
+	player1 := NewPlayer("player1")
+	player2 := NewPlayer("player2")
+	matchingChan <- &player1
+	matchingChan <- &player2
+	matchingServer := NewMatchingServer()
+	exitChan := make(chan bool, 1)
+	exitChan <- true
+	matchingServer.Serve(matchingChan, 1, exitChan)
+	player1.requestChanAsync <- RequestAsync{requestToDraw: true}
+	response := <-player2.responseChanAsync
+	liveMatch := matchingServer.LiveMatches()[0]
+	if liveMatch.requestedDraw != &player1 {
+		t.Error("Expected player1 to have requested a draw",
+			liveMatch.requestedDraw)
+	}
+	player1.requestChanAsync <- RequestAsync{requestToDraw: true}
+	tries := 0
+	for liveMatch.requestedDraw != nil && tries < 10 {
+		time.Sleep(time.Millisecond)
+		tries++
+	}
+	if liveMatch.requestedDraw != nil {
+		t.Error("Expected player1 to have toggled requestToDraw",
+			liveMatch.requestedDraw)
+	}
+	player1.requestChanAsync <- RequestAsync{requestToDraw: true}
+	response = <-player2.responseChanAsync
+	if response.requestToDraw != true || liveMatch.requestedDraw != &player1 {
+		t.Error("Expected player2 to receive a requestToDraw",
+			response)
+	}
+	player2.requestChanAsync <- RequestAsync{requestToDraw: true}
+	response = <-player1.responseChanAsync
+	if !liveMatch.game.GameOver() || !response.gameOver ||
+		!response.draw {
+		t.Error("Expected a draw got ", response.draw, response.gameOver, liveMatch.game.GameOver())
 	}
 }
 
@@ -64,19 +102,16 @@ func TestMatchingServerResignation(t *testing.T) {
 	exitChan <- true
 	matchingServer.Serve(matchingChan, 1, exitChan)
 	tries := 0
-	for len(matchingServer.LiveMatches()) == 0 && tries < 5 {
-		time.Sleep(time.Millisecond * 10)
+	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
+		time.Sleep(time.Millisecond)
 		tries++
 	}
 	liveMatch := matchingServer.LiveMatches()[0]
-	go func() { player1.requestChanAsync <- RequestAsync{resign: true} }()
-	response := ResponseAsync{}
-	select {
-	case response = <-player1.responseChanAsync:
-	}
+	player1.requestChanAsync <- RequestAsync{resign: true}
+	response := <-player1.responseChanAsync
 	if !liveMatch.game.GameOver() || !response.gameOver ||
 		!response.resignation {
-		t.Error("Expected our players got ", liveMatch.black.name)
+		t.Error("Expected resignation got ", response)
 	}
 }
 
@@ -91,8 +126,8 @@ func TestMatchingServerValidMoves(t *testing.T) {
 	exitChan <- true
 	matchingServer.Serve(matchingChan, 1, exitChan)
 	tries := 0
-	for len(matchingServer.LiveMatches()) == 0 && tries < 5 {
-		time.Sleep(time.Millisecond * 10)
+	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
+		time.Sleep(time.Millisecond)
 		tries++
 	}
 	liveMatch := matchingServer.LiveMatches()[0]
@@ -116,8 +151,8 @@ func TestMatchingServerInvalidMoves(t *testing.T) {
 	exitChan <- true
 	matchingServer.Serve(matchingChan, 1, exitChan)
 	tries := 0
-	for len(matchingServer.LiveMatches()) == 0 && tries < 5 {
-		time.Sleep(time.Millisecond * 10)
+	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
+		time.Sleep(time.Millisecond)
 		tries++
 	}
 	liveMatch := matchingServer.LiveMatches()[0]
@@ -145,8 +180,8 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	exitChan <- true
 	matchingServer.Serve(matchingChan, 1, exitChan)
 	tries := 0
-	for len(matchingServer.LiveMatches()) == 0 && tries < 5 {
-		time.Sleep(time.Millisecond * 10)
+	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
+		time.Sleep(time.Millisecond)
 		tries++
 	}
 	liveMatch := matchingServer.LiveMatches()[0]
@@ -162,10 +197,7 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	if !liveMatch.game.GameOver() {
 		t.Error("Expected gameover got ", liveMatch)
 	}
-	response := ResponseAsync{}
-	select {
-	case response = <-black.responseChanAsync:
-	}
+	response := <-black.responseChanAsync
 	if !response.gameOver || !(response.winner == white.name) {
 		t.Error("Expected checkmate got ", response)
 	}
@@ -190,8 +222,8 @@ func TestMatchingServerMultiple(t *testing.T) {
 	exitChan <- true
 	matchingServer.Serve(matchingChan, 5, exitChan)
 	tries := 0
-	for len(matchingServer.LiveMatches()) != 3 && tries < 5 {
-		time.Sleep(time.Millisecond * 10)
+	for len(matchingServer.LiveMatches()) != 3 && tries < 10 {
+		time.Sleep(time.Millisecond)
 		tries++
 	}
 	if len(matchingServer.LiveMatches()) != 3 {

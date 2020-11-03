@@ -4,9 +4,9 @@ TODO
     - [x] Detect stalemate
     - [ ] Insufficient material
     - [ ] 50 move rule
-    - [ ] timeout
-    - [ ] resignation
-    - [ ] agreed draw
+    - [x] timeout
+    - [x] resignation
+    - [x] agreed draw
     - [ ] Detect draw by repetition (same position 3 times)
         See https://en.wikipedia.org/wiki/Threefold_repetition for the definition
         of position.
@@ -14,7 +14,7 @@ TODO
         Just need a hash function to go from position -> positionId
 * Server
     - [ ] http server
-    - [ ] client agnostic matching server (IN PROGRESS)
-        - [ ] testing
+    - [x] client agnostic matching server
+        - [x] testing
 * Client
     - [ ] Golang WebAssembly web client

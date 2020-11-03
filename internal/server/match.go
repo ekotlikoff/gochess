@@ -7,11 +7,12 @@ import (
 )
 
 type Match struct {
-	black     *Player
-	white     *Player
-	game      *model.Game
-	gameOver  chan struct{}
-	maxTimeMs int64
+	black         *Player
+	white         *Player
+	game          *model.Game
+	gameOver      chan struct{}
+	maxTimeMs     int64
+	requestedDraw *Player
 }
 
 type MatchGenerator func(black *Player, white *Player) Match
@@ -26,7 +27,7 @@ func newMatch(black *Player, white *Player, maxTime int64) Match {
 	black.elapsedMs = 0
 	white.elapsedMs = 0
 	game := model.NewGame()
-	return Match{black, white, &game, make(chan struct{}), maxTime}
+	return Match{black, white, &game, make(chan struct{}), maxTime, nil}
 }
 
 func DefaultMatchGenerator(black *Player, white *Player) Match {
@@ -58,12 +59,15 @@ func (match *Match) handleTurn() {
 	case <-match.gameOver:
 		return
 	}
-	response := ResponseSync{moveSuccess: true}
 	err := errors.New("")
 	for err != nil {
 		err = match.game.Move(request.position, request.move)
 		if err != nil {
-			player.responseChanSync <- ResponseSync{moveSuccess: false}
+			select {
+			case player.responseChanSync <- ResponseSync{moveSuccess: false}:
+			case <-match.gameOver:
+				return
+			}
 			select {
 			case request = <-player.requestChanSync:
 			case <-match.gameOver:
@@ -71,56 +75,78 @@ func (match *Match) handleTurn() {
 			}
 		}
 	}
-	player.responseChanSync <- response
+	player.responseChanSync <- ResponseSync{moveSuccess: true}
 	if match.game.GameOver() {
 		result := match.game.Result()
 		winner := match.black
 		if result.Winner == model.White {
 			winner = match.white
 		}
-		match.handleGameOver(result.Draw, false, false, winner.name)
+		match.handleGameOver(result.Draw, false, false, winner)
 	}
 	player.elapsedMs += time.Now().Sub(turnStart).Milliseconds()
 }
 
 func (match *Match) handleTimeout(opponent *Player) func() {
 	return func() {
-		match.game.SetGameResult(opponent.color, false)
-		match.handleGameOver(false, false, true, opponent.name)
+		match.handleGameOver(false, false, true, opponent)
 	}
 }
 
 func (match *Match) handleAsyncRequests() {
 	for !match.game.GameOver() {
 		opponent := match.white
+		player := match.black
 		request := RequestAsync{}
 		select {
 		case request = <-match.black.requestChanAsync:
 		case request = <-match.white.requestChanAsync:
 			opponent = match.black
+			player = match.white
 		case <-match.gameOver:
 			return
 		}
 		if request.resign {
-			match.game.SetGameResult(opponent.color, false)
-			match.handleGameOver(false, true, false, opponent.name)
+			match.handleGameOver(false, true, false, opponent)
 			return
 		} else if request.requestToDraw {
-			// TODO handle draw
+			if match.requestedDraw == opponent {
+				match.handleGameOver(true, false, false, opponent)
+			} else if match.requestedDraw == player {
+				// Consider the second requestToDraw a toggle.
+				match.requestedDraw = nil
+			} else {
+				match.requestedDraw = player
+				go func() {
+					select {
+					case opponent.responseChanAsync <- ResponseAsync{
+						false, true, false, false, false, "",
+					}:
+					case <-time.After(5 * time.Second):
+					}
+				}()
+			}
 		}
 	}
 }
 
 func (match *Match) handleGameOver(
-	draw, resignation, timeout bool, winner string,
+	draw, resignation, timeout bool, winner *Player,
 ) {
+	match.game.SetGameResult(winner.color, draw)
+	winnerName := winner.name
+	if draw {
+		winnerName = ""
+	}
 	response := ResponseAsync{gameOver: true, draw: draw,
-		resignation: resignation, timeout: timeout, winner: winner}
-	go func() {
-		match.black.responseChanAsync <- response
-	}()
-	go func() {
-		match.white.responseChanAsync <- response
-	}()
+		resignation: resignation, timeout: timeout, winner: winnerName}
+	for _, player := range [2]*Player{match.white, match.black} {
+		go func() {
+			select {
+			case player.responseChanAsync <- response:
+			case <-time.After(5 * time.Second):
+			}
+		}()
+	}
 	close(match.gameOver)
 }

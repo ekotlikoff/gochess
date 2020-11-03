@@ -37,8 +37,8 @@ type RequestAsync struct {
 }
 
 type ResponseAsync struct {
-	gameOver, draw, resignation, timeout bool
-	winner                               string
+	gameOver, requestToDraw, draw, resignation, timeout bool
+	winner                                              string
 }
 
 type MatchingServer struct {
