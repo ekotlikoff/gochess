@@ -1,4 +1,4 @@
-package server
+package matchserver
 
 import (
 	"gochess/internal/model"
