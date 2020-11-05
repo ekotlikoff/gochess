@@ -8,15 +8,14 @@ import (
 )
 
 func TestMatchingServer(t *testing.T) {
-	matchingChan := make(chan *Player, 20)
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
-	matchingChan <- &player1
-	matchingChan <- &player2
 	matchingServer := NewMatchingServer()
+	matchingServer.players <- &player1
+	matchingServer.players <- &player2
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(matchingChan, 1, exitChan)
+	matchingServer.Serve(1, exitChan)
 	for len(matchingServer.LiveMatches()) == 0 {
 	}
 	liveMatch := matchingServer.LiveMatches()[0]
@@ -26,18 +25,17 @@ func TestMatchingServer(t *testing.T) {
 }
 
 func TestMatchingServerTimeout(t *testing.T) {
-	matchingChan := make(chan *Player, 20)
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
-	matchingChan <- &player1
-	matchingChan <- &player2
 	matchingServer := NewMatchingServer()
+	matchingServer.players <- &player1
+	matchingServer.players <- &player2
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	generator := func(black *Player, white *Player) Match {
 		return newMatch(black, white, 50)
 	}
-	matchingServer.ServeCustomMatch(matchingChan, 1, generator, exitChan)
+	matchingServer.ServeCustomMatch(1, generator, exitChan)
 	tries := 0
 	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
 		time.Sleep(time.Millisecond)
@@ -51,15 +49,14 @@ func TestMatchingServerTimeout(t *testing.T) {
 }
 
 func TestMatchingServerDraw(t *testing.T) {
-	matchingChan := make(chan *Player, 20)
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
-	matchingChan <- &player1
-	matchingChan <- &player2
 	matchingServer := NewMatchingServer()
+	matchingServer.players <- &player1
+	matchingServer.players <- &player2
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(matchingChan, 1, exitChan)
+	matchingServer.Serve(1, exitChan)
 	player1.requestChanAsync <- RequestAsync{requestToDraw: true}
 	response := <-player2.responseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
@@ -92,15 +89,14 @@ func TestMatchingServerDraw(t *testing.T) {
 }
 
 func TestMatchingServerResignation(t *testing.T) {
-	matchingChan := make(chan *Player, 20)
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
-	matchingChan <- &player1
-	matchingChan <- &player2
 	matchingServer := NewMatchingServer()
+	matchingServer.players <- &player1
+	matchingServer.players <- &player2
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(matchingChan, 1, exitChan)
+	matchingServer.Serve(1, exitChan)
 	tries := 0
 	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
 		time.Sleep(time.Millisecond)
@@ -116,15 +112,14 @@ func TestMatchingServerResignation(t *testing.T) {
 }
 
 func TestMatchingServerValidMoves(t *testing.T) {
-	matchingChan := make(chan *Player, 20)
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
-	matchingChan <- &player1
-	matchingChan <- &player2
 	matchingServer := NewMatchingServer()
+	matchingServer.players <- &player1
+	matchingServer.players <- &player2
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(matchingChan, 1, exitChan)
+	matchingServer.Serve(1, exitChan)
 	tries := 0
 	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
 		time.Sleep(time.Millisecond)
@@ -141,15 +136,14 @@ func TestMatchingServerValidMoves(t *testing.T) {
 }
 
 func TestMatchingServerInvalidMoves(t *testing.T) {
-	matchingChan := make(chan *Player, 20)
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
-	matchingChan <- &player1
-	matchingChan <- &player2
 	matchingServer := NewMatchingServer()
+	matchingServer.players <- &player1
+	matchingServer.players <- &player2
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(matchingChan, 1, exitChan)
+	matchingServer.Serve(1, exitChan)
 	tries := 0
 	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
 		time.Sleep(time.Millisecond)
@@ -170,15 +164,14 @@ func TestMatchingServerInvalidMoves(t *testing.T) {
 }
 
 func TestMatchingServerCheckmate(t *testing.T) {
-	matchingChan := make(chan *Player, 20)
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
-	matchingChan <- &player1
-	matchingChan <- &player2
 	matchingServer := NewMatchingServer()
+	matchingServer.players <- &player1
+	matchingServer.players <- &player2
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(matchingChan, 1, exitChan)
+	matchingServer.Serve(1, exitChan)
 	tries := 0
 	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
 		time.Sleep(time.Millisecond)
@@ -211,16 +204,15 @@ func makeMove(
 }
 
 func TestMatchingServerMultiple(t *testing.T) {
-	matchingChan := make(chan *Player, 20)
+	matchingServer := NewMatchingServer()
 	players := []Player{}
 	for i := 0; i < 7; i++ {
 		players = append(players, NewPlayer("player"+strconv.Itoa(i)))
-		matchingChan <- &players[i]
+		matchingServer.players <- &players[i]
 	}
-	matchingServer := NewMatchingServer()
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(matchingChan, 5, exitChan)
+	matchingServer.Serve(5, exitChan)
 	tries := 0
 	for len(matchingServer.LiveMatches()) != 3 && tries < 10 {
 		time.Sleep(time.Millisecond)

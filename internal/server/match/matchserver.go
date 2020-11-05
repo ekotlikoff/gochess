@@ -44,10 +44,11 @@ type ResponseAsync struct {
 type MatchingServer struct {
 	liveMatches []*Match
 	mutex       *sync.Mutex
+	players     chan *Player
 }
 
 func NewMatchingServer() MatchingServer {
-	return MatchingServer{nil, &sync.Mutex{}}
+	return MatchingServer{mutex: &sync.Mutex{}, players: make(chan *Player, 20)}
 }
 
 func (matchingServer *MatchingServer) LiveMatches() []*Match {
@@ -59,10 +60,10 @@ func (matchingServer *MatchingServer) LiveMatches() []*Match {
 }
 
 func (matchingServer *MatchingServer) matchAndPlay(
-	players <-chan *Player, matchGenerator MatchGenerator,
+	matchGenerator MatchGenerator,
 ) {
 	var player1, player2 *Player
-	for player := range players {
+	for player := range matchingServer.players {
 		if player1 == nil {
 			player1 = player
 		} else if player2 == nil {
@@ -81,20 +82,19 @@ func (matchingServer *MatchingServer) matchAndPlay(
 }
 
 func (matchingServer *MatchingServer) Serve(
-	players <-chan *Player, maxConcurrentGames int, quit chan bool,
+	maxConcurrentGames int, quit chan bool,
 ) {
 	matchingServer.ServeCustomMatch(
-		players, maxConcurrentGames, DefaultMatchGenerator, quit,
+		maxConcurrentGames, DefaultMatchGenerator, quit,
 	)
 }
 
 func (matchingServer *MatchingServer) ServeCustomMatch(
-	players <-chan *Player, maxConcurrentGames int,
-	matchGenerator MatchGenerator, quit chan bool,
+	maxConcurrentGames int, matchGenerator MatchGenerator, quit chan bool,
 ) {
 	// Start handlers
 	for i := 0; i < maxConcurrentGames; i++ {
-		go matchingServer.matchAndPlay(players, matchGenerator)
+		go matchingServer.matchAndPlay(matchGenerator)
 	}
 	<-quit // Wait to be told to exit.
 }
