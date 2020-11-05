@@ -38,6 +38,13 @@ func StartSession(w http.ResponseWriter, r *http.Request) {
 	player := matchserver.NewPlayer(creds.Username)
 	cache.Put(sessionTokenStr, &player)
 
+	// TODO start matchmaking before returning 200 to client.
+	// Need a match server to start matching on
+	// 1) Create a Server() func for the http server.  This func will
+	// take in a matching server as an arg
+	// 2) Rename and wrap StartSession in a closure where we pass in the match
+	// server and use http.HandleFunc to serve this initial endpoint.
+
 	// Set the client session_token and an expiry time equal to the cache ttl
 	http.SetCookie(w, &http.Cookie{
 		Name:    "session_token",
