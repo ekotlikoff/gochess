@@ -23,6 +23,10 @@ func NewPlayer(name string) Player {
 	}
 }
 
+func (player *Player) Name() string {
+	return player.name
+}
+
 type RequestSync struct {
 	position model.Position
 	move     model.Move

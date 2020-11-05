@@ -14,6 +14,9 @@ TODO
         Just need a hash function to go from position -> positionId
 * Server
     - [ ] http server
+    - [ ] http server sessions
+      - [ ] testing
+      - [ ] user auth?
     - [x] client agnostic matching server
         - [x] testing
 * Client
