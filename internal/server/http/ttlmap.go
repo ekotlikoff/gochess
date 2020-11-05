@@ -75,6 +75,7 @@ func (m *TTLMap) Refresh(k, newk string) error {
 	}
 	if _, newok := m.m[newk]; !newok && ok {
 		m.m[newk] = it
+		delete(m.m, k)
 	} else {
 		return errors.New("Failed to refresh key")
 	}
