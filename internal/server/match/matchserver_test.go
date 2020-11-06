@@ -81,7 +81,7 @@ func TestMatchingServerDraw(t *testing.T) {
 			response)
 	}
 	player2.requestChanAsync <- RequestAsync{requestToDraw: true}
-	response = <-player1.responseChanAsync
+	response = <-player2.responseChanAsync
 	if !liveMatch.game.GameOver() || !response.gameOver ||
 		!response.draw {
 		t.Error("Expected a draw got ", response.draw, response.gameOver, liveMatch.game.GameOver())
@@ -214,11 +214,12 @@ func TestMatchingServerMultiple(t *testing.T) {
 	exitChan <- true
 	matchingServer.Serve(5, exitChan)
 	tries := 0
-	for len(matchingServer.LiveMatches()) != 3 && tries < 10 {
+	for len(matchingServer.LiveMatches()) != 3 && tries < 50 {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
 	if len(matchingServer.LiveMatches()) != 3 {
-		t.Error("Expected all players matched got ", len(matchingServer.LiveMatches()))
+		t.Error("Expected all players matched got ",
+			len(matchingServer.LiveMatches()))
 	}
 }

@@ -27,6 +27,13 @@ func (player *Player) Name() string {
 	return player.name
 }
 
+func (player *Player) Stop() {
+	close(player.requestChanSync)
+	close(player.responseChanSync)
+	close(player.requestChanAsync)
+	close(player.responseChanAsync)
+}
+
 type RequestSync struct {
 	position model.Position
 	move     model.Move
@@ -105,6 +112,8 @@ func (matchingServer *MatchingServer) ServeCustomMatch(
 
 func (matchingServer *MatchingServer) removeMatch(matchToRemove *Match) {
 	liveMatches := matchingServer.liveMatches
+	matchingServer.mutex.Lock()
+	defer matchingServer.mutex.Unlock()
 	for i, match := range liveMatches {
 		if match == matchToRemove {
 			if len(liveMatches) == 1 {

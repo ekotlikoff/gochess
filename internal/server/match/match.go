@@ -140,10 +140,11 @@ func (match *Match) handleGameOver(
 	}
 	response := ResponseAsync{gameOver: true, draw: draw,
 		resignation: resignation, timeout: timeout, winner: winnerName}
-	for _, player := range [2]*Player{match.white, match.black} {
+	for _, player := range [2]*Player{match.black, match.white} {
+		thisPlayer := player
 		go func() {
 			select {
-			case player.responseChanAsync <- response:
+			case thisPlayer.responseChanAsync <- response:
 			case <-time.After(5 * time.Second):
 			}
 		}()
