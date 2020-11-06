@@ -3,9 +3,59 @@ package httpserver
 // Credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
 import (
 	//	"gochess/internal/server/match"
+	"encoding/json"
 	"fmt"
+	"github.com/satori/go.uuid"
+	"gochess/internal/server/match"
 	"net/http"
+	"time"
 )
+
+var cache *TTLMap
+
+func init() {
+	cache = NewTTLMap(50, 1800, 10)
+}
+
+type Credentials struct {
+	Username string `json:"username"`
+}
+
+func Serve() {
+	//		http.HandleFunc()
+}
+
+func CreateStartSessionHandler(matchServer matchserver.Match) http.Handler {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+
+		var creds Credentials
+		err := json.NewDecoder(r.Body).Decode(&creds)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		// Create a new random session token
+		sessionToken, err := uuid.NewV4()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		sessionTokenStr := sessionToken.String()
+		player := matchserver.NewPlayer(creds.Username)
+		cache.Put(sessionTokenStr, &player)
+		// TODO kick off a goroutine where we start matching, and once matched
+		// send a response to the client that they've matched and what their
+		// color is.
+		//  matchServer.MatchPlayer(player)
+		// Set the client session_token and an expiry time equal to the cache ttl
+		http.SetCookie(w, &http.Cookie{
+			Name:    "session_token",
+			Value:   sessionTokenStr,
+			Expires: time.Now().Add(1800 * time.Second),
+		})
+	}
+	return handler
+}
 
 func Welcome(w http.ResponseWriter, r *http.Request) {
 	c, err := r.Cookie("session_token")

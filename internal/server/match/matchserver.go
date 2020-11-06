@@ -52,7 +52,7 @@ type MatchingServer struct {
 }
 
 func NewMatchingServer() MatchingServer {
-	return MatchingServer{mutex: &sync.Mutex{}, players: make(chan *Player, 20)}
+	return MatchingServer{mutex: &sync.Mutex{}, players: make(chan *Player)}
 }
 
 func (matchingServer *MatchingServer) LiveMatches() []*Match {
@@ -116,4 +116,8 @@ func (matchingServer *MatchingServer) removeMatch(matchToRemove *Match) {
 			}
 		}
 	}
+}
+
+func (matchingServer *MatchingServer) MatchPlayer(player *Player) {
+	matchingServer.players <- player
 }

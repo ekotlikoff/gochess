@@ -11,8 +11,8 @@ func TestMatchingServer(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	matchingServer.players <- &player1
-	matchingServer.players <- &player2
+	go matchingServer.MatchPlayer(&player1)
+	go matchingServer.MatchPlayer(&player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.Serve(1, exitChan)
@@ -28,8 +28,8 @@ func TestMatchingServerTimeout(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	matchingServer.players <- &player1
-	matchingServer.players <- &player2
+	go matchingServer.MatchPlayer(&player1)
+	go matchingServer.MatchPlayer(&player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	generator := func(black *Player, white *Player) Match {
@@ -52,8 +52,8 @@ func TestMatchingServerDraw(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	matchingServer.players <- &player1
-	matchingServer.players <- &player2
+	go matchingServer.MatchPlayer(&player1)
+	go matchingServer.MatchPlayer(&player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.Serve(1, exitChan)
@@ -92,8 +92,8 @@ func TestMatchingServerResignation(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	matchingServer.players <- &player1
-	matchingServer.players <- &player2
+	go matchingServer.MatchPlayer(&player1)
+	go matchingServer.MatchPlayer(&player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.Serve(1, exitChan)
@@ -115,8 +115,8 @@ func TestMatchingServerValidMoves(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	matchingServer.players <- &player1
-	matchingServer.players <- &player2
+	go matchingServer.MatchPlayer(&player1)
+	go matchingServer.MatchPlayer(&player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.Serve(1, exitChan)
@@ -139,8 +139,8 @@ func TestMatchingServerInvalidMoves(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	matchingServer.players <- &player1
-	matchingServer.players <- &player2
+	go matchingServer.MatchPlayer(&player1)
+	go matchingServer.MatchPlayer(&player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.Serve(1, exitChan)
@@ -167,8 +167,8 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	matchingServer.players <- &player1
-	matchingServer.players <- &player2
+	go matchingServer.MatchPlayer(&player1)
+	go matchingServer.MatchPlayer(&player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.Serve(1, exitChan)
@@ -208,7 +208,7 @@ func TestMatchingServerMultiple(t *testing.T) {
 	players := []Player{}
 	for i := 0; i < 7; i++ {
 		players = append(players, NewPlayer("player"+strconv.Itoa(i)))
-		matchingServer.players <- &players[i]
+		go matchingServer.MatchPlayer(&players[i])
 	}
 	exitChan := make(chan bool, 1)
 	exitChan <- true
