@@ -27,6 +27,10 @@ func (player *Player) Name() string {
 	return player.name
 }
 
+func (player *Player) Color() model.Color {
+	return player.color
+}
+
 func (player *Player) Stop() {
 	close(player.requestChanSync)
 	close(player.responseChanSync)
