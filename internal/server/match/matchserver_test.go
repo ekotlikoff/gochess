@@ -183,12 +183,14 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	white := liveMatch.white
 	white.MakeMove(PieceMove{model.Position{4, 1}, model.Move{0, 2}})
 	opponentMove := black.GetOpponentMove()
-	if opponentMove != NewPieceMove(model.Position{4, 1}, model.Move{0, 2}) {
+	expectedMove := PieceMove{model.Position{4, 1}, model.Move{0, 2}}
+	if opponentMove != expectedMove {
 		t.Error("Expected opponent's move got ", opponentMove)
 	}
 	black.MakeMove(PieceMove{model.Position{0, 6}, model.Move{0, -1}})
 	opponentMove = white.GetOpponentMove()
-	if opponentMove != NewPieceMove(model.Position{0, 6}, model.Move{0, -1}) {
+	expectedMove = PieceMove{model.Position{0, 6}, model.Move{0, -1}}
+	if opponentMove != expectedMove {
 		t.Error("Expected opponent's move got ", opponentMove)
 	}
 	white.MakeMove(PieceMove{model.Position{3, 0}, model.Move{4, 4}})

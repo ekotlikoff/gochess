@@ -21,10 +21,6 @@ type PieceMove struct {
 	move     model.Move
 }
 
-func NewPieceMove(position model.Position, move model.Move) PieceMove {
-	return PieceMove{position, move}
-}
-
 func NewPlayer(name string) Player {
 	return Player{
 		name, model.Black, int64(0),
