@@ -1,5 +1,5 @@
-- GET /
-    - Start the session and fetch sessionToken
+- POST /
+    - Start the session and fetch sessionToken, providing username
 - GET /match
     - Begin matching, receive color when match is found
 - POST /sync
@@ -10,5 +10,6 @@
     - Get any async updates (should be constantly polling this endpoint)
         - gameOver, requestToDraw, gameOver results
 - GET /sync
-    - Get any sync updates (should query this after a succesful move)
-
+    - Get opponents move (should query this after a succesful move)
+- GET /moves
+    - Get all moves (call this if client lost the state and is currently in a game)

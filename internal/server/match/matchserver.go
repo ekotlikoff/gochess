@@ -17,8 +17,8 @@ type Player struct {
 }
 
 type PieceMove struct {
-	position model.Position
-	move     model.Move
+	Position model.Position
+	Move     model.Move
 }
 
 func NewPlayer(name string) Player {
@@ -39,7 +39,7 @@ func (player *Player) Color() model.Color {
 }
 
 func (player *Player) MakeMove(pieceMove PieceMove) bool {
-	player.requestChanSync <- RequestSync{pieceMove.position, pieceMove.move}
+	player.requestChanSync <- RequestSync{pieceMove.Position, pieceMove.Move}
 	response := <-player.responseChanSync
 	return response.moveSuccess
 }
