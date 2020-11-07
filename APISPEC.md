@@ -1,0 +1,14 @@
+- GET /
+    - Start the session and fetch sessionToken
+- GET /match
+    - Begin matching, receive color when match is found
+- POST /sync
+    - Make a move, receive 200 if move is succesful, 400 otherwise
+- POST /async
+    - Make an async request (draw/resign) receive 200 if request received
+- GET /async
+    - Get any async updates (should be constantly polling this endpoint)
+        - gameOver, requestToDraw, gameOver results
+- GET /sync
+    - Get any sync updates (should query this after a succesful move)
+
