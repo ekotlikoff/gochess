@@ -76,6 +76,7 @@ func (match *Match) handleTurn() {
 		}
 	}
 	player.responseChanSync <- ResponseSync{moveSuccess: true}
+	opponent.opponentPlayedMove <- PieceMove{request.position, request.move}
 	if match.game.GameOver() {
 		result := match.game.Result()
 		winner := match.black

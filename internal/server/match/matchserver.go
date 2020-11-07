@@ -6,20 +6,31 @@ import (
 )
 
 type Player struct {
-	name              string
-	color             model.Color
-	elapsedMs         int64
-	requestChanSync   chan RequestSync
-	responseChanSync  chan ResponseSync
-	requestChanAsync  chan RequestAsync
-	responseChanAsync chan ResponseAsync
+	name               string
+	color              model.Color
+	elapsedMs          int64
+	requestChanSync    chan RequestSync
+	responseChanSync   chan ResponseSync
+	requestChanAsync   chan RequestAsync
+	responseChanAsync  chan ResponseAsync
+	opponentPlayedMove chan PieceMove
+}
+
+type PieceMove struct {
+	position model.Position
+	move     model.Move
+}
+
+func NewPieceMove(position model.Position, move model.Move) PieceMove {
+	return PieceMove{position, move}
 }
 
 func NewPlayer(name string) Player {
 	return Player{
 		name, model.Black, int64(0),
-		make(chan RequestSync), make(chan ResponseSync),
-		make(chan RequestAsync), make(chan ResponseAsync),
+		make(chan RequestSync, 1), make(chan ResponseSync, 10),
+		make(chan RequestAsync, 1), make(chan ResponseAsync, 1),
+		make(chan PieceMove, 10),
 	}
 }
 
@@ -29,6 +40,16 @@ func (player *Player) Name() string {
 
 func (player *Player) Color() model.Color {
 	return player.color
+}
+
+func (player *Player) MakeMove(pieceMove PieceMove) bool {
+	player.requestChanSync <- RequestSync{pieceMove.position, pieceMove.move}
+	response := <-player.responseChanSync
+	return response.moveSuccess
+}
+
+func (player *Player) GetOpponentMove() PieceMove {
+	return <-player.opponentPlayedMove
 }
 
 func (player *Player) Stop() {

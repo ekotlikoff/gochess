@@ -128,9 +128,10 @@ func TestMatchingServerValidMoves(t *testing.T) {
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
-	makeMove(white, model.Position{3, 1}, model.Move{0, 2})
-	response := makeMove(black, model.Position{3, 6}, model.Move{0, -2})
-	if !response.moveSuccess {
+	white.MakeMove(PieceMove{model.Position{3, 1}, model.Move{0, 2}})
+	response :=
+		black.MakeMove(PieceMove{model.Position{3, 6}, model.Move{0, -2}})
+	if !response {
 		t.Error("Expected a valid move got", response)
 	}
 }
@@ -152,13 +153,13 @@ func TestMatchingServerInvalidMoves(t *testing.T) {
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
-	makeMove(white, model.Position{3, 1}, model.Move{0, 2})
-	response := makeMove(black, model.Position{3, 6}, model.Move{0, -3})
-	if response.moveSuccess {
+	white.MakeMove(PieceMove{model.Position{3, 1}, model.Move{0, 2}})
+	response := black.MakeMove(PieceMove{model.Position{3, 6}, model.Move{0, -3}})
+	if response {
 		t.Error("Expected a invalid move got", response)
 	}
-	response = makeMove(black, model.Position{3, 6}, model.Move{0, -1})
-	if !response.moveSuccess {
+	response = black.MakeMove(PieceMove{model.Position{3, 6}, model.Move{0, -1}})
+	if !response {
 		t.Error("Expected a valid move got", response)
 	}
 }
@@ -180,13 +181,21 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
-	makeMove(white, model.Position{4, 1}, model.Move{0, 2})
-	makeMove(black, model.Position{0, 6}, model.Move{0, -1})
-	makeMove(white, model.Position{3, 0}, model.Move{4, 4})
-	makeMove(black, model.Position{0, 5}, model.Move{0, -1})
-	makeMove(white, model.Position{5, 0}, model.Move{-3, 3})
-	makeMove(black, model.Position{0, 4}, model.Move{0, -1})
-	makeMove(white, model.Position{7, 4}, model.Move{-2, 2})
+	white.MakeMove(PieceMove{model.Position{4, 1}, model.Move{0, 2}})
+	opponentMove := black.GetOpponentMove()
+	if opponentMove != NewPieceMove(model.Position{4, 1}, model.Move{0, 2}) {
+		t.Error("Expected opponent's move got ", opponentMove)
+	}
+	black.MakeMove(PieceMove{model.Position{0, 6}, model.Move{0, -1}})
+	opponentMove = white.GetOpponentMove()
+	if opponentMove != NewPieceMove(model.Position{0, 6}, model.Move{0, -1}) {
+		t.Error("Expected opponent's move got ", opponentMove)
+	}
+	white.MakeMove(PieceMove{model.Position{3, 0}, model.Move{4, 4}})
+	black.MakeMove(PieceMove{model.Position{0, 5}, model.Move{0, -1}})
+	white.MakeMove(PieceMove{model.Position{5, 0}, model.Move{-3, 3}})
+	black.MakeMove(PieceMove{model.Position{0, 4}, model.Move{0, -1}})
+	white.MakeMove(PieceMove{model.Position{7, 4}, model.Move{-2, 2}})
 	if !liveMatch.game.GameOver() {
 		t.Error("Expected gameover got ", liveMatch)
 	}
@@ -194,13 +203,6 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	if !response.gameOver || !(response.winner == white.name) {
 		t.Error("Expected checkmate got ", response)
 	}
-}
-
-func makeMove(
-	player *Player, position model.Position, move model.Move,
-) ResponseSync {
-	player.requestChanSync <- RequestSync{position, move}
-	return <-player.responseChanSync
 }
 
 func TestMatchingServerMultiple(t *testing.T) {
