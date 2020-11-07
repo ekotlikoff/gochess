@@ -2,7 +2,6 @@ package httpserver
 
 // Credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
 import (
-	//	"gochess/internal/server/match"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +9,9 @@ import (
 	"gochess/internal/model"
 	"gochess/internal/server/match"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"time"
@@ -26,7 +27,19 @@ type Credentials struct {
 	Username string `json:"username"`
 }
 
-func Serve(matchServer *matchserver.MatchingServer) {
+func Serve(
+	matchServer *matchserver.MatchingServer, logFile *string, quiet bool,
+) {
+	if logFile != nil {
+		file, err := os.OpenFile(*logFile, os.O_CREATE|os.O_APPEND, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.SetOutput(file)
+	}
+	if quiet {
+		log.SetOutput(ioutil.Discard)
+	}
 	http.HandleFunc("/", StartSession)
 	http.Handle("/match/", createSearchForMatchHandler(matchServer))
 	http.HandleFunc("/sync/", moveHandler)
@@ -34,23 +47,28 @@ func Serve(matchServer *matchserver.MatchingServer) {
 }
 
 func StartSession(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Starting session")
+	log.SetPrefix("StartSession: ")
 	var creds Credentials
 	err := json.NewDecoder(r.Body).Decode(&creds)
-	if err != nil || creds.Username == "" {
-		fmt.Println("Failed to decode the body")
+	if err != nil {
+		log.Println("Bad request", err)
 		w.WriteHeader(http.StatusBadRequest)
+		return
+	} else if creds.Username == "" {
+		log.Println("Missing username")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Missing username"))
 		return
 	}
 	// Create a new random session token
 	sessionToken, err := uuid.NewV4()
 	if err != nil {
+		log.Println("Failed to generate session token")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	sessionTokenStr := sessionToken.String()
 	player := matchserver.NewPlayer(creds.Username)
-	fmt.Println(player.Name())
 	cache.Put(sessionTokenStr, &player)
 	http.SetCookie(w, &http.Cookie{
 		Name:    "session_token",
@@ -62,57 +80,29 @@ func StartSession(w http.ResponseWriter, r *http.Request) {
 func createSearchForMatchHandler(
 	matchServer *matchserver.MatchingServer,
 ) http.Handler {
+	log.SetPrefix("SearchForMatch: ")
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		c, err := r.Cookie("session_token")
-		if err != nil {
-			if err == http.ErrNoCookie {
-				// If the cookie is not set, return an unauthorized status
-				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			// For any other type of error, return a bad request status
-			w.WriteHeader(http.StatusBadRequest)
+		player := getSession(w, r)
+		if player == nil {
 			return
 		}
-		sessionToken := c.Value
-		player, err := cache.Get(sessionToken)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		} else if player == nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		matchServer.MatchPlayer(player) // Block until matched
+		matchServer.MatchPlayer(player)
+		player.WaitForMatchStart()
 		fmt.Fprintf(w, "Matched!  Player color=%v", player.Color())
 	}
 	return http.HandlerFunc(handler)
 }
 
 func moveHandler(w http.ResponseWriter, r *http.Request) {
-	c, err := r.Cookie("session_token")
-	if err != nil {
-		if err == http.ErrNoCookie {
-			// If the cookie is not set, return an unauthorized status
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		// For any other type of error, return a bad request status
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	sessionToken := c.Value
-	player, err := cache.Get(sessionToken)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	} else if player == nil {
-		w.WriteHeader(http.StatusUnauthorized)
+	log.SetPrefix("MoveHandler: ")
+	player := getSession(w, r)
+	if player == nil {
 		return
 	}
 	// Read body
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
+		log.Println("ERROR ", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -145,4 +135,31 @@ func parseMoveBody(body []byte) (matchserver.PieceMove, error) {
 	return matchserver.PieceMove{
 		model.Position{uint8(posX), uint8(posY)},
 		model.Move{int8(moveX), int8(moveY)}}, nil
+}
+
+func getSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
+	c, err := r.Cookie("session_token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			log.Println("session_token is not set")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("Missing session_token"))
+			return nil
+		}
+		log.Println("ERROR ", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return nil
+	}
+	sessionToken := c.Value
+	player, err := cache.Get(sessionToken)
+	if err != nil {
+		log.Println("ERROR ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return nil
+	} else if player == nil {
+		log.Println("No player found for token ", sessionToken)
+		w.WriteHeader(http.StatusUnauthorized)
+		return nil
+	}
+	return player
 }

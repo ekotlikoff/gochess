@@ -14,6 +14,7 @@ type Player struct {
 	requestChanAsync   chan RequestAsync
 	responseChanAsync  chan ResponseAsync
 	opponentPlayedMove chan PieceMove
+	matchStart         chan struct{}
 }
 
 type PieceMove struct {
@@ -26,7 +27,7 @@ func NewPlayer(name string) Player {
 		name, model.Black, int64(0),
 		make(chan RequestSync, 1), make(chan ResponseSync, 10),
 		make(chan RequestAsync, 1), make(chan ResponseAsync, 1),
-		make(chan PieceMove, 10),
+		make(chan PieceMove, 10), make(chan struct{}),
 	}
 }
 
@@ -36,6 +37,10 @@ func (player *Player) Name() string {
 
 func (player *Player) Color() model.Color {
 	return player.color
+}
+
+func (player *Player) WaitForMatchStart() {
+	<-player.matchStart
 }
 
 func (player *Player) MakeMove(pieceMove PieceMove) bool {
@@ -53,6 +58,7 @@ func (player *Player) Stop() {
 	close(player.responseChanSync)
 	close(player.requestChanAsync)
 	close(player.responseChanAsync)
+	close(player.matchStart)
 }
 
 type RequestSync struct {
@@ -104,6 +110,8 @@ func (matchingServer *MatchingServer) matchAndPlay(
 			matchingServer.mutex.Lock()
 			matchingServer.liveMatches = append(matchingServer.liveMatches, &match)
 			matchingServer.mutex.Unlock()
+			close(player1.matchStart)
+			close(player2.matchStart)
 			(&match).play()
 			matchingServer.mutex.Lock()
 			matchingServer.removeMatch(&match)
