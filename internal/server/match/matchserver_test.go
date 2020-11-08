@@ -43,7 +43,7 @@ func TestMatchingServerTimeout(t *testing.T) {
 	}
 	liveMatch := matchingServer.LiveMatches()[0]
 	response := <-player1.responseChanAsync
-	if !liveMatch.game.GameOver() || !response.gameOver || !response.timeout {
+	if !liveMatch.game.GameOver() || !response.GameOver || !response.Timeout {
 		t.Error("Expected timed out game got", response)
 	}
 }
@@ -76,15 +76,15 @@ func TestMatchingServerDraw(t *testing.T) {
 	}
 	player1.requestChanAsync <- RequestAsync{requestToDraw: true}
 	response = <-player2.responseChanAsync
-	if response.requestToDraw != true || liveMatch.requestedDraw != &player1 {
+	if response.RequestToDraw != true || liveMatch.requestedDraw != &player1 {
 		t.Error("Expected player2 to receive a requestToDraw",
 			response)
 	}
 	player2.requestChanAsync <- RequestAsync{requestToDraw: true}
 	response = <-player2.responseChanAsync
-	if !liveMatch.game.GameOver() || !response.gameOver ||
-		!response.draw {
-		t.Error("Expected a draw got ", response.draw, response.gameOver, liveMatch.game.GameOver())
+	if !liveMatch.game.GameOver() || !response.GameOver ||
+		!response.Draw {
+		t.Error("Expected a draw got ", response.Draw, response.GameOver, liveMatch.game.GameOver())
 	}
 }
 
@@ -105,8 +105,8 @@ func TestMatchingServerResignation(t *testing.T) {
 	liveMatch := matchingServer.LiveMatches()[0]
 	player1.requestChanAsync <- RequestAsync{resign: true}
 	response := <-player1.responseChanAsync
-	if !liveMatch.game.GameOver() || !response.gameOver ||
-		!response.resignation {
+	if !liveMatch.game.GameOver() || !response.GameOver ||
+		!response.Resignation {
 		t.Error("Expected resignation got ", response)
 	}
 }
@@ -182,13 +182,13 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	black := liveMatch.black
 	white := liveMatch.white
 	white.MakeMove(PieceMove{model.Position{4, 1}, model.Move{0, 2}})
-	opponentMove := black.GetOpponentMove()
+	opponentMove := black.GetSyncUpdate()
 	expectedMove := PieceMove{model.Position{4, 1}, model.Move{0, 2}}
 	if opponentMove != expectedMove {
 		t.Error("Expected opponent's move got ", opponentMove)
 	}
 	black.MakeMove(PieceMove{model.Position{0, 6}, model.Move{0, -1}})
-	opponentMove = white.GetOpponentMove()
+	opponentMove = white.GetSyncUpdate()
 	expectedMove = PieceMove{model.Position{0, 6}, model.Move{0, -1}}
 	if opponentMove != expectedMove {
 		t.Error("Expected opponent's move got ", opponentMove)
@@ -202,7 +202,7 @@ func TestMatchingServerCheckmate(t *testing.T) {
 		t.Error("Expected gameover got ", liveMatch)
 	}
 	response := <-black.responseChanAsync
-	if !response.gameOver || !(response.winner == white.name) {
+	if !response.GameOver || !(response.Winner == white.name) {
 		t.Error("Expected checkmate got ", response)
 	}
 }

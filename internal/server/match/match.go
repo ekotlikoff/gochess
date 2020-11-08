@@ -139,8 +139,8 @@ func (match *Match) handleGameOver(
 	if draw {
 		winnerName = ""
 	}
-	response := ResponseAsync{gameOver: true, draw: draw,
-		resignation: resignation, timeout: timeout, winner: winnerName}
+	response := ResponseAsync{GameOver: true, Draw: draw,
+		Resignation: resignation, Timeout: timeout, Winner: winnerName}
 	for _, player := range [2]*Player{match.black, match.white} {
 		thisPlayer := player
 		go func() {

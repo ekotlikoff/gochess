@@ -8,6 +8,7 @@ import (
 	"github.com/satori/go.uuid"
 	"gochess/internal/model"
 	"gochess/internal/server/match"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -27,6 +28,10 @@ type Credentials struct {
 	Username string `json:"username"`
 }
 
+type Move struct {
+	Move string `json:"move"`
+}
+
 func Serve(
 	matchServer *matchserver.MatchingServer, logFile *string, quiet bool,
 ) {
@@ -41,8 +46,9 @@ func Serve(
 		log.SetOutput(ioutil.Discard)
 	}
 	http.HandleFunc("/", StartSession)
-	http.Handle("/match/", createSearchForMatchHandler(matchServer))
-	http.HandleFunc("/sync/", moveHandler)
+	http.Handle("/match", createSearchForMatchHandler(matchServer))
+	http.HandleFunc("/sync", SyncHandler)
+	http.HandleFunc("/async", AsyncHandler)
 	http.ListenAndServe(":80", nil)
 }
 
@@ -80,8 +86,8 @@ func StartSession(w http.ResponseWriter, r *http.Request) {
 func createSearchForMatchHandler(
 	matchServer *matchserver.MatchingServer,
 ) http.Handler {
-	log.SetPrefix("SearchForMatch: ")
 	handler := func(w http.ResponseWriter, r *http.Request) {
+		log.SetPrefix("SearchForMatch: ")
 		player := getSession(w, r)
 		if player == nil {
 			return
@@ -93,48 +99,70 @@ func createSearchForMatchHandler(
 	return http.HandlerFunc(handler)
 }
 
-func moveHandler(w http.ResponseWriter, r *http.Request) {
-	log.SetPrefix("MoveHandler: ")
+func SyncHandler(w http.ResponseWriter, r *http.Request) {
+	log.SetPrefix("SyncHandler: ")
 	player := getSession(w, r)
 	if player == nil {
 		return
 	}
-	// Read body
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Println("ERROR ", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	pieceMove, err := parseMoveBody(body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	success := player.MakeMove(pieceMove)
-	if !success {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+	switch r.Method {
+	case "GET":
+		pieceMove := player.GetSyncUpdate()
+		fmt.Fprintf(w, "Opponent move=%v", pieceMove)
+	case "POST":
+		pieceMove, err := parseMoveBody(r.Body)
+		if err != nil {
+			log.Println("Failed to parse move body ", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		success := player.MakeMove(pieceMove)
+		if !success {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 }
 
-func parseMoveBody(body []byte) (matchserver.PieceMove, error) {
+func parseMoveBody(body io.ReadCloser) (matchserver.PieceMove, error) {
+	var move Move
+	err := json.NewDecoder(body).Decode(&move)
+	if err != nil {
+		return matchserver.PieceMove{}, err
+	}
 	// Match "(3,1)(0,2)" as PieceMove{Position{3,1}, Move{0,2}}
-	re := regexp.MustCompile(`^\((\d?),(\d?)\)\((\d?),(\d?)\)$`)
-	match := re.FindAllString(string(body), 4)
-	if len(match) != 4 {
+	re := regexp.MustCompile(`^\((\d?),(\d?)\)\((-?\d?),(-?\d?)\)$`)
+	match := re.FindStringSubmatch(move.Move)
+	if len(match) != 5 {
 		return matchserver.PieceMove{}, errors.New("Failed to parse body")
 	}
-	posX, errX := strconv.ParseUint(match[0], 10, 8)
-	posY, errY := strconv.ParseUint(match[1], 10, 8)
-	moveX, errMX := strconv.ParseInt(match[2], 10, 8)
-	moveY, errMY := strconv.ParseInt(match[3], 10, 8)
+	posX, errX := strconv.ParseUint(match[1], 10, 8)
+	posY, errY := strconv.ParseUint(match[2], 10, 8)
+	moveX, errMX := strconv.ParseInt(match[3], 10, 8)
+	moveY, errMY := strconv.ParseInt(match[4], 10, 8)
 	if errX != nil || errY != nil || errMX != nil || errMY != nil {
 		return matchserver.PieceMove{}, errors.New("Failed to parse ints")
 	}
 	return matchserver.PieceMove{
 		model.Position{uint8(posX), uint8(posY)},
 		model.Move{int8(moveX), int8(moveY)}}, nil
+}
+
+func AsyncHandler(w http.ResponseWriter, r *http.Request) {
+	log.SetPrefix("AsyncHandler: ")
+	player := getSession(w, r)
+	if player == nil {
+		return
+	}
+	switch r.Method {
+	case "GET":
+		asyncUpdate := player.GetAsyncUpdate()
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(asyncUpdate); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	case "POST":
+	}
 }
 
 func getSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {

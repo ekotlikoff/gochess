@@ -49,8 +49,12 @@ func (player *Player) MakeMove(pieceMove PieceMove) bool {
 	return response.moveSuccess
 }
 
-func (player *Player) GetOpponentMove() PieceMove {
+func (player *Player) GetSyncUpdate() PieceMove {
 	return <-player.opponentPlayedMove
+}
+
+func (player *Player) GetAsyncUpdate() ResponseAsync {
+	return <-player.responseChanAsync
 }
 
 func (player *Player) Stop() {
@@ -75,18 +79,22 @@ type RequestAsync struct {
 }
 
 type ResponseAsync struct {
-	gameOver, requestToDraw, draw, resignation, timeout bool
-	winner                                              string
+	GameOver, RequestToDraw, Draw, Resignation, Timeout bool
+	Winner                                              string
 }
 
 type MatchingServer struct {
-	liveMatches []*Match
-	mutex       *sync.Mutex
-	players     chan *Player
+	liveMatches  []*Match
+	mutex        *sync.Mutex
+	players      chan *Player
+	pendingMatch *sync.Mutex
 }
 
 func NewMatchingServer() MatchingServer {
-	return MatchingServer{mutex: &sync.Mutex{}, players: make(chan *Player)}
+	return MatchingServer{
+		mutex: &sync.Mutex{}, players: make(chan *Player),
+		pendingMatch: &sync.Mutex{},
+	}
 }
 
 func (matchingServer *MatchingServer) LiveMatches() []*Match {
@@ -101,6 +109,9 @@ func (matchingServer *MatchingServer) matchAndPlay(
 	matchGenerator MatchGenerator,
 ) {
 	var player1, player2 *Player
+	// Lock until a full match is found and started, thus avoiding unmatched
+	// players stranded across goroutines.
+	matchingServer.pendingMatch.Lock()
 	for player := range matchingServer.players {
 		if player1 == nil {
 			player1 = player
@@ -110,6 +121,7 @@ func (matchingServer *MatchingServer) matchAndPlay(
 			matchingServer.mutex.Lock()
 			matchingServer.liveMatches = append(matchingServer.liveMatches, &match)
 			matchingServer.mutex.Unlock()
+			matchingServer.pendingMatch.Unlock()
 			close(player1.matchStart)
 			close(player2.matchStart)
 			(&match).play()

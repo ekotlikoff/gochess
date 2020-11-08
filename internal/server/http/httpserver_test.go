@@ -13,22 +13,21 @@ import (
 )
 
 var debug bool = false
+var uri string = "http://localhost:80/"
 
 func init() {
 	matchingServer := matchserver.NewMatchingServer()
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(1, exitChan)
-	go Serve(&matchingServer, nil, false)
+	matchingServer.Serve(10, exitChan)
+	go Serve(&matchingServer, nil, true)
 }
 
 func TestHTTPServerStartSession(t *testing.T) {
 	requestBody, err := json.Marshal(map[string]string{
 		"username": "my_username",
 	})
-	resp, err := http.Post(
-		"http://localhost:80/", "text/plain", bytes.NewBuffer(requestBody),
-	)
+	resp, err := http.Post(uri, "application/json", bytes.NewBuffer(requestBody))
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if debug {
@@ -42,9 +41,7 @@ func TestHTTPServerStartSession(t *testing.T) {
 }
 
 func TestHTTPServerStartSessionError(t *testing.T) {
-	resp, _ := http.Post(
-		"http://localhost:80/", "text/plain", bytes.NewBuffer([]byte("error")),
-	)
+	resp, _ := http.Post(uri, "application/json", bytes.NewBuffer([]byte("error")))
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	if debug {
@@ -60,9 +57,7 @@ func TestHTTPServerStartSessionNoUsername(t *testing.T) {
 	requestBody, _ := json.Marshal(map[string]string{
 		"not_username": "my_username",
 	})
-	resp, _ := http.Post(
-		"http://localhost:80/", "text/plain", bytes.NewBuffer(requestBody),
-	)
+	resp, _ := http.Post(uri, "application/json", bytes.NewBuffer(requestBody))
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	if debug {
@@ -76,31 +71,21 @@ func TestHTTPServerStartSessionNoUsername(t *testing.T) {
 }
 
 func TestHTTPServerMatch(t *testing.T) {
-	requestBody, _ := json.Marshal(map[string]string{
-		"username": "player1",
-	})
-	requestBody2, _ := json.Marshal(map[string]string{
-		"username": "player2",
-	})
+	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
+	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
 	jar, _ := cookiejar.New(&cookiejar.Options{})
 	jar2, _ := cookiejar.New(&cookiejar.Options{})
-	client := &http.Client{
-		Jar: jar,
-	}
-	client2 := &http.Client{
-		Jar: jar2,
-	}
+	client := &http.Client{Jar: jar}
+	client2 := &http.Client{Jar: jar2}
 	resp, err := client.Post(
-		"http://localhost:80/", "text/plain", bytes.NewBuffer(requestBody),
-	)
+		uri, "application/json", bytes.NewBuffer(requestBody))
 	resp2, err2 := client2.Post(
-		"http://localhost:80/", "text/plain", bytes.NewBuffer(requestBody2),
-	)
+		uri, "application/json", bytes.NewBuffer(requestBody2))
 	defer resp.Body.Close()
 	defer resp2.Body.Close()
 	wait := make(chan struct{})
-	go func() { resp, err = client.Get("http://localhost:80/match"); close(wait) }()
-	resp2, err2 = client2.Get("http://localhost:80/match")
+	go func() { resp, err = client.Get(uri + "match"); close(wait) }()
+	resp2, err2 = client2.Get(uri + "match")
 	<-wait
 	defer resp.Body.Close()
 	defer resp2.Body.Close()
@@ -118,6 +103,65 @@ func TestHTTPServerMatch(t *testing.T) {
 	}
 }
 
-//for len(matchingServer.LiveMatches()) == 0 {
-//}
-//liveMatch := matchingServer.LiveMatches()[0]
+func TestHTTPServerCheckmate(t *testing.T) {
+	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
+	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
+	jar, _ := cookiejar.New(&cookiejar.Options{})
+	jar2, _ := cookiejar.New(&cookiejar.Options{})
+	client := &http.Client{Jar: jar}
+	client2 := &http.Client{Jar: jar2}
+	resp, _ := client.Post(uri, "application/json", bytes.NewBuffer(requestBody))
+	resp2, _ := client2.Post(uri, "application/json", bytes.NewBuffer(requestBody2))
+	defer resp.Body.Close()
+	defer resp2.Body.Close()
+	wait := make(chan struct{})
+	go func() { resp, _ = client.Get(uri + "match"); close(wait) }()
+	resp2, _ = client2.Get(uri + "match")
+	<-wait
+	defer resp.Body.Close()
+	defer resp2.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+	black := client
+	blackName := "player1"
+	white := client2
+	if strings.Contains(string(body), "color=1") {
+		black = client2
+		blackName = "player2"
+		white = client
+	}
+	ctp := "application/json"
+	reqMoveBody, _ := json.Marshal(map[string]string{"move": "(2,1)(0,2)"})
+	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	resp, _ = black.Get(uri + "sync")
+	body, _ = ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "{2 1} {0 2}") {
+		t.Error("Expected opponent's move got ", string(body))
+	}
+	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(4,6)(0,-2)"})
+	black.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	resp, _ = white.Get(uri + "sync")
+	body, _ = ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "{4 6} {0 -2}") {
+		t.Error("Expected opponent's move got ", string(body))
+	}
+	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(2,3)(0,1)"})
+	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(3,7)(4,-4)"})
+	black.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(2,4)(0,1)"})
+	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(5,7)(-3,-3)"})
+	black.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(2,5)(-1,1)"})
+	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(7,3)(-2,-2)"})
+	black.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	resp, _ = white.Get(uri + "async")
+	responseAsync := matchserver.ResponseAsync{}
+	json.NewDecoder(resp.Body).Decode(&responseAsync)
+	if !responseAsync.GameOver || responseAsync.Winner != blackName {
+		t.Error("Expected gameover got ", responseAsync)
+	}
+}

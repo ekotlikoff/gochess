@@ -14,8 +14,12 @@ TODO
         Just need a hash function to go from position -> positionId
 * Server
     - [ ] http server
+      - [x] checkmate test
+      - [ ] requested draw test
+      - [ ] resignation test
+      - [ ] timeout test
     - [ ] http server sessions
-      - [ ] testing
+      - [x] testing
       - [ ] user auth?
     - [x] client agnostic matching server
         - [x] testing
