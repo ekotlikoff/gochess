@@ -33,7 +33,7 @@ func TestMatchingServerTimeout(t *testing.T) {
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	generator := func(black *Player, white *Player) Match {
-		return newMatch(black, white, 50)
+		return NewMatch(black, white, 50)
 	}
 	matchingServer.ServeCustomMatch(1, generator, exitChan)
 	tries := 0

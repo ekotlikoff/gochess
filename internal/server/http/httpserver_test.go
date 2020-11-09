@@ -20,7 +20,7 @@ func init() {
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.Serve(10, exitChan)
-	go Serve(&matchingServer, nil, true)
+	go Serve(&matchingServer, 80, nil, true)
 }
 
 func TestHTTPServerStartSession(t *testing.T) {
@@ -216,26 +216,6 @@ func TestHTTPServerResign(t *testing.T) {
 	ctp := "application/json"
 	reqMoveBody, _ := json.Marshal(map[string]string{"move": "(2,1)(0,2)"})
 	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
-	resp, _ = black.Get(uri + "sync")
-	body, _ = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if !strings.Contains(string(body), "{2 1} {0 2}") {
-		t.Error("Expected opponent's move got ", string(body))
-	}
-	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(4,6)(0,-2)"})
-	black.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
-	resp, _ = white.Get(uri + "sync")
-	body, _ = ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	if !strings.Contains(string(body), "{4 6} {0 -2}") {
-		t.Error("Expected opponent's move got ", string(body))
-	}
-	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(2,3)(0,1)"})
-	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
-	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(3,7)(4,-4)"})
-	black.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
-	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(2,4)(0,1)"})
-	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
 	payloadBuf := new(bytes.Buffer)
 	requestAsync := matchserver.RequestAsync{Resign: true}
 	json.NewEncoder(payloadBuf).Encode(requestAsync)
@@ -246,5 +226,62 @@ func TestHTTPServerResign(t *testing.T) {
 	if !responseAsync.GameOver || responseAsync.Winner != blackName ||
 		!responseAsync.Resignation {
 		t.Error("Expected gameover got ", responseAsync)
+	}
+}
+
+func TestHTTPServerTimeout(t *testing.T) {
+	if debug {
+		fmt.Println("Test Timeout")
+	}
+	matchingServer := matchserver.NewMatchingServer()
+	exitChan := make(chan bool, 1)
+	exitChan <- true
+	generator := func(
+		black *matchserver.Player, white *matchserver.Player,
+	) matchserver.Match {
+		return matchserver.NewMatch(black, white, 100)
+	}
+	matchingServer.ServeCustomMatch(10, generator, exitChan)
+	go Serve(&matchingServer, 81, nil, true)
+	uri_timeout := "http://localhost:81/"
+	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
+	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
+	jar, _ := cookiejar.New(&cookiejar.Options{})
+	jar2, _ := cookiejar.New(&cookiejar.Options{})
+	client := &http.Client{Jar: jar}
+	client2 := &http.Client{Jar: jar2}
+	resp, _ := client.Post(
+		uri_timeout, "application/json", bytes.NewBuffer(requestBody))
+	resp2, _ := client2.Post(
+		uri_timeout, "application/json", bytes.NewBuffer(requestBody2))
+	defer resp.Body.Close()
+	defer resp2.Body.Close()
+	wait := make(chan struct{})
+	go func() { resp, _ = client.Get(uri_timeout + "match"); close(wait) }()
+	resp2, _ = client2.Get(uri_timeout + "match")
+	<-wait
+	defer resp.Body.Close()
+	defer resp2.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+	black := client
+	blackName := "player1"
+	white := client2
+	if strings.Contains(string(body), "color=1") {
+		black = client2
+		blackName = "player2"
+		white = client
+	}
+	ctp := "application/json"
+	reqMoveBody, _ := json.Marshal(map[string]string{"move": "(2,1)(0,2)"})
+	white.Post(uri_timeout+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(2,6)(0,-2)"})
+	black.Post(uri_timeout+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	resp.Body.Close()
+	resp, _ = black.Get(uri_timeout + "async")
+	responseAsync := matchserver.ResponseAsync{}
+	json.NewDecoder(resp.Body).Decode(&responseAsync)
+	if !responseAsync.GameOver || responseAsync.Winner != blackName ||
+		!responseAsync.Timeout {
+		t.Error("Expected timeout got ", responseAsync)
 	}
 }

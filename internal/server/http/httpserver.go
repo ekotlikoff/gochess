@@ -33,7 +33,8 @@ type Move struct {
 }
 
 func Serve(
-	matchServer *matchserver.MatchingServer, logFile *string, quiet bool,
+	matchServer *matchserver.MatchingServer, port int, logFile *string,
+	quiet bool,
 ) {
 	if logFile != nil {
 		file, err := os.OpenFile(*logFile, os.O_CREATE|os.O_APPEND, 0644)
@@ -45,11 +46,12 @@ func Serve(
 	if quiet {
 		log.SetOutput(ioutil.Discard)
 	}
-	http.HandleFunc("/", StartSession)
-	http.Handle("/match", createSearchForMatchHandler(matchServer))
-	http.HandleFunc("/sync", SyncHandler)
-	http.HandleFunc("/async", AsyncHandler)
-	http.ListenAndServe(":80", nil)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", StartSession)
+	mux.Handle("/match", createSearchForMatchHandler(matchServer))
+	mux.HandleFunc("/sync", SyncHandler)
+	mux.HandleFunc("/async", AsyncHandler)
+	http.ListenAndServe(":"+strconv.Itoa(port), mux)
 }
 
 func StartSession(w http.ResponseWriter, r *http.Request) {

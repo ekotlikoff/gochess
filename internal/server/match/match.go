@@ -17,7 +17,7 @@ type Match struct {
 
 type MatchGenerator func(black *Player, white *Player) Match
 
-func newMatch(black *Player, white *Player, maxTime int64) Match {
+func NewMatch(black *Player, white *Player, maxTimeMs int64) Match {
 	black.color = model.Black
 	white.color = model.White
 	if black.name == white.name {
@@ -27,11 +27,11 @@ func newMatch(black *Player, white *Player, maxTime int64) Match {
 	black.elapsedMs = 0
 	white.elapsedMs = 0
 	game := model.NewGame()
-	return Match{black, white, &game, make(chan struct{}), maxTime, nil}
+	return Match{black, white, &game, make(chan struct{}), maxTimeMs, nil}
 }
 
 func DefaultMatchGenerator(black *Player, white *Player) Match {
-	return newMatch(black, white, 1200000)
+	return NewMatch(black, white, 1200000)
 }
 
 func (match *Match) play() {
