@@ -162,6 +162,14 @@ func AsyncHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	case "POST":
+		var requestAsync matchserver.RequestAsync
+		err := json.NewDecoder(r.Body).Decode(&requestAsync)
+		if err != nil {
+			log.Println("Bad request", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		player.RequestAsync(requestAsync)
 	}
 }
 

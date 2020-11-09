@@ -24,6 +24,9 @@ func init() {
 }
 
 func TestHTTPServerStartSession(t *testing.T) {
+	if debug {
+		fmt.Println("Test StartSession")
+	}
 	requestBody, err := json.Marshal(map[string]string{
 		"username": "my_username",
 	})
@@ -41,6 +44,9 @@ func TestHTTPServerStartSession(t *testing.T) {
 }
 
 func TestHTTPServerStartSessionError(t *testing.T) {
+	if debug {
+		fmt.Println("Test StartSessionError")
+	}
 	resp, _ := http.Post(uri, "application/json", bytes.NewBuffer([]byte("error")))
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
@@ -54,6 +60,9 @@ func TestHTTPServerStartSessionError(t *testing.T) {
 }
 
 func TestHTTPServerStartSessionNoUsername(t *testing.T) {
+	if debug {
+		fmt.Println("Test StartSessionNoUsername")
+	}
 	requestBody, _ := json.Marshal(map[string]string{
 		"not_username": "my_username",
 	})
@@ -71,6 +80,9 @@ func TestHTTPServerStartSessionNoUsername(t *testing.T) {
 }
 
 func TestHTTPServerMatch(t *testing.T) {
+	if debug {
+		fmt.Println("Test Match")
+	}
 	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
 	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
 	jar, _ := cookiejar.New(&cookiejar.Options{})
@@ -104,6 +116,9 @@ func TestHTTPServerMatch(t *testing.T) {
 }
 
 func TestHTTPServerCheckmate(t *testing.T) {
+	if debug {
+		fmt.Println("Test Checkmate")
+	}
 	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
 	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
 	jar, _ := cookiejar.New(&cookiejar.Options{})
@@ -162,6 +177,74 @@ func TestHTTPServerCheckmate(t *testing.T) {
 	responseAsync := matchserver.ResponseAsync{}
 	json.NewDecoder(resp.Body).Decode(&responseAsync)
 	if !responseAsync.GameOver || responseAsync.Winner != blackName {
+		t.Error("Expected gameover got ", responseAsync)
+	}
+	if debug {
+		fmt.Println("Success Checkmate")
+	}
+}
+
+func TestHTTPServerResign(t *testing.T) {
+	if debug {
+		fmt.Println("Test Resign")
+	}
+	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
+	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
+	jar, _ := cookiejar.New(&cookiejar.Options{})
+	jar2, _ := cookiejar.New(&cookiejar.Options{})
+	client := &http.Client{Jar: jar}
+	client2 := &http.Client{Jar: jar2}
+	resp, _ := client.Post(uri, "application/json", bytes.NewBuffer(requestBody))
+	resp2, _ := client2.Post(uri, "application/json", bytes.NewBuffer(requestBody2))
+	defer resp.Body.Close()
+	defer resp2.Body.Close()
+	wait := make(chan struct{})
+	go func() { resp, _ = client.Get(uri + "match"); close(wait) }()
+	resp2, _ = client2.Get(uri + "match")
+	<-wait
+	defer resp.Body.Close()
+	defer resp2.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+	black := client
+	blackName := "player1"
+	white := client2
+	if strings.Contains(string(body), "color=1") {
+		black = client2
+		blackName = "player2"
+		white = client
+	}
+	ctp := "application/json"
+	reqMoveBody, _ := json.Marshal(map[string]string{"move": "(2,1)(0,2)"})
+	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	resp, _ = black.Get(uri + "sync")
+	body, _ = ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "{2 1} {0 2}") {
+		t.Error("Expected opponent's move got ", string(body))
+	}
+	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(4,6)(0,-2)"})
+	black.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	resp, _ = white.Get(uri + "sync")
+	body, _ = ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if !strings.Contains(string(body), "{4 6} {0 -2}") {
+		t.Error("Expected opponent's move got ", string(body))
+	}
+	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(2,3)(0,1)"})
+	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(3,7)(4,-4)"})
+	black.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(2,4)(0,1)"})
+	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	payloadBuf := new(bytes.Buffer)
+	requestAsync := matchserver.RequestAsync{Resign: true}
+	json.NewEncoder(payloadBuf).Encode(requestAsync)
+	white.Post(uri+"async", ctp, payloadBuf)
+	resp, _ = black.Get(uri + "async")
+	responseAsync := matchserver.ResponseAsync{}
+	json.NewDecoder(resp.Body).Decode(&responseAsync)
+	if !responseAsync.GameOver || responseAsync.Winner != blackName ||
+		!responseAsync.Resignation {
 		t.Error("Expected gameover got ", responseAsync)
 	}
 }

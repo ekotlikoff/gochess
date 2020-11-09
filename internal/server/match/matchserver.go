@@ -53,6 +53,10 @@ func (player *Player) GetSyncUpdate() PieceMove {
 	return <-player.opponentPlayedMove
 }
 
+func (player *Player) RequestAsync(requestAsync RequestAsync) {
+	player.requestChanAsync <- requestAsync
+}
+
 func (player *Player) GetAsyncUpdate() ResponseAsync {
 	return <-player.responseChanAsync
 }
@@ -75,7 +79,7 @@ type ResponseSync struct {
 }
 
 type RequestAsync struct {
-	requestToDraw, resign bool
+	RequestToDraw, Resign bool
 }
 
 type ResponseAsync struct {
@@ -106,7 +110,7 @@ func (matchingServer *MatchingServer) LiveMatches() []*Match {
 }
 
 func (matchingServer *MatchingServer) matchAndPlay(
-	matchGenerator MatchGenerator,
+	matchGenerator MatchGenerator, playServerID int,
 ) {
 	var player1, player2 *Player
 	// Lock until a full match is found and started, thus avoiding unmatched
@@ -125,10 +129,9 @@ func (matchingServer *MatchingServer) matchAndPlay(
 			close(player1.matchStart)
 			close(player2.matchStart)
 			(&match).play()
-			matchingServer.mutex.Lock()
 			matchingServer.removeMatch(&match)
-			matchingServer.mutex.Unlock()
-			player1, player = nil, nil
+			player1, player2 = nil, nil
+			matchingServer.pendingMatch.Lock()
 		}
 	}
 }
@@ -146,7 +149,7 @@ func (matchingServer *MatchingServer) ServeCustomMatch(
 ) {
 	// Start handlers
 	for i := 0; i < maxConcurrentGames; i++ {
-		go matchingServer.matchAndPlay(matchGenerator)
+		go matchingServer.matchAndPlay(matchGenerator, i)
 	}
 	<-quit // Wait to be told to exit.
 }

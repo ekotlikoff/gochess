@@ -107,10 +107,10 @@ func (match *Match) handleAsyncRequests() {
 		case <-match.gameOver:
 			return
 		}
-		if request.resign {
+		if request.Resign {
 			match.handleGameOver(false, true, false, opponent)
 			return
-		} else if request.requestToDraw {
+		} else if request.RequestToDraw {
 			if match.requestedDraw == opponent {
 				match.handleGameOver(true, false, false, opponent)
 			} else if match.requestedDraw == player {

@@ -57,30 +57,30 @@ func TestMatchingServerDraw(t *testing.T) {
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.Serve(1, exitChan)
-	player1.requestChanAsync <- RequestAsync{requestToDraw: true}
+	player1.requestChanAsync <- RequestAsync{RequestToDraw: true}
 	response := <-player2.responseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	if liveMatch.requestedDraw != &player1 {
 		t.Error("Expected player1 to have requested a draw",
 			liveMatch.requestedDraw)
 	}
-	player1.requestChanAsync <- RequestAsync{requestToDraw: true}
+	player1.requestChanAsync <- RequestAsync{RequestToDraw: true}
 	tries := 0
 	for liveMatch.requestedDraw != nil && tries < 10 {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
 	if liveMatch.requestedDraw != nil {
-		t.Error("Expected player1 to have toggled requestToDraw",
+		t.Error("Expected player1 to have toggled RequestToDraw",
 			liveMatch.requestedDraw)
 	}
-	player1.requestChanAsync <- RequestAsync{requestToDraw: true}
+	player1.requestChanAsync <- RequestAsync{RequestToDraw: true}
 	response = <-player2.responseChanAsync
 	if response.RequestToDraw != true || liveMatch.requestedDraw != &player1 {
-		t.Error("Expected player2 to receive a requestToDraw",
+		t.Error("Expected player2 to receive a RequestToDraw",
 			response)
 	}
-	player2.requestChanAsync <- RequestAsync{requestToDraw: true}
+	player2.requestChanAsync <- RequestAsync{RequestToDraw: true}
 	response = <-player2.responseChanAsync
 	if !liveMatch.game.GameOver() || !response.GameOver ||
 		!response.Draw {
@@ -103,7 +103,7 @@ func TestMatchingServerResignation(t *testing.T) {
 		tries++
 	}
 	liveMatch := matchingServer.LiveMatches()[0]
-	player1.requestChanAsync <- RequestAsync{resign: true}
+	player1.requestChanAsync <- RequestAsync{Resign: true}
 	response := <-player1.responseChanAsync
 	if !liveMatch.game.GameOver() || !response.GameOver ||
 		!response.Resignation {

@@ -16,7 +16,7 @@ TODO
     - [ ] http server
       - [x] checkmate test
       - [ ] requested draw test
-      - [ ] resignation test
+      - [x] resignation test
       - [ ] timeout test
     - [ ] http server sessions
       - [x] testing
