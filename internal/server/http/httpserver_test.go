@@ -119,36 +119,12 @@ func TestHTTPServerCheckmate(t *testing.T) {
 	if debug {
 		fmt.Println("Test Checkmate")
 	}
-	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
-	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
-	jar, _ := cookiejar.New(&cookiejar.Options{})
-	jar2, _ := cookiejar.New(&cookiejar.Options{})
-	client := &http.Client{Jar: jar}
-	client2 := &http.Client{Jar: jar2}
-	resp, _ := client.Post(uri, "application/json", bytes.NewBuffer(requestBody))
-	resp2, _ := client2.Post(uri, "application/json", bytes.NewBuffer(requestBody2))
-	defer resp.Body.Close()
-	defer resp2.Body.Close()
-	wait := make(chan struct{})
-	go func() { resp, _ = client.Get(uri + "match"); close(wait) }()
-	resp2, _ = client2.Get(uri + "match")
-	<-wait
-	defer resp.Body.Close()
-	defer resp2.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	black := client
-	blackName := "player1"
-	white := client2
-	if strings.Contains(string(body), "color=1") {
-		black = client2
-		blackName = "player2"
-		white = client
-	}
+	black, white, blackName, _ := createMatch(uri)
 	ctp := "application/json"
 	reqMoveBody, _ := json.Marshal(map[string]string{"move": "(2,1)(0,2)"})
 	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
-	resp, _ = black.Get(uri + "sync")
-	body, _ = ioutil.ReadAll(resp.Body)
+	resp, _ := black.Get(uri + "sync")
+	body, _ := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if !strings.Contains(string(body), "{2 1} {0 2}") {
 		t.Error("Expected opponent's move got ", string(body))
@@ -188,27 +164,7 @@ func TestHTTPServerDraw(t *testing.T) {
 	if debug {
 		fmt.Println("Test Draw")
 	}
-	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
-	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
-	jar, _ := cookiejar.New(&cookiejar.Options{})
-	jar2, _ := cookiejar.New(&cookiejar.Options{})
-	client := &http.Client{Jar: jar}
-	client2 := &http.Client{Jar: jar2}
-	resp, _ := client.Post(uri, "application/json", bytes.NewBuffer(requestBody))
-	resp2, _ := client2.Post(uri, "application/json", bytes.NewBuffer(requestBody2))
-	wait := make(chan struct{})
-	go func() { resp, _ = client.Get(uri + "match"); close(wait) }()
-	resp2, _ = client2.Get(uri + "match")
-	<-wait
-	defer resp.Body.Close()
-	defer resp2.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	black := client
-	white := client2
-	if strings.Contains(string(body), "color=1") {
-		black = client2
-		white = client
-	}
+	black, white, _, _ := createMatch(uri)
 	ctp := "application/json"
 	reqMoveBody, _ := json.Marshal(map[string]string{"move": "(2,1)(0,2)"})
 	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
@@ -216,7 +172,7 @@ func TestHTTPServerDraw(t *testing.T) {
 	requestAsync := matchserver.RequestAsync{RequestToDraw: true}
 	json.NewEncoder(payloadBuf).Encode(requestAsync)
 	white.Post(uri+"async", ctp, payloadBuf)
-	resp, _ = black.Get(uri + "async")
+	resp, _ := black.Get(uri + "async")
 	responseAsync := matchserver.ResponseAsync{}
 	json.NewDecoder(resp.Body).Decode(&responseAsync)
 	if !responseAsync.RequestToDraw || responseAsync.GameOver {
@@ -237,31 +193,7 @@ func TestHTTPServerResign(t *testing.T) {
 	if debug {
 		fmt.Println("Test Resign")
 	}
-	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
-	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
-	jar, _ := cookiejar.New(&cookiejar.Options{})
-	jar2, _ := cookiejar.New(&cookiejar.Options{})
-	client := &http.Client{Jar: jar}
-	client2 := &http.Client{Jar: jar2}
-	resp, _ := client.Post(uri, "application/json", bytes.NewBuffer(requestBody))
-	resp2, _ := client2.Post(uri, "application/json", bytes.NewBuffer(requestBody2))
-	defer resp.Body.Close()
-	defer resp2.Body.Close()
-	wait := make(chan struct{})
-	go func() { resp, _ = client.Get(uri + "match"); close(wait) }()
-	resp2, _ = client2.Get(uri + "match")
-	<-wait
-	defer resp.Body.Close()
-	defer resp2.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	black := client
-	blackName := "player1"
-	white := client2
-	if strings.Contains(string(body), "color=1") {
-		black = client2
-		blackName = "player2"
-		white = client
-	}
+	black, white, blackName, _ := createMatch(uri)
 	ctp := "application/json"
 	reqMoveBody, _ := json.Marshal(map[string]string{"move": "(2,1)(0,2)"})
 	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
@@ -269,7 +201,7 @@ func TestHTTPServerResign(t *testing.T) {
 	requestAsync := matchserver.RequestAsync{Resign: true}
 	json.NewEncoder(payloadBuf).Encode(requestAsync)
 	white.Post(uri+"async", ctp, payloadBuf)
-	resp, _ = black.Get(uri + "async")
+	resp, _ := black.Get(uri + "async")
 	responseAsync := matchserver.ResponseAsync{}
 	json.NewDecoder(resp.Body).Decode(&responseAsync)
 	if !responseAsync.GameOver || responseAsync.Winner != blackName ||
@@ -293,44 +225,51 @@ func TestHTTPServerTimeout(t *testing.T) {
 	matchingServer.ServeCustomMatch(10, generator, exitChan)
 	go Serve(&matchingServer, 8001, nil, true)
 	uri_timeout := "http://localhost:8001/"
-	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
-	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
-	jar, _ := cookiejar.New(&cookiejar.Options{})
-	jar2, _ := cookiejar.New(&cookiejar.Options{})
-	client := &http.Client{Jar: jar}
-	client2 := &http.Client{Jar: jar2}
-	resp, _ := client.Post(
-		uri_timeout, "application/json", bytes.NewBuffer(requestBody))
-	resp2, _ := client2.Post(
-		uri_timeout, "application/json", bytes.NewBuffer(requestBody2))
-	defer resp.Body.Close()
-	defer resp2.Body.Close()
-	wait := make(chan struct{})
-	go func() { resp, _ = client.Get(uri_timeout + "match"); close(wait) }()
-	resp2, _ = client2.Get(uri_timeout + "match")
-	<-wait
-	defer resp.Body.Close()
-	defer resp2.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	black := client
-	blackName := "player1"
-	white := client2
-	if strings.Contains(string(body), "color=1") {
-		black = client2
-		blackName = "player2"
-		white = client
-	}
+	black, white, blackName, _ := createMatch(uri_timeout)
 	ctp := "application/json"
 	reqMoveBody, _ := json.Marshal(map[string]string{"move": "(2,1)(0,2)"})
 	white.Post(uri_timeout+"sync", ctp, bytes.NewBuffer(reqMoveBody))
 	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(2,6)(0,-2)"})
 	black.Post(uri_timeout+"sync", ctp, bytes.NewBuffer(reqMoveBody))
-	resp.Body.Close()
-	resp, _ = black.Get(uri_timeout + "async")
+	resp, _ := black.Get(uri_timeout + "async")
 	responseAsync := matchserver.ResponseAsync{}
 	json.NewDecoder(resp.Body).Decode(&responseAsync)
 	if !responseAsync.GameOver || responseAsync.Winner != blackName ||
 		!responseAsync.Timeout {
 		t.Error("Expected timeout got ", responseAsync)
 	}
+}
+
+func createMatch(uri string) (
+	black *http.Client, white *http.Client, blackName string, whiteName string,
+) {
+	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
+	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
+	jar, _ := cookiejar.New(&cookiejar.Options{})
+	jar2, _ := cookiejar.New(&cookiejar.Options{})
+	client := &http.Client{Jar: jar}
+	client2 := &http.Client{Jar: jar2}
+	resp, _ := client.Post(uri, "application/json", bytes.NewBuffer(requestBody))
+	resp2, _ := client2.Post(
+		uri, "application/json", bytes.NewBuffer(requestBody2))
+	defer resp.Body.Close()
+	defer resp2.Body.Close()
+	wait := make(chan struct{})
+	go func() { resp, _ = client.Get(uri + "match"); close(wait) }()
+	resp2, _ = client2.Get(uri + "match")
+	<-wait
+	defer resp.Body.Close()
+	defer resp2.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+	black = client
+	blackName = "player1"
+	whiteName = "player2"
+	white = client2
+	if strings.Contains(string(body), "color=1") {
+		black = client2
+		blackName = "player2"
+		whiteName = "player1"
+		white = client
+	}
+	return black, white, blackName, whiteName
 }
