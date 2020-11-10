@@ -123,7 +123,7 @@ func (match *Match) handleAsyncRequests() {
 					case opponent.responseChanAsync <- ResponseAsync{
 						false, true, false, false, false, "",
 					}:
-					case <-time.After(5 * time.Second):
+					case <-time.After(10 * time.Second):
 					}
 				}()
 			}

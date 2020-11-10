@@ -13,14 +13,14 @@ import (
 )
 
 var debug bool = false
-var uri string = "http://localhost:80/"
+var uri string = "http://localhost:8000/"
 
 func init() {
 	matchingServer := matchserver.NewMatchingServer()
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.Serve(10, exitChan)
-	go Serve(&matchingServer, 80, nil, true)
+	go Serve(&matchingServer, 8000, nil, true)
 }
 
 func TestHTTPServerStartSession(t *testing.T) {
@@ -184,6 +184,55 @@ func TestHTTPServerCheckmate(t *testing.T) {
 	}
 }
 
+func TestHTTPServerDraw(t *testing.T) {
+	if debug {
+		fmt.Println("Test Draw")
+	}
+	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
+	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
+	jar, _ := cookiejar.New(&cookiejar.Options{})
+	jar2, _ := cookiejar.New(&cookiejar.Options{})
+	client := &http.Client{Jar: jar}
+	client2 := &http.Client{Jar: jar2}
+	resp, _ := client.Post(uri, "application/json", bytes.NewBuffer(requestBody))
+	resp2, _ := client2.Post(uri, "application/json", bytes.NewBuffer(requestBody2))
+	wait := make(chan struct{})
+	go func() { resp, _ = client.Get(uri + "match"); close(wait) }()
+	resp2, _ = client2.Get(uri + "match")
+	<-wait
+	defer resp.Body.Close()
+	defer resp2.Body.Close()
+	body, _ := ioutil.ReadAll(resp.Body)
+	black := client
+	white := client2
+	if strings.Contains(string(body), "color=1") {
+		black = client2
+		white = client
+	}
+	ctp := "application/json"
+	reqMoveBody, _ := json.Marshal(map[string]string{"move": "(2,1)(0,2)"})
+	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	payloadBuf := new(bytes.Buffer)
+	requestAsync := matchserver.RequestAsync{RequestToDraw: true}
+	json.NewEncoder(payloadBuf).Encode(requestAsync)
+	white.Post(uri+"async", ctp, payloadBuf)
+	resp, _ = black.Get(uri + "async")
+	responseAsync := matchserver.ResponseAsync{}
+	json.NewDecoder(resp.Body).Decode(&responseAsync)
+	if !responseAsync.RequestToDraw || responseAsync.GameOver {
+		t.Error("Expected draw request from white got ", responseAsync)
+	}
+	json.NewEncoder(payloadBuf).Encode(requestAsync)
+	black.Post(uri+"async", ctp, payloadBuf)
+	resp, _ = white.Get(uri + "async")
+	responseAsync = matchserver.ResponseAsync{}
+	json.NewDecoder(resp.Body).Decode(&responseAsync)
+	if !responseAsync.GameOver || responseAsync.Winner != "" ||
+		!responseAsync.Draw || responseAsync.Resignation {
+		t.Error("Expected gameover got ", responseAsync)
+	}
+}
+
 func TestHTTPServerResign(t *testing.T) {
 	if debug {
 		fmt.Println("Test Resign")
@@ -242,8 +291,8 @@ func TestHTTPServerTimeout(t *testing.T) {
 		return matchserver.NewMatch(black, white, 100)
 	}
 	matchingServer.ServeCustomMatch(10, generator, exitChan)
-	go Serve(&matchingServer, 81, nil, true)
-	uri_timeout := "http://localhost:81/"
+	go Serve(&matchingServer, 8001, nil, true)
+	uri_timeout := "http://localhost:8001/"
 	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
 	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
 	jar, _ := cookiejar.New(&cookiejar.Options{})
