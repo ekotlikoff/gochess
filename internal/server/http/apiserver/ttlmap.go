@@ -1,4 +1,4 @@
-package httpserver
+package apiserver
 
 // Credit to https://stackoverflow.com/questions/25484122/map-with-ttl-option-in-go
 

@@ -1,4 +1,4 @@
-package httpserver
+package apiserver
 
 // Credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
 import (
