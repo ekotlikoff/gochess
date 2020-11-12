@@ -7,18 +7,18 @@ const (
 	White = Color(iota)
 )
 
-type position struct {
+type Position struct {
 	File, Rank uint8
 }
 
-func NewPosition(file, rank uint8) position {
+func NewPosition(file, rank uint8) Position {
 	switch {
 	case file >= 8:
 		panic("Error: Invalid file " + string(file))
 	case rank >= 8:
 		panic("Error: Invalid rank " + string(rank))
 	}
-	return position{file, rank}
+	return Position{file, rank}
 }
 
 type board [8][8]*Piece

@@ -1,7 +1,9 @@
 package model
 
+import "errors"
+
 type Move struct {
-	x, y int8
+	X, Y int8
 }
 
 var diagonalMoves = []Move{Move{1, 1}, Move{1, -1}, Move{-1, 1}, Move{-1, -1}}
@@ -35,18 +37,19 @@ func (piece *Piece) takeMoveShort(board *board, move Move) {
 func (piece *Piece) takeMove(
 	board *board, move Move, previousMove Move, previousMover *Piece,
 	king *Piece,
-) {
+) error {
 	if !piece.IsMoveValid(board, move, previousMove, previousMover, king) {
-		panic("Error: Piece attempted invalid move.")
+		return errors.New("Piece attempted invalid move.")
 	}
 	newPosition, _ := piece.takeMoveUnsafe(board, move, previousMove, previousMover)
 	piece.position = newPosition
 	piece.movesTaken += 1
+	return nil
 }
 
 func (piece *Piece) takeMoveUnsafe(
 	board *board, move Move, previousMove Move, previousMover *Piece,
-) (newPosition position, capturedPiece *Piece) {
+) (newPosition Position, capturedPiece *Piece) {
 	yDirection := int8(1)
 	if piece.Color() == Black {
 		yDirection *= -1
@@ -60,13 +63,13 @@ func (piece *Piece) takeMoveUnsafe(
 	isEnPassant := (piece.pieceType == Pawn && newX != piece.File() &&
 		enPassantTarget != nil && enPassantTarget == previousMover &&
 		enPassantTarget.pieceType == Pawn &&
-		(previousMove.y == 2 || previousMove.y == -2))
-	isCastle := piece.pieceType == King && (move.x < -1 || move.x > 1)
+		(previousMove.Y == 2 || previousMove.Y == -2))
+	isCastle := piece.pieceType == King && (move.X < -1 || move.X > 1)
 	if isEnPassant {
 		capturedPiece = board[enPassantTarget.File()][enPassantTarget.Rank()]
 		board[enPassantTarget.File()][enPassantTarget.Rank()] = nil
 	} else if isCastle {
-		if move.x < 0 {
+		if move.X < 0 {
 			board[3][piece.Rank()] = board[0][piece.Rank()]
 			board[0][piece.Rank()] = nil
 		} else {
@@ -79,7 +82,7 @@ func (piece *Piece) takeMoveUnsafe(
 	}
 	board[newX][newY] = piece
 	board[piece.File()][piece.Rank()] = nil
-	newPosition = position{newX, newY}
+	newPosition = Position{newX, newY}
 	return newPosition, capturedPiece
 }
 
@@ -141,8 +144,8 @@ func (piece *Piece) getCastleMove(
 }
 
 func addMoveToPosition(piece *Piece, move Move) (uint8, uint8) {
-	newX := uint8(int8(piece.Position().File) + move.x)
-	newY := uint8(int8(piece.Position().Rank) + move.y)
+	newX := uint8(int8(piece.Position().File) + move.X)
+	newY := uint8(int8(piece.Position().Rank) + move.Y)
 	return newX, newY
 }
 
@@ -191,7 +194,7 @@ func (piece *Piece) canEnPassant(
 	return enPassantTarget != nil && enPassantTarget == previousMover &&
 		enPassantTarget.Color() != piece.Color() &&
 		enPassantTarget.pieceType == Pawn &&
-		(previousMove.y == 2 || previousMove.y == -2)
+		(previousMove.Y == 2 || previousMove.Y == -2)
 }
 
 func (piece *Piece) validMovesSlide(
@@ -215,7 +218,7 @@ func (piece *Piece) validMovesSlide(
 		)
 	}
 	for i := int8(1); i <= int8(maxSlide); i++ {
-		slideMove := Move{move.x * i, move.y * i * yDirectionModifier}
+		slideMove := Move{move.X * i, move.Y * i * yDirectionModifier}
 		wouldBeInCheck := func() bool {
 			return !allThreatened && piece.wouldBeInCheck(
 				board, slideMove, previousMove, previousMover, king,
@@ -244,8 +247,8 @@ func (piece *Piece) validMovesSlide(
 func AllMoves(
 	board *board, color Color, previousMove Move, previousMover *Piece,
 	allThreatened bool, king *Piece,
-) map[position]bool {
-	out := map[position]bool{}
+) map[Position]bool {
+	out := map[Position]bool{}
 	// for each enemy piece
 	for _, file := range board {
 		for _, piece := range file {
@@ -264,14 +267,14 @@ func AllMoves(
 func (piece *Piece) Moves(
 	board *board, previousMove Move, previousMover *Piece, allThreatened bool,
 	king *Piece,
-) []position {
-	positions := []position{}
+) []Position {
+	positions := []Position{}
 	moves :=
 		piece.ValidMoves(board, previousMove, previousMover, allThreatened,
 			king)
 	for _, move := range moves {
 		threatenedX, threatenedY := addMoveToPosition(piece, move)
-		positions = append(positions, position{threatenedX, threatenedY})
+		positions = append(positions, Position{threatenedX, threatenedY})
 	}
 	return positions
 }
@@ -327,16 +330,16 @@ func (piece *Piece) noPiecesBlockingCastle(board *board) (left, right bool) {
 }
 
 func (piece *Piece) wouldNotCastleThroughCheck(
-	threatenedPositions map[position]bool,
+	threatenedPositions map[Position]bool,
 ) (left, right bool) {
 	left, right = true, true
 	for i := int8(0); i < 3; i++ {
 		leftX, leftY := addMoveToPosition(piece, Move{-i, 0})
 		rightX, rightY := addMoveToPosition(piece, Move{i, 0})
-		if threatenedPositions[position{leftX, leftY}] {
+		if threatenedPositions[Position{leftX, leftY}] {
 			left = false
 		}
-		if threatenedPositions[position{rightX, rightY}] {
+		if threatenedPositions[Position{rightX, rightY}] {
 			right = false
 		}
 	}

@@ -1,26 +1,35 @@
 package model
 
-type game struct {
+import (
+	"errors"
+)
+
+type Game struct {
 	board         *board
 	turn          Color
 	gameOver      bool
-	result        gameResult
+	result        GameResult
 	previousMove  Move
 	previousMover *Piece
 	blackKing     *Piece
 	whiteKing     *Piece
 }
 
-type gameResult struct {
-	winner Color
-	draw   bool
+type GameResult struct {
+	Winner Color
+	Draw   bool
 }
 
-func (game *game) Move(piece *Piece, move Move) {
-	if piece == nil {
-		panic("Cannot move nil piece")
+var ErrGameOver = errors.New("The game is over")
+
+func (game *Game) Move(position Position, move Move) error {
+	piece := game.board[position.File][position.Rank]
+	if game.gameOver {
+		return ErrGameOver
+	} else if piece == nil {
+		return errors.New("Cannot move nil piece")
 	} else if piece.color != game.turn {
-		panic("It's not your turn")
+		return errors.New("It's not your turn")
 	}
 	king := game.blackKing
 	enemyKing := game.whiteKing
@@ -28,9 +37,12 @@ func (game *game) Move(piece *Piece, move Move) {
 		king = game.whiteKing
 		enemyKing = game.blackKing
 	}
-	piece.takeMove(
+	err := piece.takeMove(
 		game.board, move, game.previousMove, game.previousMover, king,
 	)
+	if err != nil {
+		return err
+	}
 	enemyColor := getOppositeColor(piece.color)
 	possibleEnemyMoves := AllMoves(
 		game.board, enemyColor, move, piece, false, enemyKing,
@@ -38,14 +50,15 @@ func (game *game) Move(piece *Piece, move Move) {
 	if len(possibleEnemyMoves) == 0 &&
 		enemyKing.isThreatened(game.board, move, piece) {
 		game.gameOver = true
-		game.result.winner = game.turn
+		game.result.Winner = game.turn
 	} else if len(possibleEnemyMoves) == 0 {
 		game.gameOver = true
-		game.result.draw = true
+		game.result.Draw = true
 	}
 	game.previousMove = move
 	game.previousMover = piece
 	game.turn = enemyColor
+	return nil
 }
 
 func getOppositeColor(color Color) (opposite Color) {
@@ -57,32 +70,38 @@ func getOppositeColor(color Color) (opposite Color) {
 	return opposite
 }
 
-func NewGame() game {
+func NewGame() Game {
 	board := NewFullBoard()
-	return game{
-		&board, White, false, gameResult{}, Move{}, nil, board[4][7], board[4][0],
+	return Game{
+		&board, White, false, GameResult{}, Move{}, nil, board[4][7], board[4][0],
 	}
 }
 
-func NewGameNoPawns() game {
+func NewGameNoPawns() Game {
 	board := NewBoardNoPawns()
-	return game{
-		&board, White, false, gameResult{}, Move{}, nil, board[4][7], board[4][0],
+	return Game{
+		&board, White, false, GameResult{}, Move{}, nil, board[4][7], board[4][0],
 	}
 }
 
-func (game *game) Board() *board {
+func (game *Game) Board() *board {
 	return game.board
 }
 
-func (game *game) Turn() Color {
+func (game *Game) Turn() Color {
 	return game.turn
 }
 
-func (game *game) GameOver() bool {
+func (game *Game) GameOver() bool {
 	return game.gameOver
 }
 
-func (game *game) Winner() Color {
-	return game.result.winner
+func (game *Game) SetGameResult(winner Color, draw bool) {
+	game.gameOver = true
+	game.result.Winner = winner
+	game.result.Draw = draw
+}
+
+func (game *Game) Result() GameResult {
+	return game.result
 }

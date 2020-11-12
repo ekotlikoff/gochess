@@ -2,12 +2,12 @@ package model
 
 type Piece struct {
 	pieceType  PieceType
-	position   position
+	position   Position
 	color      Color
 	movesTaken uint16
 }
 
-func NewPiece(pieceType PieceType, position position, color Color) *Piece {
+func NewPiece(pieceType PieceType, position Position, color Color) *Piece {
 	return &Piece{pieceType, position, color, uint16(0)}
 }
 
@@ -96,7 +96,7 @@ func (piece *Piece) StringSimple() string {
 	return out + colorReset
 }
 
-func (piece *Piece) Position() position {
+func (piece *Piece) Position() Position {
 	return piece.position
 }
 

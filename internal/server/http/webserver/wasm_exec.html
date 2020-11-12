@@ -1,0 +1,157 @@
+<!doctype html>
+<!--
+Copyright 2018 The Go Authors. All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+-->
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>Go wasm</title>
+
+    <style type="text/css">
+        .chessboard {
+            width: 640px;
+            height: 640px;
+            margin: 20px;
+            border: 25px solid #333;
+        }
+        .black {
+            float: left;
+            width: 80px;
+            height: 80px;
+            background-color: #999;
+            font-size:50px;
+            text-align:center;
+            display: table-cell;
+            vertical-align:middle;
+        }
+        .white {
+            float: left;
+            width: 80px;
+            height: 80px;
+            background-color: #fff;
+            font-size:50px;
+            text-align:center;
+            display: table-cell;
+            vertical-align:middle;
+        }
+    </style>
+</head>
+
+<body>
+	<!--
+	Add the following polyfill for Microsoft Edge 17/18 support:
+	<script src="https://cdn.jsdelivr.net/npm/text-encoding@0.7.0/lib/encoding.min.js"></script>
+	(see https://caniuse.com/#feat=textencoder)
+	-->
+	<script src="wasm_exec.js"></script>
+	<script>
+		if (!WebAssembly.instantiateStreaming) { // polyfill
+			WebAssembly.instantiateStreaming = async (resp, importObject) => {
+				const source = await (await resp).arrayBuffer();
+				return await WebAssembly.instantiate(source, importObject);
+			};
+		}
+
+    const go = new Go();
+    let mod, inst;
+    WebAssembly.instantiateStreaming(fetch("lib.wasm"), go.importObject).then(
+        async result => {
+            inst = result.instance;
+            await go.run(inst);
+        }
+    );
+	</script>
+
+    <input type="text" id="value1" />
+    <input type="text" id="value2" />
+    <button onClick="add('value1', 'value2', 'result');" id="addButton">
+      Add
+    </button>
+    <button
+      onClick="subtract('value1', 'value2', 'result');"
+      id="subtractButton"
+    >
+      Subtract
+    </button>
+
+    <input type="text" id="result" />
+    <div class="chessboard">
+        <!-- File 7 -->
+        <div class="white">&#9820;</div>
+        <div class="black">&#9822;</div>
+        <div class="white">&#9821;</div>
+        <div class="black">&#9819;</div>
+        <div class="white">&#9818;</div>
+        <div class="black">&#9821;</div>
+        <div class="white">&#9822;</div>
+        <div class="black">&#9820;</div>
+        <!-- File 6 -->
+        <div class="black">&#9821;</div>
+        <div class="white">&#9821;</div>
+        <div class="black">&#9821;</div>
+        <div class="white">&#9821;</div>
+        <div class="black">&#9821;</div>
+        <div class="white">&#9821;</div>
+        <div class="black">&#9821;</div>
+        <div class="white">&#9821;</div>
+        <!-- File 5 -->
+        <div class="white"></div>
+        <div class="black"></div>
+        <div class="white"></div>
+        <div class="black"></div>
+        <div class="white"></div>
+        <div class="black"></div>
+        <div class="white"></div>
+        <div class="black"></div>
+        <!-- File 4 -->
+        <div class="black"></div>
+        <div class="white"></div>
+        <div class="black"></div>
+        <div class="white"></div>
+        <div class="black"></div>
+        <div class="white"></div>
+        <div class="black"></div>
+        <div class="white"></div>
+        <!-- File 3 -->
+        <div class="white"></div>
+        <div class="black"></div>
+        <div class="white"></div>
+        <div class="black"></div>
+        <div class="white"></div>
+        <div class="black"></div>
+        <div class="white"></div>
+        <div class="black"></div>
+        <!-- File 2 -->
+        <div class="black"></div>
+        <div class="white"></div>
+        <div class="black"></div>
+        <div class="white"></div>
+        <div class="black"></div>
+        <div class="white"></div>
+        <div class="black"></div>
+        <div class="white"></div>
+        <!-- File 1 -->
+        <div class="white">&#9817;</div>
+        <div class="black">&#9817;</div>
+        <div class="white">&#9817;</div>
+        <div class="black">&#9817;</div>
+        <div class="white">&#9817;</div>
+        <div class="black">&#9817;</div>
+        <div class="white">&#9817;</div>
+        <div class="black">&#9817;</div>
+        <!-- File 0 -->
+        <div class="black">&#9814;</div>
+        <div class="white">&#9816;</div>
+        <div class="black">&#9815;</div>
+        <div class="white">&#9813;</div>
+        <div class="black">&#9812;</div>
+        <div class="white">&#9815;</div>
+        <div class="black">&#9816;</div>
+        <div class="white">&#9814;</div>
+    </div>
+</body>
+
+</html>

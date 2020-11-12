@@ -4,15 +4,24 @@ TODO
     - [x] Detect stalemate
     - [ ] Insufficient material
     - [ ] 50 move rule
-    - [ ] timeout
-    - [ ] resignation
-    - [ ] agreed draw
+    - [x] timeout
+    - [x] resignation
+    - [x] agreed draw
     - [ ] Detect draw by repetition (same position 3 times)
         See https://en.wikipedia.org/wiki/Threefold_repetition for the definition
         of position.
         Let's do this with a map[positionId]uint8
         Just need a hash function to go from position -> positionId
 * Server
-    - [ ] http server
+    - [x] http server
+      - [x] checkmate test
+      - [x] requested draw test
+      - [x] resignation test
+      - [x] timeout test
+    - [x] http server sessions
+      - [x] testing
+      - [ ] user auth?
+    - [x] client agnostic matching server
+        - [x] testing
 * Client
     - [ ] Golang WebAssembly web client
