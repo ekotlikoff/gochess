@@ -14,6 +14,8 @@ TODO
         Just need a hash function to go from position -> positionId
 * Server
     - [x] http server
+      - [ ] GET /sync should also provide player's remaining time to keep client, server in sync
+      - [ ] Implement /moves so that a disconnected client can reconnect
       - [x] checkmate test
       - [x] requested draw test
       - [x] resignation test

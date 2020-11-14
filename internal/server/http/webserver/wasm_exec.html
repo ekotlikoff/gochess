@@ -8,35 +8,130 @@ license that can be found in the LICENSE file.
 
 <head>
 	<meta charset="utf-8">
-	<title>Go wasm</title>
+	<title>gochess</title>
 
     <style type="text/css">
-        .chessboard {
-            width: 640px;
-            height: 640px;
-            margin: 20px;
-            border: 25px solid #333;
+        html{box-sizing:border-box;font-size:62.5%}
+        *,:after,:before{box-sizing:inherit}
+        chess-board {
+            display: block;
+            padding-bottom: 100%;
         }
-        .black {
-            float: left;
-            width: 80px;
-            height: 80px;
-            background-color: #999;
-            font-size:50px;
-            text-align:center;
-            display: table-cell;
-            vertical-align:middle;
+        .board-layout-chessboard {
+            position: relative;
         }
-        .white {
-            float: left;
-            width: 80px;
-            height: 80px;
-            background-color: #fff;
-            font-size:50px;
-            text-align:center;
-            display: table-cell;
-            vertical-align:middle;
+        .board {
+            background-repeat: no-repeat;
+            background-size: 100%;
+            border-radius: 3px;
+            height: 100%;
+            overflow: initial;
+            position: relative;
+            -webkit-user-select: none;
+            user-select: none;
+            width: 100%;
         }
+        #board-game {
+            background-image: url('https://images.chesscomfiles.com/chess-themes/boards/brown/150.png');
+        }
+        .coordinates {
+            left: 0;
+            position: absolute;
+            top: 0;
+            user-select: none;
+        }
+        .piece {
+            background-size: 100%;
+            cursor: -webkit-grab;
+            height: 12.5%;
+            left: 0;
+            overflow: hidden;
+            position: absolute;
+            top: 0;
+            touch-action: none;
+            width: 12.5%;
+            will-change: transform;
+        }
+        .piece.dragging {
+            cursor: -webkit-grabbing;
+            z-index: 2;
+        }
+        .piece.wr { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wr.png'); }
+        .piece.wn { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wn.png'); }
+        .piece.wb { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wb.png'); }
+        .piece.wk { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wk.png'); }
+        .piece.wq { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wq.png'); }
+        .piece.wp { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wp.png'); }
+        .piece.br { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/br.png'); }
+        .piece.bn { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bn.png'); }
+        .piece.bb { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bb.png'); }
+        .piece.bk { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bk.png'); }
+        .piece.bq { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bq.png'); }
+        .piece.bp { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bp.png'); }
+        .square-11 { transform: translateY(700%); }
+        .square-21 { transform: translate(100%,700%); }
+        .square-31 { transform: translate(200%,700%); }
+        .square-41 { transform: translate(300%,700%); }
+        .square-51 { transform: translate(400%,700%); }
+        .square-61 { transform: translate(500%,700%); }
+        .square-71 { transform: translate(600%,700%); }
+        .square-81 { transform: translate(700%,700%); }
+        .square-12 { transform: translateY(600%); }
+        .square-22 { transform: translate(100%,600%); }
+        .square-32 { transform: translate(200%,600%); }
+        .square-42 { transform: translate(300%,600%); }
+        .square-52 { transform: translate(400%,600%); }
+        .square-62 { transform: translate(500%,600%); }
+        .square-72 { transform: translate(600%,600%); }
+        .square-82 { transform: translate(700%,600%); }
+        .square-13 { transform: translateY(500%); }
+        .square-23 { transform: translate(100%,500%); }
+        .square-33 { transform: translate(200%,500%); }
+        .square-43 { transform: translate(300%,500%); }
+        .square-53 { transform: translate(400%,500%); }
+        .square-63 { transform: translate(500%,500%); }
+        .square-73 { transform: translate(600%,500%); }
+        .square-83 { transform: translate(700%,500%); }
+        .square-14 { transform: translateY(400%); }
+        .square-24 { transform: translate(100%,400%); }
+        .square-34 { transform: translate(200%,400%); }
+        .square-44 { transform: translate(300%,400%); }
+        .square-54 { transform: translate(400%,400%); }
+        .square-64 { transform: translate(500%,400%); }
+        .square-74 { transform: translate(600%,400%); }
+        .square-84 { transform: translate(700%,400%); }
+        .square-15 { transform: translateY(300%); }
+        .square-25 { transform: translate(100%,300%); }
+        .square-35 { transform: translate(200%,300%); }
+        .square-45 { transform: translate(300%,300%); }
+        .square-55 { transform: translate(400%,300%); }
+        .square-65 { transform: translate(500%,300%); }
+        .square-75 { transform: translate(600%,300%); }
+        .square-85 { transform: translate(700%,300%); }
+        .square-16 { transform: translateY(200%); }
+        .square-26 { transform: translate(100%,200%); }
+        .square-36 { transform: translate(200%,200%); }
+        .square-46 { transform: translate(300%,200%); }
+        .square-56 { transform: translate(400%,200%); }
+        .square-66 { transform: translate(500%,200%); }
+        .square-76 { transform: translate(600%,200%); }
+        .square-86 { transform: translate(700%,200%); }
+        .square-17 { transform: translateY(100%); }
+        .square-27 { transform: translate(100%,100%); }
+        .square-37 { transform: translate(200%,100%); }
+        .square-47 { transform: translate(300%,100%); }
+        .square-57 { transform: translate(400%,100%); }
+        .square-67 { transform: translate(500%,100%); }
+        .square-77 { transform: translate(600%,100%); }
+        .square-87 { transform: translate(700%,100%); }
+        .square-18 { transform: translateY(000%); }
+        .square-28 { transform: translate(100%,000%); }
+        .square-38 { transform: translate(200%,000%); }
+        .square-48 { transform: translate(300%,000%); }
+        .square-58 { transform: translate(400%,000%); }
+        .square-68 { transform: translate(500%,000%); }
+        .square-78 { transform: translate(600%,000%); }
+        .square-88 { transform: translate(700%,000%); }
     </style>
 </head>
 
@@ -78,79 +173,43 @@ license that can be found in the LICENSE file.
     </button>
 
     <input type="text" id="result" />
-    <div class="chessboard">
-        <!-- File 7 -->
-        <div class="white">&#9820;</div>
-        <div class="black">&#9822;</div>
-        <div class="white">&#9821;</div>
-        <div class="black">&#9819;</div>
-        <div class="white">&#9818;</div>
-        <div class="black">&#9821;</div>
-        <div class="white">&#9822;</div>
-        <div class="black">&#9820;</div>
-        <!-- File 6 -->
-        <div class="black">&#9821;</div>
-        <div class="white">&#9821;</div>
-        <div class="black">&#9821;</div>
-        <div class="white">&#9821;</div>
-        <div class="black">&#9821;</div>
-        <div class="white">&#9821;</div>
-        <div class="black">&#9821;</div>
-        <div class="white">&#9821;</div>
-        <!-- File 5 -->
-        <div class="white"></div>
-        <div class="black"></div>
-        <div class="white"></div>
-        <div class="black"></div>
-        <div class="white"></div>
-        <div class="black"></div>
-        <div class="white"></div>
-        <div class="black"></div>
-        <!-- File 4 -->
-        <div class="black"></div>
-        <div class="white"></div>
-        <div class="black"></div>
-        <div class="white"></div>
-        <div class="black"></div>
-        <div class="white"></div>
-        <div class="black"></div>
-        <div class="white"></div>
-        <!-- File 3 -->
-        <div class="white"></div>
-        <div class="black"></div>
-        <div class="white"></div>
-        <div class="black"></div>
-        <div class="white"></div>
-        <div class="black"></div>
-        <div class="white"></div>
-        <div class="black"></div>
-        <!-- File 2 -->
-        <div class="black"></div>
-        <div class="white"></div>
-        <div class="black"></div>
-        <div class="white"></div>
-        <div class="black"></div>
-        <div class="white"></div>
-        <div class="black"></div>
-        <div class="white"></div>
-        <!-- File 1 -->
-        <div class="white">&#9817;</div>
-        <div class="black">&#9817;</div>
-        <div class="white">&#9817;</div>
-        <div class="black">&#9817;</div>
-        <div class="white">&#9817;</div>
-        <div class="black">&#9817;</div>
-        <div class="white">&#9817;</div>
-        <div class="black">&#9817;</div>
-        <!-- File 0 -->
-        <div class="black">&#9814;</div>
-        <div class="white">&#9816;</div>
-        <div class="black">&#9815;</div>
-        <div class="white">&#9813;</div>
-        <div class="black">&#9812;</div>
-        <div class="white">&#9815;</div>
-        <div class="black">&#9816;</div>
-        <div class="white">&#9814;</div>
+
+    <div id="board-layout-chessboard" class="board-layout-chessboard board-board" style="width: 500px; height: 500px; padding-bottom: 0px;">
+        <chess-board class="board" id="board-game">
+            <svg viewBox="0 0 100 100" class="coordinates" />
+            <div class="piece wr square-11"></div>
+            <div class="piece wn square-21"></div>
+            <div class="piece wb square-31"></div>
+            <div class="piece wq square-41"></div>
+            <div class="piece wk square-51"></div>
+            <div class="piece wb square-61"></div>
+            <div class="piece wn square-71"></div>
+            <div class="piece wr square-81"></div>
+            <div class="piece wp square-12"></div>
+            <div class="piece wp square-22"></div>
+            <div class="piece wp square-32"></div>
+            <div class="piece wp square-42"></div>
+            <div class="piece wp square-52"></div>
+            <div class="piece wp square-62"></div>
+            <div class="piece wp square-72"></div>
+            <div class="piece wp square-82"></div>
+            <div class="piece bp square-17"></div>
+            <div class="piece bp square-27"></div>
+            <div class="piece bp square-37"></div>
+            <div class="piece bp square-47"></div>
+            <div class="piece bp square-57"></div>
+            <div class="piece bp square-67"></div>
+            <div class="piece bp square-77"></div>
+            <div class="piece bp square-87"></div>
+            <div class="piece br square-18"></div>
+            <div class="piece bn square-28"></div>
+            <div class="piece bb square-38"></div>
+            <div class="piece bq square-48"></div>
+            <div class="piece bk square-58"></div>
+            <div class="piece bb square-68"></div>
+            <div class="piece bn square-78"></div>
+            <div class="piece br square-88"></div>
+        </chess-board>
     </div>
 </body>
 
