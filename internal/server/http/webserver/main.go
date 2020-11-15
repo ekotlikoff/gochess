@@ -19,6 +19,7 @@ var board = document.Call("getElementById", "board-layout-chessboard")
 
 func main() {
 	done := make(chan struct{}, 0)
+	initStyle()
 	game = model.NewGame()
 	playerColor = model.White
 	// TODO make http calls to interact with server
@@ -28,6 +29,22 @@ func main() {
 	document.Call("addEventListener", "mouseup", js.FuncOf(mouseUp), false)
 	initBoard(model.White)
 	<-done
+}
+
+func initStyle() {
+	styleEl := document.Call("createElement", "style")
+	document.Get("head").Call("appendChild", styleEl)
+	styleSheet := styleEl.Get("sheet")
+	for x := 1; x < 9; x++ {
+		for y := 1; y < 9; y++ {
+			selector := ".square-" + strconv.Itoa(x*10+y)
+			transform := fmt.Sprintf(
+				"{transform: translate(%d%%,%d%%);}",
+				x*100-100, 700-((y-1)*100),
+			)
+			styleSheet.Call("insertRule", selector+transform)
+		}
+	}
 }
 
 func resetBoard() {
