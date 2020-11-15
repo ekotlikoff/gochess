@@ -1,9 +1,16 @@
 package model
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 type Move struct {
 	X, Y int8
+}
+
+func (move *Move) String() string {
+	return fmt.Sprintf("%d,%d", move.X, move.Y)
 }
 
 var diagonalMoves = []Move{Move{1, 1}, Move{1, -1}, Move{-1, 1}, Move{-1, -1}}
@@ -41,15 +48,17 @@ func (piece *Piece) takeMove(
 	if !piece.IsMoveValid(board, move, previousMove, previousMover, king) {
 		return errors.New("Piece attempted invalid move.")
 	}
-	newPosition, _ := piece.takeMoveUnsafe(board, move, previousMove, previousMover)
-	piece.position = newPosition
+	piece.takeMoveUnsafe(board, move, previousMove, previousMover)
 	piece.movesTaken += 1
 	return nil
 }
 
 func (piece *Piece) takeMoveUnsafe(
 	board *board, move Move, previousMove Move, previousMover *Piece,
-) (newPosition Position, capturedPiece *Piece) {
+) (
+	newPosition Position, capturedPiece *Piece,
+	newCastledPosition Position, castledRook *Piece,
+) {
 	yDirection := int8(1)
 	if piece.Color() == Black {
 		yDirection *= -1
@@ -72,10 +81,15 @@ func (piece *Piece) takeMoveUnsafe(
 		if move.X < 0 {
 			board[3][piece.Rank()] = board[0][piece.Rank()]
 			board[0][piece.Rank()] = nil
+			castledRook = board[3][piece.Rank()]
+			newCastledPosition = Position{3, piece.Rank()}
 		} else {
 			board[5][piece.Rank()] = board[7][piece.Rank()]
 			board[7][piece.Rank()] = nil
+			castledRook = board[5][piece.Rank()]
+			newCastledPosition = Position{5, piece.Rank()}
 		}
+		castledRook.position = newCastledPosition
 	}
 	if board[newX][newY] != nil {
 		capturedPiece = board[newX][newY]
@@ -83,7 +97,8 @@ func (piece *Piece) takeMoveUnsafe(
 	board[newX][newY] = piece
 	board[piece.File()][piece.Rank()] = nil
 	newPosition = Position{newX, newY}
-	return newPosition, capturedPiece
+	piece.position = newPosition
+	return newPosition, capturedPiece, newCastledPosition, castledRook
 }
 
 func (piece *Piece) IsMoveValid(
@@ -173,7 +188,7 @@ func (piece *Piece) validCaptureMovesPawn(
 			)
 		}
 		if !piece.isMoveInBounds(captureMove) || wouldBeInCheck() {
-			break
+			continue
 		}
 		newX, newY := addMoveToPosition(piece, captureMove)
 		pieceAtDest := board[newX][newY]
@@ -225,7 +240,7 @@ func (piece *Piece) validMovesSlide(
 			)
 		}
 		if !piece.isMoveInBounds(slideMove) || wouldBeInCheck() {
-			break
+			continue
 		}
 		newX, newY := addMoveToPosition(piece, slideMove)
 		pieceAtDest := board[newX][newY]
@@ -354,13 +369,22 @@ func (piece *Piece) wouldBeInCheck(
 		return false
 	}
 	originalPosition := piece.position
-	newPosition, capturedPiece :=
+	newPosition, capturedPiece, newCastledPosition, castledRook :=
 		piece.takeMoveUnsafe(board, move, previousMove, previousMover)
-	piece.position = newPosition
 	wouldBeInCheck := king.isThreatened(board, move, piece)
+	// Revert the move
 	board[newPosition.File][newPosition.Rank] = capturedPiece
 	board[originalPosition.File][originalPosition.Rank] = piece
 	piece.position = originalPosition
+	if castledRook != nil {
+		board[newCastledPosition.File][newCastledPosition.Rank] = nil
+		board[newCastledPosition.File][newCastledPosition.Rank] = nil
+		if castledRook.position.File == 5 {
+			castledRook.position.File = 7
+		} else {
+			castledRook.position.File = 0
+		}
+	}
 	return wouldBeInCheck
 }
 

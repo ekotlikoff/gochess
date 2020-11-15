@@ -292,6 +292,20 @@ func TestValidMovesPawnCheck(t *testing.T) {
 	}
 }
 
+func TestValidMovesPawnCaptureCheck(t *testing.T) {
+	board := NewFullBoard()
+	movePiece(&board, 4, 1, 0, 4)
+	movePiece(&board, 3, 7, 4, 4)
+	movePiece(&board, 1, 1, 3, 3)
+	if true {
+		fmt.Println(board)
+	}
+	validMoves := board[3][3].ValidMoves(&board, Move{}, nil, false, board[4][0])
+	if len(validMoves) != 1 || validMoves[0].X != 1 || validMoves[0].Y != 1 {
+		t.Error("Expected no valid moves, got ", validMoves)
+	}
+}
+
 func TestAllThreatenedPositions(t *testing.T) {
 	board := NewFullBoard()
 	threatenedPositions := AllMoves(

@@ -2,6 +2,7 @@ TODO
 * Detect all game end scenarios
     * https://www.chess.com/article/view/how-chess-games-can-end-8-ways-explained#:~:text=Agreement-,Win%2FLose%3A,%3A%20checkmate%2C%20resignation%20and%20timeout.
     - [x] Detect stalemate
+    - [ ] Fix takeMoveUnsafe (currently in wouldMoveBeCheck does not revert castled rook's position) also there is a bug with taking a piece that is currently causing check, it is saying that move is invalid.
     - [ ] Handle pawn promotion
     - [ ] Insufficient material
     - [ ] 50 move rule
