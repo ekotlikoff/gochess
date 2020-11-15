@@ -2,6 +2,7 @@ TODO
 * Detect all game end scenarios
     * https://www.chess.com/article/view/how-chess-games-can-end-8-ways-explained#:~:text=Agreement-,Win%2FLose%3A,%3A%20checkmate%2C%20resignation%20and%20timeout.
     - [x] Detect stalemate
+    - [ ] Handle pawn promotion
     - [ ] Insufficient material
     - [ ] 50 move rule
     - [x] timeout
@@ -14,6 +15,7 @@ TODO
         Just need a hash function to go from position -> positionId
 * Server
     - [x] http server
+      - [ ] Support some mechanism for a user cancelling their matchmaking
       - [ ] GET /sync should also provide player's remaining time to keep client, server in sync
       - [ ] Implement /moves so that a disconnected client can reconnect
       - [x] checkmate test
@@ -27,3 +29,7 @@ TODO
         - [x] testing
 * Client
     - [ ] Golang WebAssembly web client
+        - [ ] Display gameover results
+        - [ ] Request a draw
+        - [ ] Display remaining time
+        - [ ] Play local match vs begin matchmaking
