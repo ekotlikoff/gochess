@@ -12,7 +12,7 @@ var playerColor model.Color
 var elDragging js.Value
 var pieceDragging *model.Piece
 var originalTransform js.Value
-var positionDragging, positionOriginal model.Position
+var positionOriginal model.Position
 var isMouseDown bool
 var document = js.Global().Get("document")
 var board = document.Call("getElementById", "board-layout-chessboard")
@@ -27,6 +27,7 @@ func main() {
 	js.Global().Set("subtract", js.FuncOf(subtract))
 	document.Call("addEventListener", "mousemove", js.FuncOf(mouseMove), false)
 	document.Call("addEventListener", "mouseup", js.FuncOf(mouseUp), false)
+	board.Call("addEventListener", "contextmenu", js.FuncOf(preventDefault), false)
 	initBoard(model.White)
 	<-done
 }
@@ -71,6 +72,13 @@ func initBoard(playerColor model.Color) {
 	}
 }
 
+func preventDefault(this js.Value, i []js.Value) interface{} {
+	if len(i) > 0 {
+		i[0].Call("preventDefault")
+	}
+	return 0
+}
+
 func getPositionClass(position model.Position, playerColor model.Color) string {
 	class := "square-"
 	if playerColor == model.Black {
@@ -84,53 +92,23 @@ func getPositionClass(position model.Position, playerColor model.Color) string {
 }
 
 func mouseDown(this js.Value, i []js.Value) interface{} {
-	i[0].Call("preventDefault")
-	isMouseDown = true
-	elDragging = this
-	rect := board.Call("getBoundingClientRect")
-	width := rect.Get("right").Int() - rect.Get("left").Int()
-	height := rect.Get("bottom").Int() - rect.Get("top").Int()
-	squareWidth := width / 8
-	squareHeight := height / 8
-	x := i[0].Get("clientX").Int() - rect.Get("left").Int()
-	y := i[0].Get("clientY").Int() - rect.Get("top").Int()
-	gridX := x / squareWidth
-	gridY := y / squareHeight
-	positionDragging = model.Position{uint8(gridX), uint8(7 - gridY)}
-	positionOriginal = model.Position{uint8(gridX), uint8(7 - gridY)}
-	pieceDragging = game.Board()[gridX][7-gridY]
-	originalTransform = elDragging.Get("style").Get("transform")
-	elDragging.Get("classList").Call("add", "dragging")
+	if len(i) > 0 && !isMouseDown {
+		isMouseDown = true
+		i[0].Call("preventDefault")
+		elDragging = this
+		_, _, _, _, gridX, gridY := getEventMousePosition(i[0])
+		positionOriginal = model.Position{uint8(gridX), uint8(7 - gridY)}
+		pieceDragging = game.Board()[gridX][7-gridY]
+		originalTransform = elDragging.Get("style").Get("transform")
+		elDragging.Get("classList").Call("add", "dragging")
+	}
 	return 0
 }
 
 func mouseMove(this js.Value, i []js.Value) interface{} {
 	i[0].Call("preventDefault")
 	if isMouseDown {
-		rect := board.Call("getBoundingClientRect")
-		width := rect.Get("right").Int() - rect.Get("left").Int()
-		height := rect.Get("bottom").Int() - rect.Get("top").Int()
-		squareWidth := width / 8
-		squareHeight := height / 8
-		x := i[0].Get("clientX").Int() - rect.Get("left").Int()
-		gridX := x / squareWidth
-		if x > width {
-			x = width
-			gridX = 7
-		} else if x < 0 {
-			x = 0
-			gridX = 0
-		}
-		y := i[0].Get("clientY").Int() - rect.Get("top").Int()
-		gridY := y / squareHeight
-		if y > height {
-			y = height
-			gridY = 7
-		} else if y < 0 {
-			y = 0
-			gridY = 0
-		}
-		positionDragging = model.Position{uint8(gridX), uint8(7 - gridY)}
+		x, y, squareWidth, squareHeight, _, _ := getEventMousePosition(i[0])
 		pieceWidth := elDragging.Get("clientWidth").Float()
 		pieceHeight := elDragging.Get("clientHeight").Float()
 		percentX := 100 * (float64(x) - pieceWidth/2) / float64(squareWidth)
@@ -142,16 +120,21 @@ func mouseMove(this js.Value, i []js.Value) interface{} {
 }
 
 func mouseUp(this js.Value, i []js.Value) interface{} {
-	i[0].Call("preventDefault")
-	if isMouseDown {
+	if isMouseDown && len(i) > 0 {
+		i[0].Call("preventDefault")
+		elDragging.Get("style").Set("transform", originalTransform)
+		elDragging.Get("style").Set("transform", originalTransform)
+		elDragging.Get("classList").Call("remove", "dragging")
+		elDragging.Get("classList").Call("remove", "dragging")
+		originalPositionClass := getPositionClass(positionOriginal, playerColor)
+		_, _, _, _, gridX, gridY := getEventMousePosition(i[0])
+		positionDragging := model.Position{uint8(gridX), uint8(7 - gridY)}
 		move := model.Move{
 			int8(positionDragging.File) - int8(positionOriginal.File),
 			int8(positionDragging.Rank) - int8(positionOriginal.Rank),
 		}
 		err := game.Move(positionOriginal, move)
-		originalPositionClass := getPositionClass(positionOriginal, playerColor)
-		elDragging.Get("style").Set("transform", originalTransform)
-		elDragging.Get("classList").Call("remove", "dragging")
+		fmt.Println(err)
 		if err == nil {
 			newPositionClass := getPositionClass(positionDragging, playerColor)
 			elements := document.Call("getElementsByClassName", newPositionClass)
@@ -163,13 +146,38 @@ func mouseUp(this js.Value, i []js.Value) interface{} {
 			elDragging.Get("classList").Call("add", newPositionClass)
 			handleCastle(pieceDragging, move)
 			handleEnPassant(pieceDragging, move, elementsLength == 0)
-		} else {
-			elDragging.Get("classList").Call("add", originalPositionClass)
 		}
 		elDragging = js.Undefined()
 		isMouseDown = false
 	}
 	return 0
+}
+
+func getEventMousePosition(event js.Value) (int, int, int, int, int, int) {
+	rect := board.Call("getBoundingClientRect")
+	width := rect.Get("right").Int() - rect.Get("left").Int()
+	height := rect.Get("bottom").Int() - rect.Get("top").Int()
+	squareWidth := width / 8
+	squareHeight := height / 8
+	x := event.Get("clientX").Int() - rect.Get("left").Int()
+	gridX := x / squareWidth
+	if x > width || gridX > 7 {
+		x = width
+		gridX = 7
+	} else if x < 0 || gridX < 0 {
+		x = 0
+		gridX = 0
+	}
+	y := event.Get("clientY").Int() - rect.Get("top").Int()
+	gridY := y / squareHeight
+	if y > height || gridY > 7 {
+		y = height
+		gridY = 7
+	} else if y < 0 || gridY < 0 {
+		y = 0
+		gridY = 0
+	}
+	return x, y, squareWidth, squareHeight, gridX, gridY
 }
 
 func handleEnPassant(pawn *model.Piece, move model.Move, targetEmpty bool) {
@@ -190,7 +198,7 @@ func handleEnPassant(pawn *model.Piece, move model.Move, targetEmpty bool) {
 
 func handleCastle(king *model.Piece, move model.Move) {
 	if pieceDragging.PieceType() == model.King &&
-		(move.X > -1 || move.X > 1) {
+		(move.X < -1 || move.X > 1) {
 		var rookPosition model.Position
 		var rookPosClass string
 		var rookNewPosClass string
