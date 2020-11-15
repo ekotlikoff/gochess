@@ -68,6 +68,33 @@ func (piece *Piece) String() string {
 	}
 }
 
+func (piece *Piece) ClientString() string {
+	if piece == nil {
+		return ""
+	}
+	out := ""
+	if piece.Color() == Black {
+		out += "b"
+	} else {
+		out += "w"
+	}
+	switch piece.pieceType {
+	case Rook:
+		out += "r"
+	case Knight:
+		out += "n"
+	case Bishop:
+		out += "b"
+	case Queen:
+		out += "q"
+	case King:
+		out += "k"
+	case Pawn:
+		out += "p"
+	}
+	return out
+}
+
 func (piece *Piece) StringSimple() string {
 	if piece == nil {
 		return "-"
