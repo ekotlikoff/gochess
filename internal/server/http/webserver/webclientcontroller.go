@@ -6,6 +6,15 @@ import (
 	"syscall/js"
 )
 
+func (clientModel *ClientModel) initListeners() {
+	clientModel.document.Call("addEventListener", "mousemove",
+		clientModel.genMouseMove(), false)
+	clientModel.document.Call("addEventListener", "mouseup",
+		clientModel.genMouseUp(), false)
+	js.Global().Set("beginMatchmaking", clientModel.genBeginMatchmaking)
+	clientModel.board.Call("addEventListener", "contextmenu", js.FuncOf(preventDefault), false)
+}
+
 func preventDefault(this js.Value, i []js.Value) interface{} {
 	if len(i) > 0 {
 		i[0].Call("preventDefault")
@@ -13,14 +22,14 @@ func preventDefault(this js.Value, i []js.Value) interface{} {
 	return 0
 }
 
-func genMouseDown(clientModel *ClientModel) js.Func {
+func (clientModel *ClientModel) genMouseDown() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
 		if len(i) > 0 && !clientModel.isMouseDown {
 			clientModel.isMouseDown = true
 			i[0].Call("preventDefault")
 			clientModel.elDragging = this
 			_, _, _, _, gridX, gridY :=
-				getEventMousePosition(clientModel.board, i[0])
+				clientModel.getEventMousePosition(i[0])
 			clientModel.positionOriginal =
 				model.Position{uint8(gridX), uint8(7 - gridY)}
 			clientModel.pieceDragging = clientModel.game.Board()[gridX][7-gridY]
@@ -32,17 +41,17 @@ func genMouseDown(clientModel *ClientModel) js.Func {
 	})
 }
 
-func genMouseMove(clientModel *ClientModel) js.Func {
+func (clientModel *ClientModel) genMouseMove() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
 		i[0].Call("preventDefault")
 		if clientModel.isMouseDown {
-			viewDragPiece(clientModel.board, clientModel.elDragging, i[0])
+			clientModel.viewDragPiece(clientModel.elDragging, i[0])
 		}
 		return 0
 	})
 }
 
-func genMouseUp(clientModel *ClientModel) js.Func {
+func (clientModel *ClientModel) genMouseUp() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
 		cm := clientModel
 		if cm.isMouseDown && len(i) > 0 {
@@ -51,8 +60,7 @@ func genMouseUp(clientModel *ClientModel) js.Func {
 			cm.elDragging.Get("classList").Call("remove", "dragging")
 			originalPositionClass :=
 				getPositionClass(cm.positionOriginal, cm.playerColor)
-			_, _, _, _, gridX, gridY :=
-				getEventMousePosition(clientModel.board, i[0])
+			_, _, _, _, gridX, gridY := clientModel.getEventMousePosition(i[0])
 			positionDragging := model.Position{uint8(gridX), uint8(7 - gridY)}
 			move := model.Move{
 				int8(positionDragging.File) - int8(cm.positionOriginal.File),
@@ -71,8 +79,8 @@ func genMouseUp(clientModel *ClientModel) js.Func {
 				}
 				cm.elDragging.Get("classList").Call("remove", originalPositionClass)
 				cm.elDragging.Get("classList").Call("add", newPositionClass)
-				handleCastle(cm, move)
-				handleEnPassant(cm, move, elementsLength == 0)
+				cm.handleCastle(move)
+				cm.handleEnPassant(move, elementsLength == 0)
 			}
 			cm.elDragging = js.Undefined()
 			cm.isMouseDown = false
@@ -81,9 +89,26 @@ func genMouseUp(clientModel *ClientModel) js.Func {
 	})
 }
 
-func getEventMousePosition(board js.Value, event js.Value) (
+func (clientModel *ClientModel) genBeginMatchmaking() js.Func {
+	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
+		if !clientModel.isMatchmaking && clientModel.isMatched {
+			clientModel.isMatchmaking = true
+			// TODO create mutex for clientModel
+			// TODO create goroutine that:
+			// - Displays loading icon
+			// - post to clientModel.matchingServerURI with username to begin session
+			// - Store state in clientModel to remember that the session is started
+			// - GET /match to begin matching
+			// - Once matched stops displaying loading icon and briefly displays matched icon
+			// - Once matched reset board and set player color and time remaining
+		}
+		return 0
+	})
+}
+
+func (clientModel *ClientModel) getEventMousePosition(event js.Value) (
 	int, int, int, int, int, int) {
-	rect := board.Call("getBoundingClientRect")
+	rect := clientModel.board.Call("getBoundingClientRect")
 	width := rect.Get("right").Int() - rect.Get("left").Int()
 	height := rect.Get("bottom").Int() - rect.Get("top").Int()
 	squareWidth := width / 8
@@ -109,7 +134,7 @@ func getEventMousePosition(board js.Value, event js.Value) (
 	return x, y, squareWidth, squareHeight, gridX, gridY
 }
 
-func handleEnPassant(cm *ClientModel, move model.Move, targetEmpty bool) {
+func (cm *ClientModel) handleEnPassant(move model.Move, targetEmpty bool) {
 	pawn := cm.pieceDragging
 	if pawn.PieceType() == model.Pawn && move.X != 0 && targetEmpty {
 		capturedY := pawn.Rank() + 1
@@ -126,7 +151,7 @@ func handleEnPassant(cm *ClientModel, move model.Move, targetEmpty bool) {
 	}
 }
 
-func handleCastle(cm *ClientModel, move model.Move) {
+func (cm *ClientModel) handleCastle(move model.Move) {
 	king := cm.pieceDragging
 	if king.PieceType() == model.King &&
 		(move.X < -1 || move.X > 1) {

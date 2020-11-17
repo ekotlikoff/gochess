@@ -96,25 +96,16 @@ license that can be found in the LICENSE file.
     );
 	</script>
 
-    <input type="text" id="value1" />
-    <input type="text" id="value2" />
-    <button onClick="add('value1', 'value2', 'result');" id="addButton">
-      Add
-    </button>
-    <button
-      onClick="subtract('value1', 'value2', 'result');"
-      id="subtractButton"
-    >
-      Subtract
-    </button>
-
-    <input type="text" id="result" />
 
     <div id="board-layout-chessboard" class="board-layout-chessboard board-board" style="width: 500px; height: 500px; padding-bottom: 0px;">
         <chess-board class="board" id="board-game">
             <svg viewBox="0 0 100 100" class="coordinates" />
         </chess-board>
     </div>
+    <input type="text" id="username" />
+    <button onClick="beginMatchmaking('username');" id="beginMatchmakingButton">
+        Search for match
+    </button>
 </body>
 
 </html>

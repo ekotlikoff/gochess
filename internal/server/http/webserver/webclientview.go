@@ -7,7 +7,8 @@ import (
 	"syscall/js"
 )
 
-func initStyle(document js.Value) {
+func (clientModel *ClientModel) initStyle() {
+	document := clientModel.document
 	styleEl := document.Call("createElement", "style")
 	document.Get("head").Call("appendChild", styleEl)
 	styleSheet := styleEl.Get("sheet")
@@ -23,14 +24,14 @@ func initStyle(document js.Value) {
 	}
 }
 
-func resetBoard(document js.Value) {
-	elements := document.Call("getElementsByClassName", "piece")
+func (clientModel *ClientModel) resetBoard() {
+	elements := clientModel.document.Call("getElementsByClassName", "piece")
 	for i := 0; i < elements.Length(); i++ {
 		elements.Index(i).Call("remove")
 	}
 }
 
-func initBoard(clientModel *ClientModel, playerColor model.Color) {
+func (clientModel *ClientModel) initBoard(playerColor model.Color) {
 	for _, file := range clientModel.game.Board() {
 		for _, piece := range file {
 			if piece != nil {
@@ -41,7 +42,7 @@ func initBoard(clientModel *ClientModel, playerColor model.Color) {
 					"add", getPositionClass(piece.Position(), playerColor))
 				clientModel.board.Call("appendChild", div)
 				div.Call("addEventListener", "mousedown",
-					genMouseDown(clientModel), false)
+					clientModel.genMouseDown(), false)
 			}
 		}
 	}
@@ -51,8 +52,10 @@ func viewBeginDragging(element js.Value) {
 	element.Get("classList").Call("add", "dragging")
 }
 
-func viewDragPiece(board js.Value, elDragging js.Value, event js.Value) {
-	x, y, squareWidth, squareHeight, _, _ := getEventMousePosition(board, event)
+func (clientModel *ClientModel) viewDragPiece(
+	elDragging js.Value, event js.Value) {
+	x, y, squareWidth, squareHeight, _, _ :=
+		clientModel.getEventMousePosition(event)
 	pieceWidth := elDragging.Get("clientWidth").Float()
 	pieceHeight := elDragging.Get("clientHeight").Float()
 	percentX := 100 * (float64(x) - pieceWidth/2) / float64(squareWidth)
