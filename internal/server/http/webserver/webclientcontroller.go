@@ -11,7 +11,7 @@ func (clientModel *ClientModel) initListeners() {
 		clientModel.genMouseMove(), false)
 	clientModel.document.Call("addEventListener", "mouseup",
 		clientModel.genMouseUp(), false)
-	js.Global().Set("beginMatchmaking", clientModel.genBeginMatchmaking)
+	js.Global().Set("beginMatchmaking", clientModel.genBeginMatchmaking())
 	clientModel.board.Call("addEventListener", "contextmenu", js.FuncOf(preventDefault), false)
 }
 
@@ -33,7 +33,7 @@ func (clientModel *ClientModel) genMouseDown() js.Func {
 			clientModel.positionOriginal =
 				model.Position{uint8(gridX), uint8(7 - gridY)}
 			clientModel.pieceDragging = clientModel.game.Board()[gridX][7-gridY]
-			viewBeginDragging(clientModel.elDragging)
+			addClass(clientModel.elDragging, "dragging")
 			clientModel.draggingOrigTransform =
 				clientModel.elDragging.Get("style").Get("transform")
 		}
@@ -57,7 +57,7 @@ func (clientModel *ClientModel) genMouseUp() js.Func {
 		if cm.isMouseDown && len(i) > 0 {
 			i[0].Call("preventDefault")
 			cm.elDragging.Get("style").Set("transform", cm.draggingOrigTransform)
-			cm.elDragging.Get("classList").Call("remove", "dragging")
+			removeClass(cm.elDragging, "dragging")
 			originalPositionClass :=
 				getPositionClass(cm.positionOriginal, cm.playerColor)
 			_, _, _, _, gridX, gridY := clientModel.getEventMousePosition(i[0])
@@ -91,15 +91,20 @@ func (clientModel *ClientModel) genMouseUp() js.Func {
 
 func (clientModel *ClientModel) genBeginMatchmaking() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		if !clientModel.isMatchmaking && clientModel.isMatched {
+		if !clientModel.isMatchmaking && !clientModel.isMatched {
+			clientModel.mutex.Lock()
 			clientModel.isMatchmaking = true
-			// TODO create mutex for clientModel
+			clientModel.mutex.Unlock()
+			buttonLoader := clientModel.buttonBeginLoading(
+				clientModel.document.Call(
+					"getElementById", "beginMatchmakingButton"))
 			// TODO create goroutine that:
 			// - Displays loading icon
 			// - post to clientModel.matchingServerURI with username to begin session
 			// - Store state in clientModel to remember that the session is started
 			// - GET /match to begin matching
 			// - Once matched stops displaying loading icon and briefly displays matched icon
+			buttonLoader.Call("remove")
 			// - Once matched reset board and set player color and time remaining
 		}
 		return 0

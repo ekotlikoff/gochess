@@ -48,8 +48,19 @@ func (clientModel *ClientModel) initBoard(playerColor model.Color) {
 	}
 }
 
-func viewBeginDragging(element js.Value) {
-	element.Get("classList").Call("add", "dragging")
+func (clientModel *ClientModel) buttonBeginLoading(button js.Value) js.Value {
+	i := clientModel.document.Call("createElement", "div")
+	i.Get("classList").Call("add", "loading")
+	button.Call("appendChild", i)
+	return i
+}
+
+func addClass(element js.Value, class string) {
+	element.Get("classList").Call("add", class)
+}
+
+func removeClass(element js.Value, class string) {
+	element.Get("classList").Call("remove", "dragging")
 }
 
 func (clientModel *ClientModel) viewDragPiece(

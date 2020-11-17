@@ -68,6 +68,20 @@ license that can be found in the LICENSE file.
         .piece.bk { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bk.png'); }
         .piece.bq { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bq.png'); }
         .piece.bp { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bp.png'); }
+        .loading {
+            border: 3px solid #f3f3f3; /* Light grey */
+            border-top: 3px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 10px;
+            height: 10px;
+            animation: spin 1s linear infinite;
+            display: inline-block
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 

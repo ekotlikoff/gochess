@@ -2,6 +2,7 @@ package main
 
 import (
 	"gochess/internal/model"
+	"sync"
 	"syscall/js"
 )
 
@@ -20,11 +21,12 @@ type ClientModel struct {
 	isMouseDown              bool
 	pieceDragging            *model.Piece
 	positionOriginal         model.Position
-	draggingOrigTransform    js.Value
 	document                 js.Value
 	board                    js.Value
+	draggingOrigTransform    js.Value
 	isMatchmaking, isMatched bool
 	matchingServerURI        string
+	mutex                    sync.Mutex
 }
 
 func main() {
