@@ -131,15 +131,15 @@ func (matchingServer *MatchingServer) matchAndPlay(
 	}
 }
 
-func (matchingServer *MatchingServer) Serve(
+func (matchingServer *MatchingServer) StartMatchServers(
 	maxConcurrentGames int, quit chan bool,
 ) {
-	matchingServer.ServeCustomMatch(
+	matchingServer.StartCustomMatchServers(
 		maxConcurrentGames, DefaultMatchGenerator, quit,
 	)
 }
 
-func (matchingServer *MatchingServer) ServeCustomMatch(
+func (matchingServer *MatchingServer) StartCustomMatchServers(
 	maxConcurrentGames int, matchGenerator MatchGenerator, quit chan bool,
 ) {
 	// Start handlers

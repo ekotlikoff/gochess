@@ -15,7 +15,7 @@ func TestMatchingServer(t *testing.T) {
 	go matchingServer.MatchPlayer(&player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(1, exitChan)
+	matchingServer.StartMatchServers(1, exitChan)
 	for len(matchingServer.LiveMatches()) == 0 {
 	}
 	liveMatch := matchingServer.LiveMatches()[0]
@@ -35,7 +35,7 @@ func TestMatchingServerTimeout(t *testing.T) {
 	generator := func(black *Player, white *Player) Match {
 		return NewMatch(black, white, 50)
 	}
-	matchingServer.ServeCustomMatch(1, generator, exitChan)
+	matchingServer.StartCustomMatchServers(1, generator, exitChan)
 	tries := 0
 	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
 		time.Sleep(time.Millisecond)
@@ -56,7 +56,7 @@ func TestMatchingServerDraw(t *testing.T) {
 	go matchingServer.MatchPlayer(&player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(1, exitChan)
+	matchingServer.StartMatchServers(1, exitChan)
 	player1.requestChanAsync <- RequestAsync{RequestToDraw: true}
 	response := <-player2.responseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
@@ -96,7 +96,7 @@ func TestMatchingServerResignation(t *testing.T) {
 	go matchingServer.MatchPlayer(&player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(1, exitChan)
+	matchingServer.StartMatchServers(1, exitChan)
 	tries := 0
 	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
 		time.Sleep(time.Millisecond)
@@ -119,7 +119,7 @@ func TestMatchingServerValidMoves(t *testing.T) {
 	go matchingServer.MatchPlayer(&player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(1, exitChan)
+	matchingServer.StartMatchServers(1, exitChan)
 	tries := 0
 	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
 		time.Sleep(time.Millisecond)
@@ -144,7 +144,7 @@ func TestMatchingServerInvalidMoves(t *testing.T) {
 	go matchingServer.MatchPlayer(&player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(1, exitChan)
+	matchingServer.StartMatchServers(1, exitChan)
 	tries := 0
 	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
 		time.Sleep(time.Millisecond)
@@ -172,7 +172,7 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	go matchingServer.MatchPlayer(&player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(1, exitChan)
+	matchingServer.StartMatchServers(1, exitChan)
 	tries := 0
 	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
 		time.Sleep(time.Millisecond)
@@ -216,7 +216,7 @@ func TestMatchingServerMultiple(t *testing.T) {
 	}
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(5, exitChan)
+	matchingServer.StartMatchServers(5, exitChan)
 	tries := 0
 	for len(matchingServer.LiveMatches()) != 3 && tries < 50 {
 		time.Sleep(time.Millisecond)
