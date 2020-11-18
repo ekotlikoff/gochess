@@ -297,7 +297,7 @@ func TestValidMovesPawnCaptureCheck(t *testing.T) {
 	movePiece(&board, 4, 1, 0, 4)
 	movePiece(&board, 3, 7, 4, 4)
 	movePiece(&board, 1, 1, 3, 3)
-	if true {
+	if debug {
 		fmt.Println(board)
 	}
 	validMoves := board[3][3].ValidMoves(&board, Move{}, nil, false, board[4][0])

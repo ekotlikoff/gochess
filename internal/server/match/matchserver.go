@@ -13,13 +13,8 @@ type Player struct {
 	responseChanSync   chan ResponseSync
 	requestChanAsync   chan RequestAsync
 	responseChanAsync  chan ResponseAsync
-	opponentPlayedMove chan PieceMove
+	opponentPlayedMove chan model.MoveRequest
 	matchStart         chan struct{}
-}
-
-type PieceMove struct {
-	Position model.Position
-	Move     model.Move
 }
 
 func NewPlayer(name string) Player {
@@ -27,7 +22,7 @@ func NewPlayer(name string) Player {
 		name, model.Black, int64(0),
 		make(chan RequestSync, 1), make(chan ResponseSync, 10),
 		make(chan RequestAsync, 1), make(chan ResponseAsync, 1),
-		make(chan PieceMove, 10), make(chan struct{}),
+		make(chan model.MoveRequest, 10), make(chan struct{}),
 	}
 }
 
@@ -43,13 +38,13 @@ func (player *Player) WaitForMatchStart() {
 	<-player.matchStart
 }
 
-func (player *Player) MakeMove(pieceMove PieceMove) bool {
+func (player *Player) MakeMove(pieceMove model.MoveRequest) bool {
 	player.requestChanSync <- RequestSync{pieceMove.Position, pieceMove.Move}
 	response := <-player.responseChanSync
 	return response.moveSuccess
 }
 
-func (player *Player) GetSyncUpdate() PieceMove {
+func (player *Player) GetSyncUpdate() model.MoveRequest {
 	return <-player.opponentPlayedMove
 }
 

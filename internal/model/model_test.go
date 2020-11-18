@@ -6,7 +6,6 @@ import (
 
 func TestNewBoard(t *testing.T) {
 	board := NewFullBoard()
-	// fmt.Print(board)
 	for file := 0; file < 8; file++ {
 		blackPawn := board[file][6]
 		if blackPawn.PieceType() != Pawn {

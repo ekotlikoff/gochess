@@ -128,9 +128,9 @@ func TestMatchingServerValidMoves(t *testing.T) {
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
-	white.MakeMove(PieceMove{model.Position{3, 1}, model.Move{0, 2}})
+	white.MakeMove(model.MoveRequest{model.Position{3, 1}, model.Move{0, 2}})
 	response :=
-		black.MakeMove(PieceMove{model.Position{3, 6}, model.Move{0, -2}})
+		black.MakeMove(model.MoveRequest{model.Position{3, 6}, model.Move{0, -2}})
 	if !response {
 		t.Error("Expected a valid move got", response)
 	}
@@ -153,12 +153,12 @@ func TestMatchingServerInvalidMoves(t *testing.T) {
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
-	white.MakeMove(PieceMove{model.Position{3, 1}, model.Move{0, 2}})
-	response := black.MakeMove(PieceMove{model.Position{3, 6}, model.Move{0, -3}})
+	white.MakeMove(model.MoveRequest{model.Position{3, 1}, model.Move{0, 2}})
+	response := black.MakeMove(model.MoveRequest{model.Position{3, 6}, model.Move{0, -3}})
 	if response {
 		t.Error("Expected a invalid move got", response)
 	}
-	response = black.MakeMove(PieceMove{model.Position{3, 6}, model.Move{0, -1}})
+	response = black.MakeMove(model.MoveRequest{model.Position{3, 6}, model.Move{0, -1}})
 	if !response {
 		t.Error("Expected a valid move got", response)
 	}
@@ -181,23 +181,23 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
-	white.MakeMove(PieceMove{model.Position{4, 1}, model.Move{0, 2}})
+	white.MakeMove(model.MoveRequest{model.Position{4, 1}, model.Move{0, 2}})
 	opponentMove := black.GetSyncUpdate()
-	expectedMove := PieceMove{model.Position{4, 1}, model.Move{0, 2}}
+	expectedMove := model.MoveRequest{model.Position{4, 1}, model.Move{0, 2}}
 	if opponentMove != expectedMove {
 		t.Error("Expected opponent's move got ", opponentMove)
 	}
-	black.MakeMove(PieceMove{model.Position{0, 6}, model.Move{0, -1}})
+	black.MakeMove(model.MoveRequest{model.Position{0, 6}, model.Move{0, -1}})
 	opponentMove = white.GetSyncUpdate()
-	expectedMove = PieceMove{model.Position{0, 6}, model.Move{0, -1}}
+	expectedMove = model.MoveRequest{model.Position{0, 6}, model.Move{0, -1}}
 	if opponentMove != expectedMove {
 		t.Error("Expected opponent's move got ", opponentMove)
 	}
-	white.MakeMove(PieceMove{model.Position{3, 0}, model.Move{4, 4}})
-	black.MakeMove(PieceMove{model.Position{0, 5}, model.Move{0, -1}})
-	white.MakeMove(PieceMove{model.Position{5, 0}, model.Move{-3, 3}})
-	black.MakeMove(PieceMove{model.Position{0, 4}, model.Move{0, -1}})
-	white.MakeMove(PieceMove{model.Position{7, 4}, model.Move{-2, 2}})
+	white.MakeMove(model.MoveRequest{model.Position{3, 0}, model.Move{4, 4}})
+	black.MakeMove(model.MoveRequest{model.Position{0, 5}, model.Move{0, -1}})
+	white.MakeMove(model.MoveRequest{model.Position{5, 0}, model.Move{-3, 3}})
+	black.MakeMove(model.MoveRequest{model.Position{0, 4}, model.Move{0, -1}})
+	white.MakeMove(model.MoveRequest{model.Position{7, 4}, model.Move{-2, 2}})
 	if !liveMatch.game.GameOver() {
 		t.Error("Expected gameover got ", liveMatch)
 	}

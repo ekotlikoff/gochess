@@ -20,9 +20,16 @@ type GameResult struct {
 	Draw   bool
 }
 
+type MoveRequest struct {
+	Position Position
+	Move     Move
+}
+
 var ErrGameOver = errors.New("The game is over")
 
-func (game *Game) Move(position Position, move Move) error {
+func (game *Game) Move(moveRequest MoveRequest) error {
+	position := moveRequest.Position
+	move := moveRequest.Move
 	piece := game.board[position.File][position.Rank]
 	if game.gameOver {
 		return ErrGameOver

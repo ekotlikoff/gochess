@@ -3,17 +3,14 @@ package apiserver
 // Credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/satori/go.uuid"
 	"gochess/internal/model"
 	"gochess/internal/server/match"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 	"strconv"
 	"time"
 )
@@ -26,10 +23,6 @@ func init() {
 
 type Credentials struct {
 	Username string `json:"username"`
-}
-
-type Move struct {
-	Move string `json:"move"`
 }
 
 func Serve(
@@ -112,42 +105,19 @@ func SyncHandler(w http.ResponseWriter, r *http.Request) {
 		pieceMove := player.GetSyncUpdate()
 		fmt.Fprintf(w, "Opponent move=%v", pieceMove)
 	case "POST":
-		pieceMove, err := parseMoveBody(r.Body)
+		var moveRequest model.MoveRequest
+		err := json.NewDecoder(r.Body).Decode(&moveRequest)
 		if err != nil {
 			log.Println("Failed to parse move body ", err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		success := player.MakeMove(pieceMove)
+		success := player.MakeMove(moveRequest)
 		if !success {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	}
-}
-
-func parseMoveBody(body io.ReadCloser) (matchserver.PieceMove, error) {
-	var move Move
-	err := json.NewDecoder(body).Decode(&move)
-	if err != nil {
-		return matchserver.PieceMove{}, err
-	}
-	// Match "(3,1)(0,2)" as PieceMove{Position{3,1}, Move{0,2}}
-	re := regexp.MustCompile(`^\((\d?),(\d?)\)\((-?\d?),(-?\d?)\)$`)
-	match := re.FindStringSubmatch(move.Move)
-	if len(match) != 5 {
-		return matchserver.PieceMove{}, errors.New("Failed to parse body")
-	}
-	posX, errX := strconv.ParseUint(match[1], 10, 8)
-	posY, errY := strconv.ParseUint(match[2], 10, 8)
-	moveX, errMX := strconv.ParseInt(match[3], 10, 8)
-	moveY, errMY := strconv.ParseInt(match[4], 10, 8)
-	if errX != nil || errY != nil || errMX != nil || errMY != nil {
-		return matchserver.PieceMove{}, errors.New("Failed to parse ints")
-	}
-	return matchserver.PieceMove{
-		model.Position{uint8(posX), uint8(posY)},
-		model.Move{int8(moveX), int8(moveY)}}, nil
 }
 
 func AsyncHandler(w http.ResponseWriter, r *http.Request) {

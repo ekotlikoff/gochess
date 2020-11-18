@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"gochess/internal/model"
+	"net/http"
 	"syscall/js"
 )
 
@@ -66,7 +67,7 @@ func (clientModel *ClientModel) genMouseUp() js.Func {
 				int8(positionDragging.File) - int8(cm.positionOriginal.File),
 				int8(positionDragging.Rank) - int8(cm.positionOriginal.Rank),
 			}
-			err := cm.game.Move(cm.positionOriginal, move)
+			err := cm.game.Move(model.MoveRequest{cm.positionOriginal, move})
 			fmt.Println(err)
 			if err == nil && (cm.gameType == Local ||
 				(cm.gameType == Remote && cm.playerColor == cm.game.Turn())) {
@@ -92,23 +93,31 @@ func (clientModel *ClientModel) genMouseUp() js.Func {
 func (clientModel *ClientModel) genBeginMatchmaking() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
 		if !clientModel.isMatchmaking && !clientModel.isMatched {
-			clientModel.mutex.Lock()
-			clientModel.isMatchmaking = true
-			clientModel.mutex.Unlock()
-			buttonLoader := clientModel.buttonBeginLoading(
-				clientModel.document.Call(
-					"getElementById", "beginMatchmakingButton"))
-			// TODO create goroutine that:
-			// - Displays loading icon
-			// - post to clientModel.matchingServerURI with username to begin session
-			// - Store state in clientModel to remember that the session is started
-			// - GET /match to begin matching
-			// - Once matched stops displaying loading icon and briefly displays matched icon
-			buttonLoader.Call("remove")
-			// - Once matched reset board and set player color and time remaining
+			go lookForMatch()
 		}
 		return 0
 	})
+}
+
+func (clientModel *ClientModel) lookForMatch() js.Func {
+	clientModel.mutex.Lock()
+	clientModel.isMatchmaking = true
+	clientModel.mutex.Unlock()
+	buttonLoader := clientModel.buttonBeginLoading(
+		clientModel.document.Call(
+			"getElementById", "beginMatchmakingButton"))
+	// TODO
+	requestBody, err := json.Marshal(map[string]string{
+		"username": "my_username",
+	})
+	resp, err := http.Post(clientModel.matchingServerURI, "application/json",
+		bytes.NewBuffer(requestBody))
+	// - post to clientModel.matchingServerURI with username to begin session
+	// - Store state in clientModel to remember that the session is started
+	// - GET /match to begin matching
+	// - Once matched stops displaying loading icon and briefly displays matched icon
+	buttonLoader.Call("remove")
+	// - Once matched reset board and set player color and time remaining
 }
 
 func (clientModel *ClientModel) getEventMousePosition(event js.Value) (

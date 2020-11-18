@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"gochess/internal/model"
 	"gochess/internal/server/match"
 	"io/ioutil"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 
 var debug bool = false
 var uri string = "http://localhost:8000/"
+var ctp string = "application/json"
 
 func init() {
 	matchingServer := matchserver.NewMatchingServer()
@@ -30,7 +32,10 @@ func TestHTTPServerStartSession(t *testing.T) {
 	requestBody, err := json.Marshal(map[string]string{
 		"username": "my_username",
 	})
-	resp, err := http.Post(uri, "application/json", bytes.NewBuffer(requestBody))
+	resp, err := http.Post(uri, ctp, bytes.NewBuffer(requestBody))
+	if err != nil {
+		t.Error(err)
+	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if debug {
@@ -120,35 +125,26 @@ func TestHTTPServerCheckmate(t *testing.T) {
 		fmt.Println("Test Checkmate")
 	}
 	black, white, blackName, _ := createMatch(uri)
-	ctp := "application/json"
-	reqMoveBody, _ := json.Marshal(map[string]string{"move": "(2,1)(0,2)"})
-	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	sendMove(white, uri+"sync", 2, 1, 0, 2)
 	resp, _ := black.Get(uri + "sync")
 	body, _ := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if !strings.Contains(string(body), "{2 1} {0 2}") {
 		t.Error("Expected opponent's move got ", string(body))
 	}
-	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(4,6)(0,-2)"})
-	black.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	sendMove(black, uri+"sync", 4, 6, 0, -2)
 	resp, _ = white.Get(uri + "sync")
 	body, _ = ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if !strings.Contains(string(body), "{4 6} {0 -2}") {
 		t.Error("Expected opponent's move got ", string(body))
 	}
-	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(2,3)(0,1)"})
-	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
-	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(3,7)(4,-4)"})
-	black.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
-	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(2,4)(0,1)"})
-	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
-	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(5,7)(-3,-3)"})
-	black.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
-	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(2,5)(-1,1)"})
-	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
-	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(7,3)(-2,-2)"})
-	black.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	sendMove(white, uri+"sync", 2, 3, 0, 1)
+	sendMove(black, uri+"sync", 3, 7, 4, -4)
+	sendMove(white, uri+"sync", 2, 4, 0, 1)
+	sendMove(black, uri+"sync", 5, 7, -3, -3)
+	sendMove(white, uri+"sync", 2, 5, -1, 1)
+	sendMove(black, uri+"sync", 7, 3, -2, -2)
 	resp, _ = white.Get(uri + "async")
 	responseAsync := matchserver.ResponseAsync{}
 	json.NewDecoder(resp.Body).Decode(&responseAsync)
@@ -160,14 +156,21 @@ func TestHTTPServerCheckmate(t *testing.T) {
 	}
 }
 
+func sendMove(client *http.Client, uri string, x, y, moveX, moveY int) {
+	movePayloadBuf := new(bytes.Buffer)
+	moveRequest := model.MoveRequest{
+		model.Position{uint8(x), uint8(y)}, model.Move{int8(moveX), int8(moveY)},
+	}
+	json.NewEncoder(movePayloadBuf).Encode(moveRequest)
+	client.Post(uri, "application/json", movePayloadBuf)
+}
+
 func TestHTTPServerDraw(t *testing.T) {
 	if debug {
 		fmt.Println("Test Draw")
 	}
 	black, white, _, _ := createMatch(uri)
-	ctp := "application/json"
-	reqMoveBody, _ := json.Marshal(map[string]string{"move": "(2,1)(0,2)"})
-	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	sendMove(white, uri+"sync", 2, 1, 0, 2)
 	payloadBuf := new(bytes.Buffer)
 	requestAsync := matchserver.RequestAsync{RequestToDraw: true}
 	json.NewEncoder(payloadBuf).Encode(requestAsync)
@@ -194,9 +197,7 @@ func TestHTTPServerResign(t *testing.T) {
 		fmt.Println("Test Resign")
 	}
 	black, white, blackName, _ := createMatch(uri)
-	ctp := "application/json"
-	reqMoveBody, _ := json.Marshal(map[string]string{"move": "(2,1)(0,2)"})
-	white.Post(uri+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	sendMove(white, uri+"sync", 2, 1, 0, 2)
 	payloadBuf := new(bytes.Buffer)
 	requestAsync := matchserver.RequestAsync{Resign: true}
 	json.NewEncoder(payloadBuf).Encode(requestAsync)
@@ -226,11 +227,8 @@ func TestHTTPServerTimeout(t *testing.T) {
 	go Serve(&matchingServer, 8001, nil, true)
 	uri_timeout := "http://localhost:8001/"
 	black, white, blackName, _ := createMatch(uri_timeout)
-	ctp := "application/json"
-	reqMoveBody, _ := json.Marshal(map[string]string{"move": "(2,1)(0,2)"})
-	white.Post(uri_timeout+"sync", ctp, bytes.NewBuffer(reqMoveBody))
-	reqMoveBody, _ = json.Marshal(map[string]string{"move": "(2,6)(0,-2)"})
-	black.Post(uri_timeout+"sync", ctp, bytes.NewBuffer(reqMoveBody))
+	sendMove(white, uri_timeout+"sync", 2, 1, 0, 2)
+	sendMove(black, uri_timeout+"sync", 2, 6, 0, -2)
 	resp, _ := black.Get(uri_timeout + "async")
 	responseAsync := matchserver.ResponseAsync{}
 	json.NewDecoder(resp.Body).Decode(&responseAsync)
