@@ -21,7 +21,7 @@ func init() {
 	matchingServer := matchserver.NewMatchingServer()
 	exitChan := make(chan bool, 1)
 	exitChan <- true
-	matchingServer.Serve(10, exitChan)
+	matchingServer.StartMatchServers(10, exitChan)
 	go Serve(&matchingServer, 8000, nil, true)
 }
 
@@ -209,7 +209,7 @@ func TestHTTPServerTimeout(t *testing.T) {
 	) matchserver.Match {
 		return matchserver.NewMatch(black, white, 100)
 	}
-	matchingServer.ServeCustomMatch(10, generator, exitChan)
+	matchingServer.StartCustomMatchServers(10, generator, exitChan)
 	go Serve(&matchingServer, 8001, nil, true)
 	uri_timeout := "http://localhost:8001/"
 	black, white, blackName, _ := createMatch(uri_timeout)
