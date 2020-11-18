@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"gochess/internal/model"
-	"net/http"
+	"gochess/internal/server/http/apiserver"
 	"syscall/js"
 )
 
@@ -93,26 +95,31 @@ func (clientModel *ClientModel) genMouseUp() js.Func {
 func (clientModel *ClientModel) genBeginMatchmaking() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
 		if !clientModel.isMatchmaking && !clientModel.isMatched {
-			go lookForMatch()
+			go clientModel.lookForMatch()
 		}
 		return 0
 	})
 }
 
-func (clientModel *ClientModel) lookForMatch() js.Func {
+func (clientModel *ClientModel) lookForMatch() {
 	clientModel.mutex.Lock()
 	clientModel.isMatchmaking = true
-	clientModel.mutex.Unlock()
 	buttonLoader := clientModel.buttonBeginLoading(
 		clientModel.document.Call(
 			"getElementById", "beginMatchmakingButton"))
+	clientModel.mutex.Unlock()
 	// TODO
-	requestBody, err := json.Marshal(map[string]string{
-		"username": "my_username",
-	})
-	resp, err := http.Post(clientModel.matchingServerURI, "application/json",
-		bytes.NewBuffer(requestBody))
-	// - post to clientModel.matchingServerURI with username to begin session
+	username := clientModel.document.Call(
+		"getElementById", "username").Get("value").String()
+	credentialsBuf := new(bytes.Buffer)
+	credentials := apiserver.Credentials{username}
+	json.NewEncoder(credentialsBuf).Encode(credentials)
+	resp, err := clientModel.client.Post(
+		clientModel.matchingServerURI, "application/json", credentialsBuf,
+	)
+	if err == nil {
+		defer resp.Body.Close()
+	}
 	// - Store state in clientModel to remember that the session is started
 	// - GET /match to begin matching
 	// - Once matched stops displaying loading icon and briefly displays matched icon

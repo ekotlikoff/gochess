@@ -29,6 +29,7 @@ TODO
         - [x] testing
 * Client
     - [ ] Golang WebAssembly web client
+        - [ ] Should the client call separate apiserver directly?  Or webserver routes request to apiserver?
         - [ ] Display gameover results
         - [ ] Request a draw
         - [ ] Display remaining time
