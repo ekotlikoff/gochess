@@ -22,7 +22,7 @@ func init() {
 }
 
 type Credentials struct {
-	Username string `json:"username"`
+	Username string
 }
 
 func Serve(

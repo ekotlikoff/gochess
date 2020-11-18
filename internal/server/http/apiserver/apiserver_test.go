@@ -29,10 +29,10 @@ func TestHTTPServerStartSession(t *testing.T) {
 	if debug {
 		fmt.Println("Test StartSession")
 	}
-	requestBody, err := json.Marshal(map[string]string{
-		"username": "my_username",
-	})
-	resp, err := http.Post(uri, ctp, bytes.NewBuffer(requestBody))
+	credentialsBuf := new(bytes.Buffer)
+	credentials := Credentials{"my_username"}
+	json.NewEncoder(credentialsBuf).Encode(credentials)
+	resp, err := http.Post(uri, ctp, credentialsBuf)
 	if err != nil {
 		t.Error(err)
 	}
@@ -88,21 +88,16 @@ func TestHTTPServerMatch(t *testing.T) {
 	if debug {
 		fmt.Println("Test Match")
 	}
-	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
-	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
 	jar, _ := cookiejar.New(&cookiejar.Options{})
 	jar2, _ := cookiejar.New(&cookiejar.Options{})
 	client := &http.Client{Jar: jar}
 	client2 := &http.Client{Jar: jar2}
-	resp, err := client.Post(
-		uri, "application/json", bytes.NewBuffer(requestBody))
-	resp2, err2 := client2.Post(
-		uri, "application/json", bytes.NewBuffer(requestBody2))
-	defer resp.Body.Close()
-	defer resp2.Body.Close()
+	startSession(client, uri, "player1")
+	startSession(client2, uri, "player2")
 	wait := make(chan struct{})
-	go func() { resp, err = client.Get(uri + "match"); close(wait) }()
-	resp2, err2 = client2.Get(uri + "match")
+	var resp *http.Response
+	go func() { resp, _ = client.Get(uri + "match"); close(wait) }()
+	resp2, err2 := client2.Get(uri + "match")
 	<-wait
 	defer resp.Body.Close()
 	defer resp2.Body.Close()
@@ -114,7 +109,7 @@ func TestHTTPServerMatch(t *testing.T) {
 		fmt.Println(string(body2))
 		fmt.Println(resp2.StatusCode)
 	}
-	if err != nil || err2 != nil || !strings.HasPrefix(string(body), "Matched!") ||
+	if err2 != nil || !strings.HasPrefix(string(body), "Matched!") ||
 		!strings.HasPrefix(string(body2), "Matched!") {
 		t.Error("Expected match got ", string(body))
 	}
@@ -154,15 +149,6 @@ func TestHTTPServerCheckmate(t *testing.T) {
 	if debug {
 		fmt.Println("Success Checkmate")
 	}
-}
-
-func sendMove(client *http.Client, uri string, x, y, moveX, moveY int) {
-	movePayloadBuf := new(bytes.Buffer)
-	moveRequest := model.MoveRequest{
-		model.Position{uint8(x), uint8(y)}, model.Move{int8(moveX), int8(moveY)},
-	}
-	json.NewEncoder(movePayloadBuf).Encode(moveRequest)
-	client.Post(uri, "application/json", movePayloadBuf)
 }
 
 func TestHTTPServerDraw(t *testing.T) {
@@ -241,20 +227,16 @@ func TestHTTPServerTimeout(t *testing.T) {
 func createMatch(uri string) (
 	black *http.Client, white *http.Client, blackName string, whiteName string,
 ) {
-	requestBody, _ := json.Marshal(map[string]string{"username": "player1"})
-	requestBody2, _ := json.Marshal(map[string]string{"username": "player2"})
 	jar, _ := cookiejar.New(&cookiejar.Options{})
 	jar2, _ := cookiejar.New(&cookiejar.Options{})
 	client := &http.Client{Jar: jar}
 	client2 := &http.Client{Jar: jar2}
-	resp, _ := client.Post(uri, "application/json", bytes.NewBuffer(requestBody))
-	resp2, _ := client2.Post(
-		uri, "application/json", bytes.NewBuffer(requestBody2))
-	defer resp.Body.Close()
-	defer resp2.Body.Close()
+	startSession(client, uri, "player1")
+	startSession(client2, uri, "player2")
 	wait := make(chan struct{})
+	var resp *http.Response
 	go func() { resp, _ = client.Get(uri + "match"); close(wait) }()
-	resp2, _ = client2.Get(uri + "match")
+	resp2, _ := client2.Get(uri + "match")
 	<-wait
 	defer resp.Body.Close()
 	defer resp2.Body.Close()
@@ -270,4 +252,26 @@ func createMatch(uri string) (
 		white = client
 	}
 	return black, white, blackName, whiteName
+}
+
+func sendMove(client *http.Client, uri string, x, y, moveX, moveY int) {
+	movePayloadBuf := new(bytes.Buffer)
+	moveRequest := model.MoveRequest{
+		model.Position{uint8(x), uint8(y)}, model.Move{int8(moveX), int8(moveY)},
+	}
+	json.NewEncoder(movePayloadBuf).Encode(moveRequest)
+	resp, err := client.Post(uri, "application/json", movePayloadBuf)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+}
+
+func startSession(client *http.Client, uri string, username string) {
+	credentialsBuf := new(bytes.Buffer)
+	credentials := Credentials{username}
+	json.NewEncoder(credentialsBuf).Encode(credentials)
+	resp, err := client.Post(uri, "application/json", credentialsBuf)
+	if err == nil {
+		defer resp.Body.Close()
+	}
 }
