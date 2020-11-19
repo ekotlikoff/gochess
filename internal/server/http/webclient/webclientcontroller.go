@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"gochess/internal/model"
-	"gochess/internal/server/http/apiserver"
+	"gochess/internal/server/http/webserver"
 	"syscall/js"
 )
 
@@ -112,10 +112,11 @@ func (clientModel *ClientModel) lookForMatch() {
 	username := clientModel.document.Call(
 		"getElementById", "username").Get("value").String()
 	credentialsBuf := new(bytes.Buffer)
-	credentials := apiserver.Credentials{username}
+	credentials := webserver.Credentials{username}
 	json.NewEncoder(credentialsBuf).Encode(credentials)
 	resp, err := clientModel.client.Post(
-		clientModel.matchingServerURI, "application/json", credentialsBuf,
+		clientModel.matchingServerURI+"session",
+		"application/json", credentialsBuf,
 	)
 	if err == nil {
 		defer resp.Body.Close()

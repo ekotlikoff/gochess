@@ -1,4 +1,4 @@
-- POST /
+- POST /session
     - Start the session and fetch sessionToken, providing username
 - GET /match
     - Begin matching, receive color when match is found

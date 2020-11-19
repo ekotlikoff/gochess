@@ -99,15 +99,10 @@ license that can be found in the LICENSE file.
 				return await WebAssembly.instantiate(source, importObject);
 			};
 		}
-
-    const go = new Go();
-    let mod, inst;
-    WebAssembly.instantiateStreaming(fetch("lib.wasm"), go.importObject).then(
-        async result => {
-            inst = result.instance;
-            await go.run(inst);
-        }
-    );
+            const go = new Go();
+            WebAssembly.instantiateStreaming(fetch("lib.wasm"), go.importObject).then((result) => {
+                go.run(result.instance);
+            });
 	</script>
 
 

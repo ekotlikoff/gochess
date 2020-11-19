@@ -1,4 +1,4 @@
-package apiserver
+package webserver
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ func TestHTTPServerStartSession(t *testing.T) {
 	credentialsBuf := new(bytes.Buffer)
 	credentials := Credentials{"my_username"}
 	json.NewEncoder(credentialsBuf).Encode(credentials)
-	resp, err := http.Post(uri, ctp, credentialsBuf)
+	resp, err := http.Post(uri+"session", ctp, credentialsBuf)
 	if err != nil {
 		t.Error(err)
 	}
@@ -52,7 +52,7 @@ func TestHTTPServerStartSessionError(t *testing.T) {
 	if debug {
 		fmt.Println("Test StartSessionError")
 	}
-	resp, _ := http.Post(uri, "application/json", bytes.NewBuffer([]byte("error")))
+	resp, _ := http.Post(uri+"session", "application/json", bytes.NewBuffer([]byte("error")))
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	if debug {
@@ -71,7 +71,7 @@ func TestHTTPServerStartSessionNoUsername(t *testing.T) {
 	requestBody, _ := json.Marshal(map[string]string{
 		"not_username": "my_username",
 	})
-	resp, _ := http.Post(uri, "application/json", bytes.NewBuffer(requestBody))
+	resp, _ := http.Post(uri+"session", "application/json", bytes.NewBuffer(requestBody))
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	if debug {
@@ -270,7 +270,7 @@ func startSession(client *http.Client, uri string, username string) {
 	credentialsBuf := new(bytes.Buffer)
 	credentials := Credentials{username}
 	json.NewEncoder(credentialsBuf).Encode(credentials)
-	resp, err := client.Post(uri, "application/json", credentialsBuf)
+	resp, err := client.Post(uri+"session", "application/json", credentialsBuf)
 	if err == nil {
 		defer resp.Body.Close()
 	}
