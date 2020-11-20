@@ -39,7 +39,7 @@ func main() {
 	jar, _ := cookiejar.New(&cookiejar.Options{})
 	client := &http.Client{Jar: jar}
 	clientModel := ClientModel{
-		gameType: Local, game: &game, playerColor: model.White,
+		game: &game, playerColor: model.White,
 		document: js.Global().Get("document"),
 		board: js.Global().Get("document").Call(
 			"getElementById", "board-layout-chessboard"),
@@ -48,6 +48,6 @@ func main() {
 	}
 	clientModel.initListeners()
 	clientModel.initStyle()
-	clientModel.initBoard(model.White)
+	clientModel.viewInitBoard(clientModel.playerColor)
 	<-done
 }

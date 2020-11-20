@@ -24,14 +24,14 @@ func (clientModel *ClientModel) initStyle() {
 	}
 }
 
-func (clientModel *ClientModel) resetBoard() {
+func (clientModel *ClientModel) viewClearBoard() {
 	elements := clientModel.document.Call("getElementsByClassName", "piece")
 	for i := elements.Length() - 1; i >= 0; i-- {
 		elements.Index(i).Call("remove")
 	}
 }
 
-func (clientModel *ClientModel) initBoard(playerColor model.Color) {
+func (clientModel *ClientModel) viewInitBoard(playerColor model.Color) {
 	for _, file := range clientModel.game.Board() {
 		for _, piece := range file {
 			if piece != nil {

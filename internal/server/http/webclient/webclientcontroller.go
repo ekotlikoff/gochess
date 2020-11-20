@@ -33,9 +33,10 @@ func (clientModel *ClientModel) genMouseDown() js.Func {
 			clientModel.elDragging = this
 			_, _, _, _, gridX, gridY :=
 				clientModel.getEventMousePosition(i[0])
-			clientModel.positionOriginal =
-				model.Position{uint8(gridX), uint8(7 - gridY)}
-			clientModel.pieceDragging = clientModel.game.Board()[gridX][7-gridY]
+			clientModel.positionOriginal = clientModel.getPositionFromGrid(
+				uint8(gridX), uint8(gridY))
+			clientModel.pieceDragging =
+				clientModel.game.Board().Piece(clientModel.positionOriginal)
 			addClass(clientModel.elDragging, "dragging")
 			clientModel.draggingOrigTransform =
 				clientModel.elDragging.Get("style").Get("transform")
@@ -64,7 +65,8 @@ func (clientModel *ClientModel) genMouseUp() js.Func {
 			originalPositionClass :=
 				getPositionClass(cm.positionOriginal, cm.playerColor)
 			_, _, _, _, gridX, gridY := clientModel.getEventMousePosition(i[0])
-			positionDragging := model.Position{uint8(gridX), uint8(7 - gridY)}
+			positionDragging :=
+				clientModel.getPositionFromGrid(uint8(gridX), uint8(gridY))
 			move := model.Move{
 				int8(positionDragging.File) - int8(cm.positionOriginal.File),
 				int8(positionDragging.Rank) - int8(cm.positionOriginal.Rank),
@@ -77,7 +79,7 @@ func (clientModel *ClientModel) genMouseUp() js.Func {
 					getPositionClass(positionDragging, cm.playerColor)
 				elements := cm.document.Call("getElementsByClassName", newPositionClass)
 				elementsLength := elements.Length()
-				for i := 0; i < elementsLength; i++ {
+				for i := elementsLength - 1; i >= 0; i-- {
 					elements.Index(i).Call("remove")
 				}
 				cm.elDragging.Get("classList").Call("remove", originalPositionClass)
@@ -127,13 +129,15 @@ func (clientModel *ClientModel) lookForMatch() {
 	if err == nil {
 		defer resp.Body.Close()
 	}
-	buttonLoader.Call("remove")
+	var playerColor model.Color
+	json.NewDecoder(resp.Body).Decode(&playerColor)
+	clientModel.playerColor = playerColor
+	clientModel.resetGame()
 	// - TODO once matched briefly display matched icon
 	// - TODO once matched reset board and set player color and time remaining
-	clientModel.resetBoard()
-	clientModel.initBoard()
 	clientModel.isMatched = true
 	clientModel.isMatchmaking = false
+	buttonLoader.Call("remove")
 }
 
 func (clientModel *ClientModel) getEventMousePosition(event js.Value) (
@@ -208,4 +212,22 @@ func (cm *ClientModel) handleCastle(move model.Move) {
 			elements.Index(i).Get("classList").Call("remove", rookPosClass)
 		}
 	}
+}
+
+// To flip black to be on the bottom we do two things, everything is flipped
+// in the view (see getPositionClass), and everything is flipped onClick here.
+func (cm *ClientModel) getPositionFromGrid(
+	gridX uint8, gridY uint8) model.Position {
+	if cm.playerColor == model.White {
+		return model.Position{uint8(gridX), uint8(7 - gridY)}
+	} else {
+		return model.Position{uint8(7 - gridX), uint8(gridY)}
+	}
+}
+
+func (clientModel *ClientModel) resetGame() {
+	game := model.NewGame()
+	clientModel.game = &game
+	clientModel.viewClearBoard()
+	clientModel.viewInitBoard(clientModel.playerColor)
 }
