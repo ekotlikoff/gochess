@@ -108,24 +108,32 @@ func (clientModel *ClientModel) lookForMatch() {
 		clientModel.document.Call(
 			"getElementById", "beginMatchmakingButton"))
 	clientModel.mutex.Unlock()
-	// TODO
-	username := clientModel.document.Call(
-		"getElementById", "username").Get("value").String()
-	credentialsBuf := new(bytes.Buffer)
-	credentials := webserver.Credentials{username}
-	json.NewEncoder(credentialsBuf).Encode(credentials)
-	resp, err := clientModel.client.Post(
-		clientModel.matchingServerURI+"session",
-		"application/json", credentialsBuf,
-	)
+	if !clientModel.hasSession {
+		username := clientModel.document.Call(
+			"getElementById", "username").Get("value").String()
+		credentialsBuf := new(bytes.Buffer)
+		credentials := webserver.Credentials{username}
+		json.NewEncoder(credentialsBuf).Encode(credentials)
+		resp, err := clientModel.client.Post(
+			clientModel.matchingServerURI+"session",
+			"application/json", credentialsBuf,
+		)
+		if err == nil {
+			defer resp.Body.Close()
+		}
+		clientModel.hasSession = true
+	}
+	resp, err := clientModel.client.Get(clientModel.matchingServerURI + "match")
 	if err == nil {
 		defer resp.Body.Close()
 	}
-	// - Store state in clientModel to remember that the session is started
-	// - GET /match to begin matching
-	// - Once matched stops displaying loading icon and briefly displays matched icon
 	buttonLoader.Call("remove")
-	// - Once matched reset board and set player color and time remaining
+	// - TODO once matched briefly display matched icon
+	// - TODO once matched reset board and set player color and time remaining
+	clientModel.resetBoard()
+	clientModel.initBoard()
+	clientModel.isMatched = true
+	clientModel.isMatchmaking = false
 }
 
 func (clientModel *ClientModel) getEventMousePosition(event js.Value) (

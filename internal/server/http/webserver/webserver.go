@@ -1,9 +1,7 @@
 package webserver
 
-// Credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/satori/go.uuid"
 	"gochess/internal/model"
 	"gochess/internal/server/match"
@@ -53,6 +51,7 @@ func ServeRoot(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "../webclient/assets/wasm_exec.html")
 }
 
+// Credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
 func StartSession(w http.ResponseWriter, r *http.Request) {
 	log.SetPrefix("StartSession: ")
 	var creds Credentials
@@ -95,7 +94,7 @@ func createSearchForMatchHandler(
 		}
 		matchServer.MatchPlayer(player)
 		player.WaitForMatchStart()
-		fmt.Fprintf(w, "Matched!  Player color=%v", player.Color())
+		json.NewEncoder(w).Encode(player.Color())
 	}
 	return http.HandlerFunc(handler)
 }
@@ -109,7 +108,7 @@ func SyncHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		pieceMove := player.GetSyncUpdate()
-		fmt.Fprintf(w, "Opponent move=%v", pieceMove)
+		json.NewEncoder(w).Encode(pieceMove)
 	case "POST":
 		var moveRequest model.MoveRequest
 		err := json.NewDecoder(r.Body).Decode(&moveRequest)

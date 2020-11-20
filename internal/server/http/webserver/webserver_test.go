@@ -109,8 +109,8 @@ func TestHTTPServerMatch(t *testing.T) {
 		fmt.Println(string(body2))
 		fmt.Println(resp2.StatusCode)
 	}
-	if err2 != nil || !strings.HasPrefix(string(body), "Matched!") ||
-		!strings.HasPrefix(string(body2), "Matched!") {
+	if err2 != nil || (!strings.HasPrefix(string(body), "1") &&
+		!strings.HasPrefix(string(body2), "1")) {
 		t.Error("Expected match got ", string(body))
 	}
 }
@@ -124,14 +124,16 @@ func TestHTTPServerCheckmate(t *testing.T) {
 	resp, _ := black.Get(uri + "sync")
 	body, _ := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), "{2 1} {0 2}") {
+	if !strings.Contains(string(body),
+		"{\"Position\":{\"File\":2,\"Rank\":1},\"Move\":{\"X\":0,\"Y\":2}}") {
 		t.Error("Expected opponent's move got ", string(body))
 	}
 	sendMove(black, uri+"sync", 4, 6, 0, -2)
 	resp, _ = white.Get(uri + "sync")
 	body, _ = ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
-	if !strings.Contains(string(body), "{4 6} {0 -2}") {
+	if !strings.Contains(string(body),
+		"{\"Position\":{\"File\":4,\"Rank\":6},\"Move\":{\"X\":0,\"Y\":-2}}") {
 		t.Error("Expected opponent's move got ", string(body))
 	}
 	sendMove(white, uri+"sync", 2, 3, 0, 1)
@@ -245,7 +247,7 @@ func createMatch(uri string) (
 	blackName = "player1"
 	whiteName = "player2"
 	white = client2
-	if strings.Contains(string(body), "color=1") {
+	if strings.Contains(string(body), "1") {
 		black = client2
 		blackName = "player2"
 		whiteName = "player1"

@@ -29,6 +29,7 @@ type ClientModel struct {
 	isMatchmaking, isMatched bool
 	matchingServerURI        string
 	client                   *http.Client
+	hasSession               bool
 	mutex                    sync.Mutex
 }
 
@@ -46,7 +47,6 @@ func main() {
 		client:            client,
 	}
 	clientModel.initListeners()
-	// TODO make http calls to interact with server
 	clientModel.initStyle()
 	clientModel.initBoard(model.White)
 	<-done

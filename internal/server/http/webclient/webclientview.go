@@ -26,7 +26,7 @@ func (clientModel *ClientModel) initStyle() {
 
 func (clientModel *ClientModel) resetBoard() {
 	elements := clientModel.document.Call("getElementsByClassName", "piece")
-	for i := 0; i < elements.Length(); i++ {
+	for i := elements.Length() - 1; i >= 0; i-- {
 		elements.Index(i).Call("remove")
 	}
 }
