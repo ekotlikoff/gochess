@@ -52,6 +52,9 @@ func TestValidMovesPawnEnPassant(t *testing.T) {
 	if debug {
 		fmt.Println(board)
 	}
+	if board[3][3] == nil || board[3][3].Position().Rank != 3 {
+		t.Error("Expected pawn in the correct position")
+	}
 	validMoves :=
 		board[4][3].ValidMoves(&board, Move{0, 2}, board[3][3], false, nil)
 	if (len(validMoves) != 2 || validMoves[0] != Move{-1, -1}) {

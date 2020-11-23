@@ -74,3 +74,24 @@ func TestStalemate(t *testing.T) {
 		t.Error("Game should be a draw")
 	}
 }
+
+func TestEnPassant(t *testing.T) {
+	game := NewGame()
+	if game.gameOver != false || game.result.Draw == true {
+		t.Error("Game should not be over")
+	}
+	game.Move(MoveRequest{Position{4, 1}, Move{0, 2}})
+	game.Move(MoveRequest{Position{7, 6}, Move{0, -2}})
+	game.Move(MoveRequest{Position{4, 3}, Move{0, 1}})
+	game.Move(MoveRequest{Position{3, 6}, Move{0, -2}})
+	if debug {
+		fmt.Println(game.board)
+	}
+	if game.board[3][4] == nil {
+		t.Error("Pawn should have moved as expected")
+	}
+	game.Move(MoveRequest{Position{4, 4}, Move{-1, 1}})
+	if game.board[3][4] != nil || game.board[3][5] == nil {
+		t.Error("Pawn should have been taken en passant")
+	}
+}
