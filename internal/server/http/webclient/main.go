@@ -21,7 +21,6 @@ type ClientModel struct {
 	playerColor              model.Color
 	elDragging               js.Value
 	isMouseDown              bool
-	pieceDragging            *model.Piece
 	positionOriginal         model.Position
 	document                 js.Value
 	board                    js.Value
@@ -31,6 +30,7 @@ type ClientModel struct {
 	client                   *http.Client
 	hasSession               bool
 	mutex                    sync.Mutex
+	endRemoteGameChan        chan bool
 }
 
 func main() {
@@ -43,7 +43,7 @@ func main() {
 		document: js.Global().Get("document"),
 		board: js.Global().Get("document").Call(
 			"getElementById", "board-layout-chessboard"),
-		matchingServerURI: "http://localhost:8000/",
+		matchingServerURI: "http://192.168.1.166:8000/",
 		client:            client,
 	}
 	clientModel.initListeners()

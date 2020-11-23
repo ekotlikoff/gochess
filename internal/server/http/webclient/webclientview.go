@@ -48,6 +48,70 @@ func (clientModel *ClientModel) viewInitBoard(playerColor model.Color) {
 	}
 }
 
+func (cm *ClientModel) viewHandleMove(
+	moveRequest model.MoveRequest, newPos model.Position, elMoving js.Value) {
+	originalPositionClass :=
+		getPositionClass(moveRequest.Position, cm.playerColor)
+	newPositionClass := getPositionClass(newPos, cm.playerColor)
+	elements := cm.document.Call("getElementsByClassName", newPositionClass)
+	elementsLength := elements.Length()
+	for i := elementsLength - 1; i >= 0; i-- {
+		elements.Index(i).Call("remove")
+	}
+	cm.viewHandleCastle(moveRequest.Move, newPos)
+	cm.viewHandleEnPassant(moveRequest.Move, newPos, elementsLength == 0)
+	elMoving.Get("classList").Call("remove", originalPositionClass)
+	elMoving.Get("classList").Call("add", newPositionClass)
+}
+
+func (cm *ClientModel) viewHandleEnPassant(
+	move model.Move, newPos model.Position, targetEmpty bool) {
+	pawn := cm.game.Board().Piece(newPos)
+	if pawn.PieceType() == model.Pawn && move.X != 0 && targetEmpty {
+		capturedY := pawn.Rank() + 1
+		if move.Y > 0 {
+			capturedY = pawn.Rank() - 1
+		}
+		capturedPosition := model.Position{pawn.File(), capturedY}
+		capturedPosClass := getPositionClass(capturedPosition, cm.playerColor)
+		elements := cm.document.Call("getElementsByClassName", capturedPosClass)
+		elementsLength := elements.Length()
+		for i := 0; i < elementsLength; i++ {
+			elements.Index(i).Call("remove")
+		}
+	}
+}
+
+func (cm *ClientModel) viewHandleCastle(
+	move model.Move, newPos model.Position) {
+	king := cm.game.Board().Piece(newPos)
+	if king.PieceType() == model.King &&
+		(move.X < -1 || move.X > 1) {
+		var rookPosition model.Position
+		var rookPosClass string
+		var rookNewPosClass string
+		if king.File() == 2 {
+			rookPosition = model.Position{0, king.Rank()}
+			rookPosClass = getPositionClass(rookPosition, cm.playerColor)
+			newRookPosition := model.Position{3, king.Rank()}
+			rookNewPosClass = getPositionClass(newRookPosition, cm.playerColor)
+		} else if king.File() == 6 {
+			rookPosition = model.Position{7, king.Rank()}
+			rookPosClass = getPositionClass(rookPosition, cm.playerColor)
+			newRookPosition := model.Position{5, king.Rank()}
+			rookNewPosClass = getPositionClass(newRookPosition, cm.playerColor)
+		} else {
+			panic("King not in valid castled position")
+		}
+		elements := cm.document.Call("getElementsByClassName", rookPosClass)
+		elementsLength := elements.Length()
+		for i := 0; i < elementsLength; i++ {
+			elements.Index(i).Get("classList").Call("add", rookNewPosClass)
+			elements.Index(i).Get("classList").Call("remove", rookPosClass)
+		}
+	}
+}
+
 func (clientModel *ClientModel) buttonBeginLoading(button js.Value) js.Value {
 	i := clientModel.document.Call("createElement", "div")
 	i.Get("classList").Call("add", "loading")

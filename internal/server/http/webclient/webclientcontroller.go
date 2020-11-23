@@ -7,22 +7,19 @@ import (
 	"gochess/internal/model"
 	"gochess/internal/server/http/webserver"
 	"syscall/js"
+	"time"
 )
+
+var ctp string = "application/json"
 
 func (clientModel *ClientModel) initListeners() {
 	clientModel.document.Call("addEventListener", "mousemove",
 		clientModel.genMouseMove(), false)
 	clientModel.document.Call("addEventListener", "mouseup",
 		clientModel.genMouseUp(), false)
+	clientModel.board.Call("addEventListener", "contextmenu",
+		js.FuncOf(preventDefault), false)
 	js.Global().Set("beginMatchmaking", clientModel.genBeginMatchmaking())
-	clientModel.board.Call("addEventListener", "contextmenu", js.FuncOf(preventDefault), false)
-}
-
-func preventDefault(this js.Value, i []js.Value) interface{} {
-	if len(i) > 0 {
-		i[0].Call("preventDefault")
-	}
-	return 0
 }
 
 func (clientModel *ClientModel) genMouseDown() js.Func {
@@ -35,8 +32,6 @@ func (clientModel *ClientModel) genMouseDown() js.Func {
 				clientModel.getEventMousePosition(i[0])
 			clientModel.positionOriginal = clientModel.getPositionFromGrid(
 				uint8(gridX), uint8(gridY))
-			clientModel.pieceDragging =
-				clientModel.game.Board().Piece(clientModel.positionOriginal)
 			addClass(clientModel.elDragging, "dragging")
 			clientModel.draggingOrigTransform =
 				clientModel.elDragging.Get("style").Get("transform")
@@ -59,39 +54,99 @@ func (clientModel *ClientModel) genMouseUp() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
 		cm := clientModel
 		if cm.isMouseDown && len(i) > 0 {
-			i[0].Call("preventDefault")
-			cm.elDragging.Get("style").Set("transform", cm.draggingOrigTransform)
-			removeClass(cm.elDragging, "dragging")
-			originalPositionClass :=
-				getPositionClass(cm.positionOriginal, cm.playerColor)
-			_, _, _, _, gridX, gridY := clientModel.getEventMousePosition(i[0])
-			positionDragging :=
-				clientModel.getPositionFromGrid(uint8(gridX), uint8(gridY))
-			move := model.Move{
-				int8(positionDragging.File) - int8(cm.positionOriginal.File),
-				int8(positionDragging.Rank) - int8(cm.positionOriginal.Rank),
-			}
-			err := cm.game.Move(model.MoveRequest{cm.positionOriginal, move})
-			fmt.Println(err)
-			if err == nil && (cm.gameType == Local ||
-				(cm.gameType == Remote && cm.playerColor == cm.game.Turn())) {
-				newPositionClass :=
-					getPositionClass(positionDragging, cm.playerColor)
-				elements := cm.document.Call("getElementsByClassName", newPositionClass)
-				elementsLength := elements.Length()
-				for i := elementsLength - 1; i >= 0; i-- {
-					elements.Index(i).Call("remove")
-				}
-				cm.elDragging.Get("classList").Call("remove", originalPositionClass)
-				cm.elDragging.Get("classList").Call("add", newPositionClass)
-				cm.handleCastle(move)
-				cm.handleEnPassant(move, elementsLength == 0)
-			}
-			cm.elDragging = js.Undefined()
 			cm.isMouseDown = false
+			elDragging := cm.elDragging
+			cm.elDragging = js.Undefined()
+			i[0].Call("preventDefault")
+			_, _, _, _, gridX, gridY := clientModel.getEventMousePosition(i[0])
+			newPosition :=
+				clientModel.getPositionFromGrid(uint8(gridX), uint8(gridY))
+			moveRequest := model.MoveRequest{
+				clientModel.positionOriginal,
+				model.Move{
+					int8(newPosition.File) - int8(cm.positionOriginal.File),
+					int8(newPosition.Rank) - int8(cm.positionOriginal.Rank),
+				},
+			}
+			if cm.gameType == Local || cm.playerColor == cm.game.Turn() {
+				go func() {
+					cm.takeMove(moveRequest, newPosition, elDragging)
+					elDragging.Get("style").Set("transform", cm.draggingOrigTransform)
+					removeClass(elDragging, "dragging")
+				}()
+			} else {
+				elDragging.Get("style").Set("transform", cm.draggingOrigTransform)
+				removeClass(elDragging, "dragging")
+			}
 		}
 		return 0
 	})
+}
+
+func (cm *ClientModel) takeMove(
+	moveRequest model.MoveRequest, newPos model.Position, elMoving js.Value) {
+	successfulRemoteMove := false
+	if cm.gameType == Remote {
+		movePayloadBuf := new(bytes.Buffer)
+		json.NewEncoder(movePayloadBuf).Encode(moveRequest)
+		resp, err := cm.client.Post(
+			cm.matchingServerURI+"sync", ctp, movePayloadBuf)
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode != 200 {
+				return
+			}
+			successfulRemoteMove = true
+		}
+	}
+	err := cm.game.Move(moveRequest)
+	fmt.Println(err)
+	if err == nil {
+		cm.viewHandleMove(moveRequest, newPos, elMoving)
+	} else {
+		if successfulRemoteMove {
+			// TODO handle strange case where http call was successful but local
+			// game did not accept the move.
+			println("FATAL: We do not expect an unsuccessful local move when remote succeeds")
+		}
+	}
+}
+
+func (cm *ClientModel) listenForOpponentMove(endRemoteGame chan bool) {
+	// TODO need to write to the endRemoteGame chan when game is over
+	for true {
+		select {
+		case <-endRemoteGame:
+			return
+		default:
+		}
+		resp, err := cm.client.Get(cm.matchingServerURI + "sync")
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode != 200 {
+				continue
+			}
+			opponentMove := model.MoveRequest{}
+			json.NewDecoder(resp.Body).Decode(&opponentMove)
+			cm.mutex.Lock()
+			err := cm.game.Move(opponentMove)
+			cm.mutex.Unlock()
+			if err != nil {
+				println("FATAL: We do not expect an invalid move from the opponent")
+			}
+			newPos := model.Position{
+				opponentMove.Position.File + uint8(opponentMove.Move.X),
+				opponentMove.Position.Rank + uint8(opponentMove.Move.Y),
+			}
+			originalPosClass :=
+				getPositionClass(opponentMove.Position, cm.playerColor)
+			elements := cm.document.Call("getElementsByClassName", originalPosClass)
+			elMoving := elements.Index(0)
+			cm.viewHandleMove(opponentMove, newPos, elMoving)
+		} else {
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
 }
 
 func (clientModel *ClientModel) genBeginMatchmaking() js.Func {
@@ -117,27 +172,29 @@ func (clientModel *ClientModel) lookForMatch() {
 		credentials := webserver.Credentials{username}
 		json.NewEncoder(credentialsBuf).Encode(credentials)
 		resp, err := clientModel.client.Post(
-			clientModel.matchingServerURI+"session",
-			"application/json", credentialsBuf,
+			clientModel.matchingServerURI+"session", ctp, credentialsBuf,
 		)
 		if err == nil {
-			defer resp.Body.Close()
+			resp.Body.Close()
 		}
 		clientModel.hasSession = true
 	}
 	resp, err := clientModel.client.Get(clientModel.matchingServerURI + "match")
 	if err == nil {
-		defer resp.Body.Close()
+		var playerColor model.Color
+		json.NewDecoder(resp.Body).Decode(&playerColor)
+		resp.Body.Close()
+		clientModel.playerColor = playerColor
+		clientModel.resetGame()
+		// - TODO once matched briefly display matched icon?
+		// - TODO once matched set and display time remaining
+		clientModel.gameType = Remote
+		clientModel.isMatched = true
+		clientModel.isMatchmaking = false
+		buttonLoader.Call("remove")
+		clientModel.endRemoteGameChan = make(chan bool, 0)
+		go clientModel.listenForOpponentMove(clientModel.endRemoteGameChan)
 	}
-	var playerColor model.Color
-	json.NewDecoder(resp.Body).Decode(&playerColor)
-	clientModel.playerColor = playerColor
-	clientModel.resetGame()
-	// - TODO once matched briefly display matched icon
-	// - TODO once matched reset board and set player color and time remaining
-	clientModel.isMatched = true
-	clientModel.isMatchmaking = false
-	buttonLoader.Call("remove")
 }
 
 func (clientModel *ClientModel) getEventMousePosition(event js.Value) (
@@ -168,52 +225,6 @@ func (clientModel *ClientModel) getEventMousePosition(event js.Value) (
 	return x, y, squareWidth, squareHeight, gridX, gridY
 }
 
-func (cm *ClientModel) handleEnPassant(move model.Move, targetEmpty bool) {
-	pawn := cm.pieceDragging
-	if pawn.PieceType() == model.Pawn && move.X != 0 && targetEmpty {
-		capturedY := pawn.Rank() + 1
-		if move.Y > 0 {
-			capturedY = pawn.Rank() - 1
-		}
-		capturedPosition := model.Position{pawn.File(), capturedY}
-		capturedPosClass := getPositionClass(capturedPosition, cm.playerColor)
-		elements := cm.document.Call("getElementsByClassName", capturedPosClass)
-		elementsLength := elements.Length()
-		for i := 0; i < elementsLength; i++ {
-			elements.Index(i).Call("remove")
-		}
-	}
-}
-
-func (cm *ClientModel) handleCastle(move model.Move) {
-	king := cm.pieceDragging
-	if king.PieceType() == model.King &&
-		(move.X < -1 || move.X > 1) {
-		var rookPosition model.Position
-		var rookPosClass string
-		var rookNewPosClass string
-		if king.File() == 2 {
-			rookPosition = model.Position{0, king.Rank()}
-			rookPosClass = getPositionClass(rookPosition, cm.playerColor)
-			newRookPosition := model.Position{3, king.Rank()}
-			rookNewPosClass = getPositionClass(newRookPosition, cm.playerColor)
-		} else if king.File() == 6 {
-			rookPosition = model.Position{7, king.Rank()}
-			rookPosClass = getPositionClass(rookPosition, cm.playerColor)
-			newRookPosition := model.Position{5, king.Rank()}
-			rookNewPosClass = getPositionClass(newRookPosition, cm.playerColor)
-		} else {
-			panic("King not in valid castled position")
-		}
-		elements := cm.document.Call("getElementsByClassName", rookPosClass)
-		elementsLength := elements.Length()
-		for i := 0; i < elementsLength; i++ {
-			elements.Index(i).Get("classList").Call("add", rookNewPosClass)
-			elements.Index(i).Get("classList").Call("remove", rookPosClass)
-		}
-	}
-}
-
 // To flip black to be on the bottom we do two things, everything is flipped
 // in the view (see getPositionClass), and everything is flipped onClick here.
 func (cm *ClientModel) getPositionFromGrid(
@@ -223,6 +234,13 @@ func (cm *ClientModel) getPositionFromGrid(
 	} else {
 		return model.Position{uint8(7 - gridX), uint8(gridY)}
 	}
+}
+
+func preventDefault(this js.Value, i []js.Value) interface{} {
+	if len(i) > 0 {
+		i[0].Call("preventDefault")
+	}
+	return 0
 }
 
 func (clientModel *ClientModel) resetGame() {
