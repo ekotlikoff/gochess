@@ -44,7 +44,7 @@ func Serve(
 	}
 	mux := http.NewServeMux()
 
-	mux.Handle("/", http.FileServer(http.Dir("../webclient/assets")))
+	mux.Handle("/", http.FileServer(http.Dir("./cmd/webserver/assets")))
 	mux.HandleFunc("/session", StartSession)
 	mux.Handle("/match", createSearchForMatchHandler(matchServer))
 	mux.HandleFunc("/sync", SyncHandler)

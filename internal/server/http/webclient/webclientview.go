@@ -1,3 +1,5 @@
+// +build webclient
+
 package main
 
 import (
