@@ -24,6 +24,15 @@ func (clientModel *ClientModel) initStyle() {
 	}
 }
 
+func (cm *ClientModel) viewSetMatchDetails() {
+	opponentMatchDetailsName := cm.document.Call(
+		"getElementById", "matchdetails_opponent_name")
+	opponentMatchDetailsName.Set("innerText", cm.opponentName)
+	playerMatchDetailsName := cm.document.Call(
+		"getElementById", "matchdetails_player_name")
+	playerMatchDetailsName.Set("innerText", cm.playerName)
+}
+
 func (clientModel *ClientModel) viewClearBoard() {
 	elements := clientModel.document.Call("getElementsByClassName", "piece")
 	for i := elements.Length() - 1; i >= 0; i-- {

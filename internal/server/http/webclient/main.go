@@ -26,6 +26,8 @@ type ClientModel struct {
 	board                    js.Value
 	draggingOrigTransform    js.Value
 	isMatchmaking, isMatched bool
+	playerName               string
+	opponentName             string
 	matchingServerURI        string
 	client                   *http.Client
 	hasSession               bool

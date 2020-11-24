@@ -23,6 +23,11 @@ type Credentials struct {
 	Username string
 }
 
+type MatchedResponse struct {
+	Color        model.Color
+	OpponentName string
+}
+
 func Serve(
 	matchServer *matchserver.MatchingServer, port int, logFile *string,
 	quiet bool,
@@ -94,7 +99,9 @@ func createSearchForMatchHandler(
 		}
 		matchServer.MatchPlayer(player)
 		player.WaitForMatchStart()
-		json.NewEncoder(w).Encode(player.Color())
+		matchResponse :=
+			MatchedResponse{player.Color(), player.MatchedOpponentName()}
+		json.NewEncoder(w).Encode(matchResponse)
 	}
 	return http.HandlerFunc(handler)
 }

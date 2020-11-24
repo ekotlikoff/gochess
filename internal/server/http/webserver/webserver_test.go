@@ -109,8 +109,8 @@ func TestHTTPServerMatch(t *testing.T) {
 		fmt.Println(string(body2))
 		fmt.Println(resp2.StatusCode)
 	}
-	if err2 != nil || (!strings.HasPrefix(string(body), "1") &&
-		!strings.HasPrefix(string(body2), "1")) {
+	if err2 != nil || (!strings.HasPrefix(string(body), "{\"Color\":1,\"Opp") &&
+		!strings.HasPrefix(string(body2), "\"Color\":1")) {
 		t.Error("Expected match got ", string(body))
 	}
 }

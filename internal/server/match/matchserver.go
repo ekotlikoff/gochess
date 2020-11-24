@@ -15,6 +15,7 @@ type Player struct {
 	responseChanAsync  chan ResponseAsync
 	opponentPlayedMove chan model.MoveRequest
 	matchStart         chan struct{}
+	matchedOpponent    string
 }
 
 func NewPlayer(name string) Player {
@@ -22,12 +23,16 @@ func NewPlayer(name string) Player {
 		name, model.Black, int64(0),
 		make(chan RequestSync, 1), make(chan ResponseSync, 10),
 		make(chan RequestAsync, 1), make(chan ResponseAsync, 1),
-		make(chan model.MoveRequest, 10), make(chan struct{}),
+		make(chan model.MoveRequest, 10), make(chan struct{}), "",
 	}
 }
 
 func (player *Player) Name() string {
 	return player.name
+}
+
+func (player *Player) MatchedOpponentName() string {
+	return player.matchedOpponent
 }
 
 func (player *Player) Color() model.Color {
@@ -116,6 +121,8 @@ func (matchingServer *MatchingServer) matchAndPlay(
 			player1 = player
 		} else if player2 == nil {
 			player2 = player
+			player1.matchedOpponent = player2.name
+			player2.matchedOpponent = player1.name
 			match := matchGenerator(player1, player2)
 			matchingServer.mutex.Lock()
 			matchingServer.liveMatches = append(matchingServer.liveMatches, &match)

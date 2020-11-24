@@ -29,8 +29,11 @@ TODO
         - [x] testing
 * Client
     - [ ] Golang WebAssembly web client
+        - [ ] Display matched opponent name
         - [ ] Display gameover results
         - [ ] Request a draw
         - [ ] Display remaining time
         - [ ] Display point advantage/captured pieces
-        - [ ] Play local match vs begin matchmaking
+        - [x] Play local match vs begin matchmaking
+* General
+    - [ ] Travis CI test
