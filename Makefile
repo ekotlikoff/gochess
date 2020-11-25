@@ -5,7 +5,7 @@ all:
 buildweb:
 	GOARCH=wasm GOOS=js go build -o \
 		   $(GOPATH)/src/gochess/cmd/webserver/assets/lib.wasm \
-		   -tags webclient gochess/internal/server/http/webclient
+		   -tags webclient github.com/Ekotlikoff/gochess/internal/server/http/webclient
 
 runweb: buildweb
-	go run gochess/cmd/webserver
+	go run github.com/Ekotlikoff/gochess/cmd/webserver

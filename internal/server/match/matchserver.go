@@ -1,7 +1,7 @@
 package matchserver
 
 import (
-	"gochess/internal/model"
+	"github.com/Ekotlikoff/gochess/internal/model"
 	"sync"
 )
 

@@ -4,7 +4,7 @@ package main
 
 import (
 	"fmt"
-	"gochess/internal/model"
+	"github.com/Ekotlikoff/gochess/internal/model"
 	"strconv"
 	"syscall/js"
 )

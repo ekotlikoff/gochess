@@ -4,7 +4,7 @@ package webserver
 
 import (
 	"errors"
-	"gochess/internal/server/match"
+	"github.com/Ekotlikoff/gochess/internal/server/match"
 	"sync"
 	"time"
 )

@@ -2,9 +2,9 @@ package webserver
 
 import (
 	"encoding/json"
-	"github.com/satori/go.uuid"
-	"gochess/internal/model"
-	"gochess/internal/server/match"
+	"github.com/Ekotlikoff/gochess/internal/model"
+	"github.com/Ekotlikoff/gochess/internal/server/match"
+	"github.com/gofrs/uuid"
 	"io/ioutil"
 	"log"
 	"net/http"

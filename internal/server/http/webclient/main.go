@@ -3,7 +3,7 @@
 package main
 
 import (
-	"gochess/internal/model"
+	"github.com/Ekotlikoff/gochess/internal/model"
 	"net/http"
 	"net/http/cookiejar"
 	"sync"

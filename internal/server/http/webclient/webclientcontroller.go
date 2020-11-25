@@ -6,8 +6,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"gochess/internal/model"
-	"gochess/internal/server/http/webserver"
+	"github.com/Ekotlikoff/gochess/internal/model"
+	"github.com/Ekotlikoff/gochess/internal/server/http/webserver"
 	"syscall/js"
 	"time"
 )

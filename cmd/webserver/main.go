@@ -1,8 +1,8 @@
 package main
 
 import (
-	"gochess/internal/server/http/webserver"
-	"gochess/internal/server/match"
+	"github.com/Ekotlikoff/gochess/internal/server/http/webserver"
+	"github.com/Ekotlikoff/gochess/internal/server/match"
 )
 
 func main() {
