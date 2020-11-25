@@ -54,6 +54,8 @@ func (clientModel *ClientModel) viewInitBoard(playerColor model.Color) {
 				clientModel.board.Call("appendChild", div)
 				div.Call("addEventListener", "mousedown",
 					clientModel.genMouseDown(), false)
+				div.Call("addEventListener", "touchstart",
+					clientModel.genTouchStart(), false)
 			}
 		}
 	}

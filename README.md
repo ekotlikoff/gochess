@@ -35,5 +35,6 @@ TODO
         - [ ] Display remaining time
         - [ ] Display point advantage/captured pieces
         - [x] Play local match vs begin matchmaking
+        - [x] Mobile support
 * General
     - [ ] Travis CI test

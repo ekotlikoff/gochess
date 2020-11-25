@@ -17,8 +17,12 @@ var ctp string = "application/json"
 func (clientModel *ClientModel) initListeners() {
 	clientModel.document.Call("addEventListener", "mousemove",
 		clientModel.genMouseMove(), false)
+	clientModel.document.Call("addEventListener", "touchmove",
+		clientModel.genTouchMove(), false)
 	clientModel.document.Call("addEventListener", "mouseup",
 		clientModel.genMouseUp(), false)
+	clientModel.document.Call("addEventListener", "touchend",
+		clientModel.genTouchEnd(), false)
 	clientModel.board.Call("addEventListener", "contextmenu",
 		js.FuncOf(preventDefault), false)
 	js.Global().Set("beginMatchmaking", clientModel.genBeginMatchmaking())
@@ -27,62 +31,102 @@ func (clientModel *ClientModel) initListeners() {
 func (clientModel *ClientModel) genMouseDown() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
 		if len(i) > 0 && !clientModel.isMouseDown {
-			clientModel.isMouseDown = true
 			i[0].Call("preventDefault")
-			clientModel.elDragging = this
-			_, _, _, _, gridX, gridY :=
-				clientModel.getEventMousePosition(i[0])
-			clientModel.positionOriginal = clientModel.getPositionFromGrid(
-				uint8(gridX), uint8(gridY))
-			addClass(clientModel.elDragging, "dragging")
-			clientModel.draggingOrigTransform =
-				clientModel.elDragging.Get("style").Get("transform")
+			clientModel.handleClickStart(this, i[0])
 		}
 		return 0
 	})
+}
+
+func (clientModel *ClientModel) genTouchStart() js.Func {
+	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
+		if len(i) > 0 && !clientModel.isMouseDown {
+			i[0].Call("preventDefault")
+			touch := i[0].Get("touches").Index(0)
+			clientModel.handleClickStart(this, touch)
+		}
+		return 0
+	})
+}
+
+func (clientModel *ClientModel) handleClickStart(
+	this js.Value, event js.Value) {
+	clientModel.isMouseDown = true
+	clientModel.elDragging = this
+	_, _, _, _, gridX, gridY :=
+		clientModel.getEventMousePosition(event)
+	clientModel.positionOriginal = clientModel.getPositionFromGrid(
+		uint8(gridX), uint8(gridY))
+	addClass(clientModel.elDragging, "dragging")
+	clientModel.draggingOrigTransform =
+		clientModel.elDragging.Get("style").Get("transform")
 }
 
 func (clientModel *ClientModel) genMouseMove() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
 		i[0].Call("preventDefault")
-		if clientModel.isMouseDown {
-			clientModel.viewDragPiece(clientModel.elDragging, i[0])
+		clientModel.handleMoveEvent(i[0])
+		return 0
+	})
+}
+
+func (clientModel *ClientModel) genTouchMove() js.Func {
+	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
+		i[0].Call("preventDefault")
+		touch := i[0].Get("touches").Index(0)
+		clientModel.handleMoveEvent(touch)
+		return 0
+	})
+}
+
+func (clientModel *ClientModel) handleMoveEvent(moveEvent js.Value) {
+	if clientModel.isMouseDown {
+		clientModel.viewDragPiece(clientModel.elDragging, moveEvent)
+	}
+}
+
+func (clientModel *ClientModel) genMouseUp() js.Func {
+	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
+		if clientModel.isMouseDown && len(i) > 0 {
+			i[0].Call("preventDefault")
+			clientModel.handleClickEnd(i[0])
 		}
 		return 0
 	})
 }
 
-func (clientModel *ClientModel) genMouseUp() js.Func {
+func (clientModel *ClientModel) genTouchEnd() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		cm := clientModel
-		if cm.isMouseDown && len(i) > 0 {
-			cm.isMouseDown = false
-			elDragging := cm.elDragging
-			cm.elDragging = js.Undefined()
+		if clientModel.isMouseDown && len(i) > 0 {
 			i[0].Call("preventDefault")
-			_, _, _, _, gridX, gridY := clientModel.getEventMousePosition(i[0])
-			newPosition :=
-				clientModel.getPositionFromGrid(uint8(gridX), uint8(gridY))
-			moveRequest := model.MoveRequest{
-				clientModel.positionOriginal,
-				model.Move{
-					int8(newPosition.File) - int8(cm.positionOriginal.File),
-					int8(newPosition.Rank) - int8(cm.positionOriginal.Rank),
-				},
-			}
-			if cm.gameType == Local || cm.playerColor == cm.game.Turn() {
-				go func() {
-					cm.takeMove(moveRequest, newPosition, elDragging)
-					elDragging.Get("style").Set("transform", cm.draggingOrigTransform)
-					removeClass(elDragging, "dragging")
-				}()
-			} else {
-				elDragging.Get("style").Set("transform", cm.draggingOrigTransform)
-				removeClass(elDragging, "dragging")
-			}
+			touch := i[0].Get("changedTouches").Index(0)
+			clientModel.handleClickEnd(touch)
 		}
 		return 0
 	})
+}
+
+func (cm *ClientModel) handleClickEnd(event js.Value) {
+	cm.isMouseDown = false
+	elDragging := cm.elDragging
+	cm.elDragging = js.Undefined()
+	_, _, _, _, gridX, gridY := cm.getEventMousePosition(event)
+	newPosition := cm.getPositionFromGrid(uint8(gridX), uint8(gridY))
+	moveRequest := model.MoveRequest{cm.positionOriginal, model.Move{
+		int8(newPosition.File) - int8(cm.positionOriginal.File),
+		int8(newPosition.Rank) - int8(cm.positionOriginal.Rank),
+	},
+	}
+	if cm.gameType == Local || cm.playerColor == cm.game.Turn() {
+		go func() {
+			cm.takeMove(moveRequest, newPosition, elDragging)
+			elDragging.Get("style").Set("transform", cm.draggingOrigTransform)
+			removeClass(elDragging, "dragging")
+		}()
+	} else {
+		elDragging.Get("style").Set("transform", cm.draggingOrigTransform)
+		removeClass(elDragging, "dragging")
+	}
 }
 
 func (cm *ClientModel) takeMove(
