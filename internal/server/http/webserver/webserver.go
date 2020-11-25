@@ -52,6 +52,10 @@ func Serve(
 	http.ListenAndServe(":"+strconv.Itoa(port), mux)
 }
 
+func SetQuiet() {
+	log.SetOutput(ioutil.Discard)
+}
+
 func ServeRoot(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "../webclient/assets/wasm_exec.html")
 }
