@@ -35,6 +35,7 @@ TODO
         - [ ] Request a draw
         - [ ] Display remaining time
         - [ ] Display point advantage/captured pieces
+        - [ ] Is the mutex needed/used correctly?
         - [x] Play local match vs begin matchmaking
         - [x] Mobile support
 * General
