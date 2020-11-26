@@ -17,7 +17,8 @@ TODO
     - [x] http server
       - [ ] Support some mechanism for a user cancelling their matchmaking
       - [ ] GET /sync should also provide player's remaining time to keep client, server in sync
-      - [ ] Implement /moves so that a disconnected client can reconnect
+      - [ ] Implement /currentgame so that a disconnected client can reconnect
+      - [ ] Use browser session storage to save the session token cookie, that way a client can refresh and check if their token is still valid/in a game https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage
       - [x] checkmate test
       - [x] requested draw test
       - [x] resignation test
@@ -29,9 +30,13 @@ TODO
         - [x] testing
 * Client
     - [ ] Golang WebAssembly web client
-        - [ ] Should the client call separate apiserver directly?  Or webserver routes request to apiserver?
+        - [x] Display matched opponent name
         - [ ] Display gameover results
         - [ ] Request a draw
         - [ ] Display remaining time
         - [ ] Display point advantage/captured pieces
-        - [ ] Play local match vs begin matchmaking
+        - [ ] Is the mutex needed/used correctly?
+        - [x] Play local match vs begin matchmaking
+        - [x] Mobile support
+* General
+    - [x] Travis CI test

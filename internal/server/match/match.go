@@ -2,7 +2,7 @@ package matchserver
 
 import (
 	"errors"
-	"gochess/internal/model"
+	"github.com/Ekotlikoff/gochess/internal/model"
 	"time"
 )
 

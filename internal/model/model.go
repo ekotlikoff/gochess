@@ -60,6 +60,10 @@ func createTheBackLine(board *board) {
 	}
 }
 
+func (board board) Piece(pos Position) *Piece {
+	return board[pos.File][pos.Rank]
+}
+
 func (board board) String() string {
 	out := ""
 	for rank := 7; rank >= 0; rank-- {

@@ -1,10 +1,10 @@
-package apiserver
+package webserver
 
 // Credit to https://stackoverflow.com/questions/25484122/map-with-ttl-option-in-go
 
 import (
 	"errors"
-	"gochess/internal/server/match"
+	"github.com/Ekotlikoff/gochess/internal/server/match"
 	"sync"
 	"time"
 )

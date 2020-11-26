@@ -99,22 +99,23 @@ license that can be found in the LICENSE file.
 				return await WebAssembly.instantiate(source, importObject);
 			};
 		}
-
-    const go = new Go();
-    let mod, inst;
-    WebAssembly.instantiateStreaming(fetch("lib.wasm"), go.importObject).then(
-        async result => {
-            inst = result.instance;
-            await go.run(inst);
-        }
-    );
+            const go = new Go();
+            WebAssembly.instantiateStreaming(fetch("lib.wasm"), go.importObject).then((result) => {
+                go.run(result.instance);
+            });
 	</script>
 
 
+    <div id="matchdetails_opponent">
+        <h3 id="matchdetails_opponent_name"></h3>
+    </div>
     <div id="board-layout-chessboard" class="board-layout-chessboard board-board" style="width: 500px; height: 500px; padding-bottom: 0px;">
         <chess-board class="board" id="board-game">
             <svg viewBox="0 0 100 100" class="coordinates" />
         </chess-board>
+    </div>
+    <div id="matchdetails_player">
+        <h3 id="matchdetails_player_name"></h3>
     </div>
     <input type="text" id="username" />
     <button onClick="beginMatchmaking('username');" id="beginMatchmakingButton">

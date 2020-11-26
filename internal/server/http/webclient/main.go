@@ -1,7 +1,9 @@
+// +build webclient
+
 package main
 
 import (
-	"gochess/internal/model"
+	"github.com/Ekotlikoff/gochess/internal/model"
 	"net/http"
 	"net/http/cookiejar"
 	"sync"
@@ -21,15 +23,18 @@ type ClientModel struct {
 	playerColor              model.Color
 	elDragging               js.Value
 	isMouseDown              bool
-	pieceDragging            *model.Piece
 	positionOriginal         model.Position
 	document                 js.Value
 	board                    js.Value
 	draggingOrigTransform    js.Value
 	isMatchmaking, isMatched bool
+	playerName               string
+	opponentName             string
 	matchingServerURI        string
 	client                   *http.Client
+	hasSession               bool
 	mutex                    sync.Mutex
+	endRemoteGameChan        chan bool
 }
 
 func main() {
@@ -38,16 +43,15 @@ func main() {
 	jar, _ := cookiejar.New(&cookiejar.Options{})
 	client := &http.Client{Jar: jar}
 	clientModel := ClientModel{
-		gameType: Local, game: &game, playerColor: model.White,
+		game: &game, playerColor: model.White,
 		document: js.Global().Get("document"),
 		board: js.Global().Get("document").Call(
 			"getElementById", "board-layout-chessboard"),
-		matchingServerURI: "http://localhost:8081",
+		matchingServerURI: "http://192.168.1.166:8000/",
 		client:            client,
 	}
 	clientModel.initListeners()
-	// TODO make http calls to interact with server
 	clientModel.initStyle()
-	clientModel.initBoard(model.White)
+	clientModel.viewInitBoard(clientModel.playerColor)
 	<-done
 }

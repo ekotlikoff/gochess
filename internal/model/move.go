@@ -373,7 +373,10 @@ func (piece *Piece) wouldBeInCheck(
 		piece.takeMoveUnsafe(board, move, previousMove, previousMover)
 	wouldBeInCheck := king.isThreatened(board, move, piece)
 	// Revert the move
-	board[newPosition.File][newPosition.Rank] = capturedPiece
+	board[newPosition.File][newPosition.Rank] = nil
+	if capturedPiece != nil {
+		board[capturedPiece.File()][capturedPiece.Rank()] = capturedPiece
+	}
 	board[originalPosition.File][originalPosition.Rank] = piece
 	piece.position = originalPosition
 	if castledRook != nil {
