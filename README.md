@@ -31,6 +31,7 @@ TODO
 * Client
     - [ ] Golang WebAssembly web client
         - [x] Display matched opponent name
+        - [ ] Check cookies for session token instead of using hasSession bool
         - [ ] Display gameover results
         - [ ] Request a draw
         - [ ] Display remaining time
