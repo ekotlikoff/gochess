@@ -8,13 +8,15 @@ import (
 	"fmt"
 	"github.com/Ekotlikoff/gochess/internal/model"
 	"github.com/Ekotlikoff/gochess/internal/server/http/webserver"
+	"io/ioutil"
+	"log"
 	"syscall/js"
 	"time"
 )
 
 var ctp string = "application/json"
 
-func (clientModel *ClientModel) initListeners() {
+func (clientModel *ClientModel) initController(quiet bool) {
 	clientModel.document.Call("addEventListener", "mousemove",
 		clientModel.genMouseMove(), false)
 	clientModel.document.Call("addEventListener", "touchmove",
@@ -26,6 +28,9 @@ func (clientModel *ClientModel) initListeners() {
 	clientModel.board.Call("addEventListener", "contextmenu",
 		js.FuncOf(preventDefault), false)
 	js.Global().Set("beginMatchmaking", clientModel.genBeginMatchmaking())
+	if quiet {
+		log.SetOutput(ioutil.Discard)
+	}
 }
 
 func (clientModel *ClientModel) genMouseDown() js.Func {
@@ -107,7 +112,6 @@ func (clientModel *ClientModel) genTouchEnd() js.Func {
 }
 
 func (cm *ClientModel) handleClickEnd(event js.Value) {
-	cm.isMouseDown = false
 	elDragging := cm.elDragging
 	cm.elDragging = js.Undefined()
 	_, _, _, _, gridX, gridY := cm.getEventMousePosition(event)
@@ -127,6 +131,7 @@ func (cm *ClientModel) handleClickEnd(event js.Value) {
 		elDragging.Get("style").Set("transform", cm.draggingOrigTransform)
 		removeClass(elDragging, "dragging")
 	}
+	cm.isMouseDown = false
 }
 
 func (cm *ClientModel) takeMove(
@@ -159,7 +164,10 @@ func (cm *ClientModel) takeMove(
 }
 
 func (cm *ClientModel) listenForOpponentMove(endRemoteGame chan bool) {
+	log.SetPrefix("listenForOpponentMove: ")
 	// TODO need to write to the endRemoteGame chan when game is over
+	retries := 0
+	maxRetries := 10
 	for true {
 		select {
 		case <-endRemoteGame:
@@ -169,9 +177,6 @@ func (cm *ClientModel) listenForOpponentMove(endRemoteGame chan bool) {
 		resp, err := cm.client.Get(cm.matchingServerURI + "sync")
 		if err == nil {
 			defer resp.Body.Close()
-			if resp.StatusCode != 200 {
-				continue
-			}
 			opponentMove := model.MoveRequest{}
 			json.NewDecoder(resp.Body).Decode(&opponentMove)
 			cm.mutex.Lock()
@@ -191,6 +196,12 @@ func (cm *ClientModel) listenForOpponentMove(endRemoteGame chan bool) {
 			cm.viewHandleMove(opponentMove, newPos, elMoving)
 		} else {
 			time.Sleep(500 * time.Millisecond)
+			retries++
+			if retries >= maxRetries {
+				log.Printf("Reached maxRetries on uri=%s retries=%d",
+					cm.matchingServerURI+"sync", maxRetries)
+				return
+			}
 		}
 	}
 }
