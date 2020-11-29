@@ -35,7 +35,7 @@ func (clientModel *ClientModel) initController(quiet bool) {
 
 func (clientModel *ClientModel) genMouseDown() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		if len(i) > 0 && !clientModel.isMouseDown {
+		if len(i) > 0 && !clientModel.GetIsMouseDown() {
 			i[0].Call("preventDefault")
 			clientModel.handleClickStart(this, i[0])
 		}
@@ -45,7 +45,7 @@ func (clientModel *ClientModel) genMouseDown() js.Func {
 
 func (clientModel *ClientModel) genTouchStart() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		if len(i) > 0 && !clientModel.isMouseDown {
+		if len(i) > 0 && !clientModel.GetIsMouseDown() {
 			i[0].Call("preventDefault")
 			touch := i[0].Get("touches").Index(0)
 			clientModel.handleClickStart(this, touch)
@@ -56,15 +56,15 @@ func (clientModel *ClientModel) genTouchStart() js.Func {
 
 func (clientModel *ClientModel) handleClickStart(
 	this js.Value, event js.Value) {
-	clientModel.isMouseDown = true
-	clientModel.elDragging = this
+	clientModel.SetIsMouseDown(true)
+	clientModel.SetDraggingElement(this)
 	_, _, _, _, gridX, gridY :=
 		clientModel.getEventMousePosition(event)
 	clientModel.positionOriginal = clientModel.getPositionFromGrid(
 		uint8(gridX), uint8(gridY))
-	addClass(clientModel.elDragging, "dragging")
-	clientModel.draggingOrigTransform =
-		clientModel.elDragging.Get("style").Get("transform")
+	addClass(clientModel.GetDraggingElement(), "dragging")
+	clientModel.SetDraggingOriginalTransform(
+		clientModel.GetDraggingElement().Get("style").Get("transform"))
 }
 
 func (clientModel *ClientModel) genMouseMove() js.Func {
@@ -85,14 +85,14 @@ func (clientModel *ClientModel) genTouchMove() js.Func {
 }
 
 func (clientModel *ClientModel) handleMoveEvent(moveEvent js.Value) {
-	if clientModel.isMouseDown {
-		clientModel.viewDragPiece(clientModel.elDragging, moveEvent)
+	if clientModel.GetIsMouseDown() {
+		clientModel.viewDragPiece(clientModel.GetDraggingElement(), moveEvent)
 	}
 }
 
 func (clientModel *ClientModel) genMouseUp() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		if clientModel.isMouseDown && len(i) > 0 {
+		if clientModel.GetIsMouseDown() && len(i) > 0 {
 			i[0].Call("preventDefault")
 			clientModel.handleClickEnd(i[0])
 		}
@@ -102,7 +102,7 @@ func (clientModel *ClientModel) genMouseUp() js.Func {
 
 func (clientModel *ClientModel) genTouchEnd() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		if clientModel.isMouseDown && len(i) > 0 {
+		if clientModel.GetIsMouseDown() && len(i) > 0 {
 			i[0].Call("preventDefault")
 			touch := i[0].Get("changedTouches").Index(0)
 			clientModel.handleClickEnd(touch)
@@ -112,8 +112,8 @@ func (clientModel *ClientModel) genTouchEnd() js.Func {
 }
 
 func (cm *ClientModel) handleClickEnd(event js.Value) {
-	elDragging := cm.elDragging
-	cm.elDragging = js.Undefined()
+	elDragging := cm.GetDraggingElement()
+	cm.SetDraggingElement(js.Undefined())
 	_, _, _, _, gridX, gridY := cm.getEventMousePosition(event)
 	newPosition := cm.getPositionFromGrid(uint8(gridX), uint8(gridY))
 	moveRequest := model.MoveRequest{cm.positionOriginal, model.Move{
@@ -124,20 +124,22 @@ func (cm *ClientModel) handleClickEnd(event js.Value) {
 	if cm.gameType == Local || cm.playerColor == cm.game.Turn() {
 		go func() {
 			cm.takeMove(moveRequest, newPosition, elDragging)
-			elDragging.Get("style").Set("transform", cm.draggingOrigTransform)
+			elDragging.Get("style").Set("transform",
+				cm.GetDraggingOriginalTransform())
 			removeClass(elDragging, "dragging")
 		}()
 	} else {
-		elDragging.Get("style").Set("transform", cm.draggingOrigTransform)
+		elDragging.Get("style").Set("transform",
+			cm.GetDraggingOriginalTransform())
 		removeClass(elDragging, "dragging")
 	}
-	cm.isMouseDown = false
+	cm.SetIsMouseDown(false)
 }
 
 func (cm *ClientModel) takeMove(
 	moveRequest model.MoveRequest, newPos model.Position, elMoving js.Value) {
 	successfulRemoteMove := false
-	if cm.gameType == Remote {
+	if cm.GetGameType() == Remote {
 		movePayloadBuf := new(bytes.Buffer)
 		json.NewEncoder(movePayloadBuf).Encode(moveRequest)
 		resp, err := cm.client.Post(
@@ -150,7 +152,7 @@ func (cm *ClientModel) takeMove(
 			successfulRemoteMove = true
 		}
 	}
-	err := cm.game.Move(moveRequest)
+	err := cm.MakeMove(moveRequest)
 	fmt.Println(err)
 	if err == nil {
 		cm.viewHandleMove(moveRequest, newPos, elMoving)
@@ -179,9 +181,7 @@ func (cm *ClientModel) listenForOpponentMove(endRemoteGame chan bool) {
 			defer resp.Body.Close()
 			opponentMove := model.MoveRequest{}
 			json.NewDecoder(resp.Body).Decode(&opponentMove)
-			cm.mutex.Lock()
-			err := cm.game.Move(opponentMove)
-			cm.mutex.Unlock()
+			err := cm.MakeMove(opponentMove)
 			if err != nil {
 				println("FATAL: We do not expect an invalid move from the opponent")
 			}
@@ -190,7 +190,7 @@ func (cm *ClientModel) listenForOpponentMove(endRemoteGame chan bool) {
 				opponentMove.Position.Rank + uint8(opponentMove.Move.Y),
 			}
 			originalPosClass :=
-				getPositionClass(opponentMove.Position, cm.playerColor)
+				getPositionClass(opponentMove.Position, cm.GetPlayerColor())
 			elements := cm.document.Call("getElementsByClassName", originalPosClass)
 			elMoving := elements.Index(0)
 			cm.viewHandleMove(opponentMove, newPos, elMoving)
@@ -208,7 +208,7 @@ func (cm *ClientModel) listenForOpponentMove(endRemoteGame chan bool) {
 
 func (clientModel *ClientModel) genBeginMatchmaking() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		if !clientModel.isMatchmaking && !clientModel.isMatched {
+		if !clientModel.GetIsMatchmaking() && !clientModel.GetIsMatched() {
 			go clientModel.lookForMatch()
 		}
 		return 0
@@ -216,13 +216,11 @@ func (clientModel *ClientModel) genBeginMatchmaking() js.Func {
 }
 
 func (clientModel *ClientModel) lookForMatch() {
-	clientModel.mutex.Lock()
-	clientModel.isMatchmaking = true
+	clientModel.SetIsMatchmaking(true)
 	buttonLoader := clientModel.buttonBeginLoading(
 		clientModel.document.Call(
 			"getElementById", "beginMatchmakingButton"))
-	clientModel.mutex.Unlock()
-	if !clientModel.hasSession {
+	if !clientModel.GetHasSession() {
 		username := clientModel.document.Call(
 			"getElementById", "username").Get("value").String()
 		credentialsBuf := new(bytes.Buffer)
@@ -234,22 +232,22 @@ func (clientModel *ClientModel) lookForMatch() {
 		if err == nil {
 			resp.Body.Close()
 		}
-		clientModel.playerName = username
-		clientModel.hasSession = true
+		clientModel.SetPlayerName(username)
+		clientModel.SetHasSession(true)
 	}
 	resp, err := clientModel.client.Get(clientModel.matchingServerURI + "match")
 	if err == nil {
 		var matchResponse webserver.MatchedResponse
 		json.NewDecoder(resp.Body).Decode(&matchResponse)
 		resp.Body.Close()
-		clientModel.playerColor = matchResponse.Color
-		clientModel.opponentName = matchResponse.OpponentName
+		clientModel.SetPlayerColor(matchResponse.Color)
+		clientModel.SetOpponentName(matchResponse.OpponentName)
 		clientModel.resetGame()
 		// - TODO once matched briefly display matched icon?
 		// - TODO once matched set and display time remaining
-		clientModel.gameType = Remote
-		clientModel.isMatched = true
-		clientModel.isMatchmaking = false
+		clientModel.SetGameType(Remote)
+		clientModel.SetIsMatched(true)
+		clientModel.SetIsMatchmaking(false)
 		buttonLoader.Call("remove")
 		clientModel.endRemoteGameChan = make(chan bool, 0)
 		clientModel.viewSetMatchDetails()
@@ -289,7 +287,7 @@ func (clientModel *ClientModel) getEventMousePosition(event js.Value) (
 // in the view (see getPositionClass), and everything is flipped onClick here.
 func (cm *ClientModel) getPositionFromGrid(
 	gridX uint8, gridY uint8) model.Position {
-	if cm.playerColor == model.White {
+	if cm.GetPlayerColor() == model.White {
 		return model.Position{uint8(gridX), uint8(7 - gridY)}
 	} else {
 		return model.Position{uint8(7 - gridX), uint8(gridY)}
@@ -305,7 +303,7 @@ func preventDefault(this js.Value, i []js.Value) interface{} {
 
 func (clientModel *ClientModel) resetGame() {
 	game := model.NewGame()
-	clientModel.game = &game
+	clientModel.SetGame(&game)
 	clientModel.viewClearBoard()
 	clientModel.viewInitBoard(clientModel.playerColor)
 }
