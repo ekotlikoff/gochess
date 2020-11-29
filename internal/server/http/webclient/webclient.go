@@ -1,6 +1,6 @@
-package main
+// +build webclient
 
-// WebClient struct with thread safe methods
+package main
 
 import (
 	"github.com/Ekotlikoff/gochess/internal/model"
