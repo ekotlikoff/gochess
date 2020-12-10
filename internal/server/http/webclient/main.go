@@ -10,6 +10,8 @@ import (
 	"syscall/js"
 )
 
+var server string
+
 type GameType uint8
 
 const (
@@ -47,7 +49,7 @@ func main() {
 		document: js.Global().Get("document"),
 		board: js.Global().Get("document").Call(
 			"getElementById", "board-layout-chessboard"),
-		matchingServerURI: "http://192.168.1.166:8000/",
+		matchingServerURI: server,
 		client:            client,
 	}
 	clientModel.initListeners()
