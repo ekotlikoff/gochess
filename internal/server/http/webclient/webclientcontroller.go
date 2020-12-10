@@ -160,6 +160,8 @@ func (cm *ClientModel) takeMove(
 
 func (cm *ClientModel) listenForOpponentMove(endRemoteGame chan bool) {
 	// TODO need to write to the endRemoteGame chan when game is over
+	maxRetries := 5
+	retries := 0
 	for true {
 		select {
 		case <-endRemoteGame:
@@ -178,7 +180,7 @@ func (cm *ClientModel) listenForOpponentMove(endRemoteGame chan bool) {
 			err := cm.game.Move(opponentMove)
 			cm.mutex.Unlock()
 			if err != nil {
-				println("FATAL: We do not expect an invalid move from the opponent")
+				println("FATAL: We do not expect an invalid move from the opponent.")
 			}
 			newPos := model.Position{
 				opponentMove.Position.File + uint8(opponentMove.Move.X),
@@ -191,6 +193,11 @@ func (cm *ClientModel) listenForOpponentMove(endRemoteGame chan bool) {
 			cm.viewHandleMove(opponentMove, newPos, elMoving)
 		} else {
 			time.Sleep(500 * time.Millisecond)
+			if retries > maxRetries {
+				println("FATAL: Reached max retries on sync.")
+				return
+			}
+			retries++
 		}
 	}
 }
