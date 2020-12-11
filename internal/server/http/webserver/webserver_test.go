@@ -253,12 +253,14 @@ func createMatch(testMatchServer *httptest.Server) (
 	<-wait
 	defer resp.Body.Close()
 	defer resp2.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
 	black = client
 	blackName = "player1"
 	whiteName = "player2"
 	white = client2
-	if strings.Contains(string(body), "1") {
+	var matchResponse MatchedResponse
+	json.NewDecoder(resp.Body).Decode(&matchResponse)
+	resp.Body.Close()
+	if matchResponse.Color == model.White {
 		black = client2
 		blackName = "player2"
 		whiteName = "player1"
