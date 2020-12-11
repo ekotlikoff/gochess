@@ -6,38 +6,10 @@ import (
 	"github.com/Ekotlikoff/gochess/internal/model"
 	"net/http"
 	"net/http/cookiejar"
-	"sync"
 	"syscall/js"
 )
 
 var server string
-
-type GameType uint8
-
-const (
-	Local  = GameType(iota)
-	Remote = GameType(iota)
-)
-
-type ClientModel struct {
-	gameType                 GameType
-	game                     *model.Game
-	playerColor              model.Color
-	elDragging               js.Value
-	isMouseDown              bool
-	positionOriginal         model.Position
-	document                 js.Value
-	board                    js.Value
-	draggingOrigTransform    js.Value
-	isMatchmaking, isMatched bool
-	playerName               string
-	opponentName             string
-	matchingServerURI        string
-	client                   *http.Client
-	hasSession               bool
-	mutex                    sync.Mutex
-	endRemoteGameChan        chan bool
-}
 
 func main() {
 	done := make(chan struct{}, 0)
@@ -52,7 +24,7 @@ func main() {
 		matchingServerURI: server,
 		client:            client,
 	}
-	clientModel.initListeners()
+	clientModel.initController(quiet)
 	clientModel.initStyle()
 	clientModel.viewInitBoard(clientModel.playerColor)
 	<-done
