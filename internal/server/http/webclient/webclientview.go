@@ -29,10 +29,18 @@ func (clientModel *ClientModel) initStyle() {
 func (cm *ClientModel) viewSetMatchDetails() {
 	opponentMatchDetailsName := cm.document.Call(
 		"getElementById", "matchdetails_opponent_name")
-	opponentMatchDetailsName.Set("innerText", cm.opponentName)
+	opponentMatchDetailsName.Set("innerText", cm.remoteMatchModel.opponentName)
 	playerMatchDetailsName := cm.document.Call(
 		"getElementById", "matchdetails_player_name")
 	playerMatchDetailsName.Set("innerText", cm.playerName)
+	opponentMatchDetailsRemainingTime := cm.document.Call(
+		"getElementById", "matchdetails_opponent_remainingtime")
+	opponentMatchDetailsRemainingTime.Set("innerText",
+		(cm.GetMaxTimeMs()-cm.GetPlayerElapsedMs(cm.GetOpponentColor()))/1000)
+	playerMatchDetailsRemainingTime := cm.document.Call(
+		"getElementById", "matchdetails_player_remainingtime")
+	playerMatchDetailsRemainingTime.Set("innerText",
+		(cm.GetMaxTimeMs()-cm.GetPlayerElapsedMs(cm.GetPlayerColor()))/1000)
 }
 
 func (clientModel *ClientModel) viewClearBoard() {

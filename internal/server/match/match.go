@@ -34,6 +34,17 @@ func DefaultMatchGenerator(black *Player, white *Player) Match {
 	return NewMatch(black, white, 1200000)
 }
 
+func (match *Match) PlayerName(color model.Color) string {
+	if color == model.Black {
+		return match.black.Name()
+	}
+	return match.white.Name()
+}
+
+func (match *Match) MaxTimeMs() int64 {
+	return match.maxTimeMs
+}
+
 func (match *Match) play() {
 	go match.handleAsyncRequests()
 	for !match.game.GameOver() {

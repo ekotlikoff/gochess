@@ -15,15 +15,18 @@ type Player struct {
 	responseChanAsync  chan ResponseAsync
 	opponentPlayedMove chan model.MoveRequest
 	matchStart         chan struct{}
-	matchedOpponent    string
+	match              *Match
 }
 
 func NewPlayer(name string) Player {
 	return Player{
-		name, model.Black, int64(0),
-		make(chan RequestSync, 1), make(chan ResponseSync, 10),
-		make(chan RequestAsync, 1), make(chan ResponseAsync, 1),
-		make(chan model.MoveRequest, 10), make(chan struct{}), "",
+		name: name, color: model.Black,
+		requestChanSync:    make(chan RequestSync, 1),
+		responseChanSync:   make(chan ResponseSync, 10),
+		requestChanAsync:   make(chan RequestAsync, 1),
+		responseChanAsync:  make(chan ResponseAsync, 1),
+		opponentPlayedMove: make(chan model.MoveRequest, 10),
+		matchStart:         make(chan struct{}),
 	}
 }
 
@@ -32,7 +35,15 @@ func (player *Player) Name() string {
 }
 
 func (player *Player) MatchedOpponentName() string {
-	return player.matchedOpponent
+	opponentColor := model.Black
+	if player.color == opponentColor {
+		opponentColor = model.White
+	}
+	return player.match.PlayerName(opponentColor)
+}
+
+func (player *Player) MatchMaxTimeMs() int64 {
+	return player.match.MaxTimeMs()
 }
 
 func (player *Player) Color() model.Color {
@@ -121,11 +132,12 @@ func (matchingServer *MatchingServer) matchAndPlay(
 			player1 = player
 		} else if player2 == nil {
 			player2 = player
-			player1.matchedOpponent = player2.name
-			player2.matchedOpponent = player1.name
 			match := matchGenerator(player1, player2)
+			player1.match = &match
+			player2.match = &match
 			matchingServer.mutex.Lock()
-			matchingServer.liveMatches = append(matchingServer.liveMatches, &match)
+			matchingServer.liveMatches =
+				append(matchingServer.liveMatches, &match)
 			matchingServer.mutex.Unlock()
 			matchingServer.pendingMatch.Unlock()
 			close(player1.matchStart)

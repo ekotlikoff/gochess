@@ -26,6 +26,7 @@ type Credentials struct {
 type MatchedResponse struct {
 	Color        model.Color
 	OpponentName string
+	MaxTimeMs    int64
 }
 
 func Serve(
@@ -104,7 +105,9 @@ func createSearchForMatchHandler(
 		matchServer.MatchPlayer(player)
 		player.WaitForMatchStart()
 		matchResponse :=
-			MatchedResponse{player.Color(), player.MatchedOpponentName()}
+			MatchedResponse{player.Color(), player.MatchedOpponentName(),
+				player.MatchMaxTimeMs(),
+			}
 		json.NewEncoder(w).Encode(matchResponse)
 	}
 	return http.HandlerFunc(handler)

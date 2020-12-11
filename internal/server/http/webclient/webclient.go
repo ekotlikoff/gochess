@@ -27,15 +27,22 @@ type ClientModel struct {
 	positionOriginal         model.Position
 	isMatchmaking, isMatched bool
 	playerName               string
-	opponentName             string
 	hasSession               bool
 	gameMutex                sync.RWMutex
 	game                     *model.Game
+	remoteMatchModel         RemoteMatchModel
 	// Unchanging elements
 	document          js.Value
 	board             js.Value
 	matchingServerURI string
 	client            *http.Client
+}
+
+type RemoteMatchModel struct {
+	opponentName      string
+	maxTimeMs         int64
+	playerElapsedMs   int64
+	opponentElapsedMs int64
 	endRemoteGameChan chan bool
 }
 
@@ -73,6 +80,16 @@ func (cm *ClientModel) GetPlayerColor() model.Color {
 	cm.cmMutex.RLock()
 	defer cm.cmMutex.RUnlock()
 	return cm.playerColor
+}
+
+func (cm *ClientModel) GetOpponentColor() model.Color {
+	cm.cmMutex.RLock()
+	defer cm.cmMutex.RUnlock()
+	opponentColor := model.Black
+	if cm.playerColor == opponentColor {
+		opponentColor = model.White
+	}
+	return opponentColor
 }
 
 func (cm *ClientModel) SetPlayerColor(color model.Color) {
@@ -168,13 +185,43 @@ func (cm *ClientModel) SetPlayerName(name string) {
 func (cm *ClientModel) GetOpponentName() string {
 	cm.cmMutex.RLock()
 	defer cm.cmMutex.RUnlock()
-	return cm.opponentName
+	return cm.remoteMatchModel.opponentName
 }
 
 func (cm *ClientModel) SetOpponentName(name string) {
 	cm.cmMutex.Lock()
 	defer cm.cmMutex.Unlock()
-	cm.opponentName = name
+	cm.remoteMatchModel.opponentName = name
+}
+
+func (cm *ClientModel) GetMaxTimeMs() int64 {
+	cm.cmMutex.RLock()
+	defer cm.cmMutex.RUnlock()
+	return cm.remoteMatchModel.maxTimeMs
+}
+
+func (cm *ClientModel) SetMaxTimeMs(maxTimeMs int64) {
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
+	cm.remoteMatchModel.maxTimeMs = maxTimeMs
+}
+
+func (cm *ClientModel) GetPlayerElapsedMs(color model.Color) int64 {
+	cm.cmMutex.RLock()
+	defer cm.cmMutex.RUnlock()
+	if color == cm.playerColor {
+		return cm.remoteMatchModel.playerElapsedMs
+	}
+	return cm.remoteMatchModel.opponentElapsedMs
+}
+
+func (cm *ClientModel) SetPlayerElapsedMs(color model.Color, elapsedMs int64) {
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
+	if color == cm.playerColor {
+		cm.remoteMatchModel.playerElapsedMs = elapsedMs
+	}
+	cm.remoteMatchModel.opponentElapsedMs = elapsedMs
 }
 
 func (cm *ClientModel) GetHasSession() bool {

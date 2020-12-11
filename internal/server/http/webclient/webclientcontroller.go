@@ -242,6 +242,7 @@ func (clientModel *ClientModel) lookForMatch() {
 		resp.Body.Close()
 		clientModel.SetPlayerColor(matchResponse.Color)
 		clientModel.SetOpponentName(matchResponse.OpponentName)
+		clientModel.SetMaxTimeMs(matchResponse.MaxTimeMs)
 		clientModel.resetGame()
 		// - TODO once matched briefly display matched icon?
 		// - TODO once matched set and display time remaining
@@ -249,9 +250,10 @@ func (clientModel *ClientModel) lookForMatch() {
 		clientModel.SetIsMatched(true)
 		clientModel.SetIsMatchmaking(false)
 		buttonLoader.Call("remove")
-		clientModel.endRemoteGameChan = make(chan bool, 0)
+		clientModel.remoteMatchModel.endRemoteGameChan = make(chan bool, 0)
 		clientModel.viewSetMatchDetails()
-		go clientModel.listenForOpponentMove(clientModel.endRemoteGameChan)
+		go clientModel.listenForOpponentMove(
+			clientModel.remoteMatchModel.endRemoteGameChan)
 	}
 }
 
