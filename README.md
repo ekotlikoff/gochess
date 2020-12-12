@@ -15,6 +15,7 @@ TODO
         Just need a hash function to go from position -> positionId
 * Server
     - [x] http server
+      - [ ] If no response from client in x seconds then call disconnect win for opponent
       - [ ] Support some mechanism for a user cancelling their matchmaking
       - [ ] GET /sync should also provide player and opponent's remaining time to keep client, server in sync
       - [ ] Implement /currentgame so that a disconnected client can reconnect
@@ -34,7 +35,7 @@ TODO
         - [ ] Check cookies for session token instead of using hasSession bool
         - [ ] Display gameover results
         - [ ] Request a draw
-        - [ ] Display remaining time
+        - [x] Display remaining time
         - [ ] Display point advantage/captured pieces
         - [x] Play local match vs begin matchmaking
         - [x] Mobile support

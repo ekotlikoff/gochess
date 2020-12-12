@@ -165,9 +165,10 @@ func (cm *ClientModel) takeMove(
 	}
 }
 
-func (cm *ClientModel) listenForOpponentMove(endRemoteGame chan bool) {
+func (cm *ClientModel) listenForOpponentMove() {
 	log.SetPrefix("listenForOpponentMove: ")
 	// TODO need to write to the endRemoteGame chan when game is over
+	endRemoteGame := cm.remoteMatchModel.endRemoteGameChan
 	retries := 0
 	maxRetries := 5
 	for true {
@@ -200,6 +201,7 @@ func (cm *ClientModel) listenForOpponentMove(endRemoteGame chan bool) {
 			if retries >= maxRetries {
 				log.Printf("Reached maxRetries on uri=%s retries=%d",
 					cm.matchingServerURI+"sync", maxRetries)
+				close(cm.remoteMatchModel.endRemoteGameChan)
 				return
 			}
 		}
@@ -251,9 +253,22 @@ func (clientModel *ClientModel) lookForMatch() {
 		clientModel.SetIsMatchmaking(false)
 		buttonLoader.Call("remove")
 		clientModel.remoteMatchModel.endRemoteGameChan = make(chan bool, 0)
+		go clientModel.matchDetailsUpdateLoop()
+		go clientModel.listenForOpponentMove()
+	}
+}
+
+func (clientModel *ClientModel) matchDetailsUpdateLoop() {
+	for true {
 		clientModel.viewSetMatchDetails()
-		go clientModel.listenForOpponentMove(
-			clientModel.remoteMatchModel.endRemoteGameChan)
+		time.Sleep(1000 * time.Millisecond)
+		select {
+		case <-clientModel.remoteMatchModel.endRemoteGameChan:
+			return
+		default:
+		}
+		turn := clientModel.game.Turn()
+		clientModel.AddPlayerElapsedMs(turn, 1000)
 	}
 }
 

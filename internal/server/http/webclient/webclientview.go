@@ -7,6 +7,7 @@ import (
 	"github.com/Ekotlikoff/gochess/internal/model"
 	"strconv"
 	"syscall/js"
+	"time"
 )
 
 func (clientModel *ClientModel) initStyle() {
@@ -35,12 +36,26 @@ func (cm *ClientModel) viewSetMatchDetails() {
 	playerMatchDetailsName.Set("innerText", cm.playerName)
 	opponentMatchDetailsRemainingTime := cm.document.Call(
 		"getElementById", "matchdetails_opponent_remainingtime")
+	opponentRemainingMs := cm.GetMaxTimeMs() -
+		cm.GetPlayerElapsedMs(cm.GetOpponentColor())
+	if opponentRemainingMs < 0 {
+		opponentRemainingMs = 0
+	}
 	opponentMatchDetailsRemainingTime.Set("innerText",
-		(cm.GetMaxTimeMs()-cm.GetPlayerElapsedMs(cm.GetOpponentColor()))/1000)
+		cm.formatTime(opponentRemainingMs))
 	playerMatchDetailsRemainingTime := cm.document.Call(
 		"getElementById", "matchdetails_player_remainingtime")
+	playerRemainingMs := cm.GetMaxTimeMs() -
+		cm.GetPlayerElapsedMs(cm.GetPlayerColor())
+	if playerRemainingMs < 0 {
+		playerRemainingMs = 0
+	}
 	playerMatchDetailsRemainingTime.Set("innerText",
-		(cm.GetMaxTimeMs()-cm.GetPlayerElapsedMs(cm.GetPlayerColor()))/1000)
+		cm.formatTime(playerRemainingMs))
+}
+
+func (cm *ClientModel) formatTime(ms int64) string {
+	return (time.Duration(ms) * time.Millisecond).String()
 }
 
 func (clientModel *ClientModel) viewClearBoard() {

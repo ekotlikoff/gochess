@@ -215,13 +215,14 @@ func (cm *ClientModel) GetPlayerElapsedMs(color model.Color) int64 {
 	return cm.remoteMatchModel.opponentElapsedMs
 }
 
-func (cm *ClientModel) SetPlayerElapsedMs(color model.Color, elapsedMs int64) {
+func (cm *ClientModel) AddPlayerElapsedMs(color model.Color, elapsedMs int64) {
 	cm.cmMutex.Lock()
 	defer cm.cmMutex.Unlock()
 	if color == cm.playerColor {
-		cm.remoteMatchModel.playerElapsedMs = elapsedMs
+		cm.remoteMatchModel.playerElapsedMs += elapsedMs
+	} else {
+		cm.remoteMatchModel.opponentElapsedMs += elapsedMs
 	}
-	cm.remoteMatchModel.opponentElapsedMs = elapsedMs
 }
 
 func (cm *ClientModel) GetHasSession() bool {
