@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/Ekotlikoff/gochess/internal/model"
 	"github.com/Ekotlikoff/gochess/internal/server/http/webserver"
+	"github.com/Ekotlikoff/gochess/internal/server/match"
 	"io/ioutil"
 	"log"
 	"syscall/js"
@@ -165,9 +166,8 @@ func (cm *ClientModel) takeMove(
 	}
 }
 
-func (cm *ClientModel) listenForOpponentMove() {
-	log.SetPrefix("listenForOpponentMove: ")
-	// TODO need to write to the endRemoteGame chan when game is over
+func (cm *ClientModel) listenForSyncUpdate() {
+	log.SetPrefix("listenForSyncUpdate: ")
 	endRemoteGame := cm.remoteMatchModel.endRemoteGameChan
 	retries := 0
 	maxRetries := 5
@@ -201,6 +201,54 @@ func (cm *ClientModel) listenForOpponentMove() {
 			if retries >= maxRetries {
 				log.Printf("Reached maxRetries on uri=%s retries=%d",
 					cm.matchingServerURI+"sync", maxRetries)
+				close(cm.remoteMatchModel.endRemoteGameChan)
+				return
+			}
+		}
+	}
+}
+
+func (cm *ClientModel) listenForAsyncUpdate() {
+	log.SetPrefix("listenForAsyncUpdate: ")
+	endRemoteGame := cm.remoteMatchModel.endRemoteGameChan
+	retries := 0
+	maxRetries := 5
+	for true {
+		select {
+		case <-endRemoteGame:
+			return
+		default:
+		}
+		resp, err := cm.client.Get(cm.matchingServerURI + "async")
+		if err == nil {
+			defer resp.Body.Close()
+			asyncResponse := matchserver.ResponseAsync{}
+			json.NewDecoder(resp.Body).Decode(&asyncResponse)
+			if asyncResponse.GameOver {
+				close(cm.remoteMatchModel.endRemoteGameChan)
+				winType := "mate"
+				// TODO update UI
+				if asyncResponse.Resignation {
+					// TODO update UI
+					winType = "resignation"
+				} else if asyncResponse.Draw {
+					// TODO update UI
+					winType = "draw"
+				} else if asyncResponse.Timeout {
+					// TODO update UI
+					winType = "timeout"
+				}
+				log.Println("Winner:", asyncResponse.Winner, "by", winType)
+				return
+			} else if asyncResponse.RequestToDraw {
+				// TODO update UI with option to accept draw
+			}
+		} else {
+			time.Sleep(500 * time.Millisecond)
+			retries++
+			if retries >= maxRetries {
+				log.Printf("Reached maxRetries on uri=%s retries=%d",
+					cm.matchingServerURI+"async", maxRetries)
 				close(cm.remoteMatchModel.endRemoteGameChan)
 				return
 			}
@@ -254,7 +302,8 @@ func (clientModel *ClientModel) lookForMatch() {
 		buttonLoader.Call("remove")
 		clientModel.remoteMatchModel.endRemoteGameChan = make(chan bool, 0)
 		go clientModel.matchDetailsUpdateLoop()
-		go clientModel.listenForOpponentMove()
+		go clientModel.listenForSyncUpdate()
+		go clientModel.listenForAsyncUpdate()
 	}
 }
 
