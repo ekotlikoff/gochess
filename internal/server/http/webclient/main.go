@@ -9,8 +9,6 @@ import (
 	"syscall/js"
 )
 
-var server string
-
 func main() {
 	done := make(chan struct{}, 0)
 	game := model.NewGame()
@@ -21,8 +19,7 @@ func main() {
 		document: js.Global().Get("document"),
 		board: js.Global().Get("document").Call(
 			"getElementById", "board-layout-chessboard"),
-		matchingServerURI: server,
-		client:            client,
+		client: client,
 	}
 	clientModel.initController(quiet)
 	clientModel.initStyle()

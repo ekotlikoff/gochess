@@ -143,8 +143,7 @@ func (cm *ClientModel) takeMove(
 	if cm.GetGameType() == Remote {
 		movePayloadBuf := new(bytes.Buffer)
 		json.NewEncoder(movePayloadBuf).Encode(moveRequest)
-		resp, err := cm.client.Post(
-			cm.matchingServerURI+"sync", ctp, movePayloadBuf)
+		resp, err := cm.client.Post("sync", ctp, movePayloadBuf)
 		if err == nil {
 			defer resp.Body.Close()
 			if resp.StatusCode != 200 {
@@ -177,7 +176,7 @@ func (cm *ClientModel) listenForSyncUpdate() {
 			return
 		default:
 		}
-		resp, err := cm.client.Get(cm.matchingServerURI + "sync")
+		resp, err := cm.client.Get("sync")
 		if err == nil {
 			defer resp.Body.Close()
 			opponentMove := model.MoveRequest{}
@@ -200,7 +199,7 @@ func (cm *ClientModel) listenForSyncUpdate() {
 			retries++
 			if retries >= maxRetries {
 				log.Printf("Reached maxRetries on uri=%s retries=%d",
-					cm.matchingServerURI+"sync", maxRetries)
+					"sync", maxRetries)
 				close(cm.remoteMatchModel.endRemoteGameChan)
 				return
 			}
@@ -219,7 +218,7 @@ func (cm *ClientModel) listenForAsyncUpdate() {
 			return
 		default:
 		}
-		resp, err := cm.client.Get(cm.matchingServerURI + "async")
+		resp, err := cm.client.Get("async")
 		if err == nil {
 			defer resp.Body.Close()
 			asyncResponse := matchserver.ResponseAsync{}
@@ -248,7 +247,7 @@ func (cm *ClientModel) listenForAsyncUpdate() {
 			retries++
 			if retries >= maxRetries {
 				log.Printf("Reached maxRetries on uri=%s retries=%d",
-					cm.matchingServerURI+"async", maxRetries)
+					"async", maxRetries)
 				close(cm.remoteMatchModel.endRemoteGameChan)
 				return
 			}
@@ -276,16 +275,14 @@ func (clientModel *ClientModel) lookForMatch() {
 		credentialsBuf := new(bytes.Buffer)
 		credentials := webserver.Credentials{username}
 		json.NewEncoder(credentialsBuf).Encode(credentials)
-		resp, err := clientModel.client.Post(
-			clientModel.matchingServerURI+"session", ctp, credentialsBuf,
-		)
+		resp, err := clientModel.client.Post("session", ctp, credentialsBuf)
 		if err == nil {
 			resp.Body.Close()
 		}
 		clientModel.SetPlayerName(username)
 		clientModel.SetHasSession(true)
 	}
-	resp, err := clientModel.client.Get(clientModel.matchingServerURI + "match")
+	resp, err := clientModel.client.Get("match")
 	if err == nil {
 		var matchResponse webserver.MatchedResponse
 		json.NewDecoder(resp.Body).Decode(&matchResponse)
