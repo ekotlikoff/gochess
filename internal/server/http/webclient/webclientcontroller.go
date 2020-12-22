@@ -29,6 +29,8 @@ func (clientModel *ClientModel) initController(quiet bool) {
 	clientModel.board.Call("addEventListener", "contextmenu",
 		js.FuncOf(preventDefault), false)
 	js.Global().Set("beginMatchmaking", clientModel.genBeginMatchmaking())
+	js.Global().Set("forfeit", clientModel.genForfeit())
+	js.Global().Set("draw", clientModel.genDraw())
 	if quiet {
 		log.SetOutput(ioutil.Discard)
 	}
@@ -225,7 +227,7 @@ func (cm *ClientModel) listenForAsyncUpdate() {
 			json.NewDecoder(resp.Body).Decode(&asyncResponse)
 			if asyncResponse.GameOver {
 				close(cm.remoteMatchModel.endRemoteGameChan)
-				winType := "mate"
+				winType := ""
 				// TODO update UI
 				if asyncResponse.Resignation {
 					// TODO update UI
@@ -236,6 +238,8 @@ func (cm *ClientModel) listenForAsyncUpdate() {
 				} else if asyncResponse.Timeout {
 					// TODO update UI
 					winType = "timeout"
+				} else {
+					winType = "mate"
 				}
 				log.Println("Winner:", asyncResponse.Winner, "by", winType)
 				return
@@ -260,6 +264,20 @@ func (clientModel *ClientModel) genBeginMatchmaking() js.Func {
 		if !clientModel.GetIsMatchmaking() && !clientModel.GetIsMatched() {
 			go clientModel.lookForMatch()
 		}
+		return 0
+	})
+}
+
+func (clientModel *ClientModel) genForfeit() js.Func {
+	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
+		println("TODO: implement")
+		return 0
+	})
+}
+
+func (clientModel *ClientModel) genDraw() js.Func {
+	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
+		println("TODO: implement")
 		return 0
 	})
 }
@@ -298,6 +316,7 @@ func (clientModel *ClientModel) lookForMatch() {
 		clientModel.SetIsMatchmaking(false)
 		buttonLoader.Call("remove")
 		clientModel.remoteMatchModel.endRemoteGameChan = make(chan bool, 0)
+		clientModel.viewSetMatchControls()
 		go clientModel.matchDetailsUpdateLoop()
 		go clientModel.listenForSyncUpdate()
 		go clientModel.listenForAsyncUpdate()

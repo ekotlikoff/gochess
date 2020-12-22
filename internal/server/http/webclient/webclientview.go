@@ -27,6 +27,21 @@ func (clientModel *ClientModel) initStyle() {
 	}
 }
 
+func (cm *ClientModel) viewSetMatchControls() {
+	usernameInput := cm.document.Call(
+		"getElementById", "username")
+	usernameInput.Call("remove")
+	matchButton := cm.document.Call(
+		"getElementById", "beginMatchmakingButton")
+	matchButton.Call("remove")
+	forfeitButton := cm.document.Call(
+		"getElementById", "forfeitButton")
+	removeClass(forfeitButton, "hidden")
+	drawButton := cm.document.Call(
+		"getElementById", "drawButton")
+	removeClass(drawButton, "hidden")
+}
+
 func (cm *ClientModel) viewSetMatchDetails() {
 	opponentMatchDetailsName := cm.document.Call(
 		"getElementById", "matchdetails_opponent_name")
@@ -160,7 +175,7 @@ func addClass(element js.Value, class string) {
 }
 
 func removeClass(element js.Value, class string) {
-	element.Get("classList").Call("remove", "dragging")
+	element.Get("classList").Call("remove", class)
 }
 
 func (clientModel *ClientModel) viewDragPiece(

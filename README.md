@@ -33,6 +33,7 @@ TODO
     - [ ] Golang WebAssembly web client
         - [x] Display matched opponent name
         - [ ] Check cookies for session token instead of using hasSession bool
+            - Not sure if possible, the golang cookiejar doesn't seem like it supports this.
         - [ ] Display gameover results
         - [ ] Request a draw
         - [x] Display remaining time
