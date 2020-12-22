@@ -60,23 +60,31 @@ func TestMatchingServerDraw(t *testing.T) {
 	player1.requestChanAsync <- RequestAsync{RequestToDraw: true}
 	response := <-player2.responseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
-	if liveMatch.requestedDraw != &player1 {
-		t.Error("Expected player1 to have requested a draw",
-			liveMatch.requestedDraw)
+	if liveMatch.GetRequestedDraw() != &player1 {
+		t.Error("expected player1 to have requested a draw",
+			liveMatch.GetRequestedDraw())
+	}
+	white := liveMatch.white
+	white.MakeMove(model.MoveRequest{model.Position{3, 1}, model.Move{0, 2}})
+	if liveMatch.GetRequestedDraw() != nil {
+		t.Error("expected move to have reset the request to draw",
+			liveMatch.GetRequestedDraw())
 	}
 	player1.requestChanAsync <- RequestAsync{RequestToDraw: true}
+	<-player2.responseChanAsync
+	player1.requestChanAsync <- RequestAsync{RequestToDraw: true}
 	tries := 0
-	for liveMatch.requestedDraw != nil && tries < 10 {
+	for liveMatch.GetRequestedDraw() != nil && tries < 10 {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
-	if liveMatch.requestedDraw != nil {
+	if liveMatch.GetRequestedDraw() != nil {
 		t.Error("Expected player1 to have toggled RequestToDraw",
-			liveMatch.requestedDraw)
+			liveMatch.GetRequestedDraw())
 	}
 	player1.requestChanAsync <- RequestAsync{RequestToDraw: true}
 	response = <-player2.responseChanAsync
-	if response.RequestToDraw != true || liveMatch.requestedDraw != &player1 {
+	if response.RequestToDraw != true || liveMatch.GetRequestedDraw() != &player1 {
 		t.Error("Expected player2 to receive a RequestToDraw",
 			response)
 	}
