@@ -43,6 +43,7 @@ type RemoteMatchModel struct {
 	maxTimeMs         int64
 	playerElapsedMs   int64
 	opponentElapsedMs int64
+	requestedDraw     bool
 	endRemoteGameChan chan bool
 }
 
@@ -223,6 +224,18 @@ func (cm *ClientModel) AddPlayerElapsedMs(color model.Color, elapsedMs int64) {
 	} else {
 		cm.remoteMatchModel.opponentElapsedMs += elapsedMs
 	}
+}
+
+func (cm *ClientModel) GetRequestedDraw() bool {
+	cm.cmMutex.RLock()
+	defer cm.cmMutex.RUnlock()
+	return cm.remoteMatchModel.requestedDraw
+}
+
+func (cm *ClientModel) SetRequestedDraw(requestedDraw bool) {
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
+	cm.remoteMatchModel.requestedDraw = requestedDraw
 }
 
 func (cm *ClientModel) GetHasSession() bool {

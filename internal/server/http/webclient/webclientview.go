@@ -34,9 +34,9 @@ func (cm *ClientModel) viewSetMatchControls() {
 	matchButton := cm.document.Call(
 		"getElementById", "beginMatchmakingButton")
 	matchButton.Call("remove")
-	forfeitButton := cm.document.Call(
-		"getElementById", "forfeitButton")
-	removeClass(forfeitButton, "hidden")
+	resignButton := cm.document.Call(
+		"getElementById", "resignButton")
+	removeClass(resignButton, "hidden")
 	drawButton := cm.document.Call(
 		"getElementById", "drawButton")
 	removeClass(drawButton, "hidden")
@@ -67,6 +67,13 @@ func (cm *ClientModel) viewSetMatchDetails() {
 	}
 	playerMatchDetailsRemainingTime.Set("innerText",
 		cm.formatTime(playerRemainingMs))
+	drawButtonText := "Draw"
+	if cm.GetRequestedDraw() {
+		drawButtonText = fmt.Sprintf("Draw, %s requested a draw",
+			cm.remoteMatchModel.opponentName)
+	}
+	drawButton := cm.document.Call("getElementById", "drawButton")
+	drawButton.Set("innerText", drawButtonText)
 }
 
 func (cm *ClientModel) formatTime(ms int64) string {

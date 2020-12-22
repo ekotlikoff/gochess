@@ -29,7 +29,7 @@ func (clientModel *ClientModel) initController(quiet bool) {
 	clientModel.board.Call("addEventListener", "contextmenu",
 		js.FuncOf(preventDefault), false)
 	js.Global().Set("beginMatchmaking", clientModel.genBeginMatchmaking())
-	js.Global().Set("forfeit", clientModel.genForfeit())
+	js.Global().Set("resign", clientModel.genResign())
 	js.Global().Set("draw", clientModel.genDraw())
 	if quiet {
 		log.SetOutput(ioutil.Discard)
@@ -155,10 +155,11 @@ func (cm *ClientModel) takeMove(
 		}
 	}
 	err := cm.MakeMove(moveRequest)
-	fmt.Println(err)
 	if err == nil {
+		cm.SetRequestedDraw(false)
 		cm.viewHandleMove(moveRequest, newPos, elMoving)
 	} else {
+		fmt.Println(err)
 		if successfulRemoteMove {
 			// TODO handle strange case where http call was successful but local
 			// game did not accept the move.
@@ -187,6 +188,7 @@ func (cm *ClientModel) listenForSyncUpdate() {
 			if err != nil {
 				println("FATAL: We do not expect an invalid move from the opponent.")
 			}
+			cm.SetRequestedDraw(false)
 			newPos := model.Position{
 				opponentMove.Position.File + uint8(opponentMove.Move.X),
 				opponentMove.Position.Rank + uint8(opponentMove.Move.Y),
@@ -235,6 +237,7 @@ func (cm *ClientModel) listenForAsyncUpdate() {
 				} else if asyncResponse.Draw {
 					// TODO update UI
 					winType = "draw"
+					cm.SetRequestedDraw(false)
 				} else if asyncResponse.Timeout {
 					// TODO update UI
 					winType = "timeout"
@@ -244,7 +247,8 @@ func (cm *ClientModel) listenForAsyncUpdate() {
 				log.Println("Winner:", asyncResponse.Winner, "by", winType)
 				return
 			} else if asyncResponse.RequestToDraw {
-				// TODO update UI with option to accept draw
+				log.Println("Requested draw")
+				cm.SetRequestedDraw(!cm.GetRequestedDraw())
 			}
 		} else {
 			time.Sleep(500 * time.Millisecond)
@@ -268,16 +272,22 @@ func (clientModel *ClientModel) genBeginMatchmaking() js.Func {
 	})
 }
 
-func (clientModel *ClientModel) genForfeit() js.Func {
+func (clientModel *ClientModel) genResign() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		println("TODO: implement")
+		requestBuf := new(bytes.Buffer)
+		request := matchserver.RequestAsync{Resign: true}
+		json.NewEncoder(requestBuf).Encode(request)
+		go clientModel.client.Post("async", ctp, requestBuf)
 		return 0
 	})
 }
 
 func (clientModel *ClientModel) genDraw() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		println("TODO: implement")
+		requestBuf := new(bytes.Buffer)
+		request := matchserver.RequestAsync{RequestToDraw: true}
+		json.NewEncoder(requestBuf).Encode(request)
+		go clientModel.client.Post("async", ctp, requestBuf)
 		return 0
 	})
 }
