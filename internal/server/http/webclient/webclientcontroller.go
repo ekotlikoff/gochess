@@ -163,7 +163,7 @@ func (cm *ClientModel) takeMove(
 		if successfulRemoteMove {
 			// TODO handle strange case where http call was successful but local
 			// game did not accept the move.
-			println("FATAL: We do not expect an unsuccessful local move when remote succeeds")
+			log.Println("FATAL: We do not expect an unsuccessful local move when remote succeeds")
 		}
 	}
 }
@@ -186,7 +186,7 @@ func (cm *ClientModel) listenForSyncUpdate() {
 			json.NewDecoder(resp.Body).Decode(&opponentMove)
 			err := cm.MakeMove(opponentMove)
 			if err != nil {
-				println("FATAL: We do not expect an invalid move from the opponent.")
+				log.Println("FATAL: We do not expect an invalid move from the opponent.")
 			}
 			cm.SetRequestedDraw(false)
 			newPos := model.Position{
