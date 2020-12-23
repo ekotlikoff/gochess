@@ -103,6 +103,24 @@ func (game *Game) Board() *board {
 	return game.board
 }
 
+func (game *Game) PointAdvantage(color Color) int8 {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	var points int8 = 0
+	for _, file := range game.board {
+		for _, piece := range file {
+			if piece != nil {
+				if piece.Color() == color {
+					points += piece.Value()
+				} else {
+					points -= piece.Value()
+				}
+			}
+		}
+	}
+	return points
+}
+
 func (game *Game) Turn() Color {
 	game.mutex.RLock()
 	defer game.mutex.RUnlock()
