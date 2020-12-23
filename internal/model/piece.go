@@ -95,6 +95,24 @@ func (piece *Piece) ClientString() string {
 	return out
 }
 
+func (piece *Piece) Value() int8 {
+	if piece == nil {
+		return 0
+	}
+	switch piece.pieceType {
+	case Queen:
+		return 9
+	case Rook:
+		return 5
+	case Knight:
+	case Bishop:
+		return 3
+	case Pawn:
+		return 1
+	}
+	return 0
+}
+
 func (piece *Piece) StringSimple() string {
 	if piece == nil {
 		return "-"

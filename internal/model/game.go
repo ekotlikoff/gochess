@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"sync"
 )
 
 type Game struct {
@@ -13,6 +14,7 @@ type Game struct {
 	previousMover *Piece
 	blackKing     *Piece
 	whiteKing     *Piece
+	mutex         sync.RWMutex
 }
 
 type GameResult struct {
@@ -28,6 +30,8 @@ type MoveRequest struct {
 var ErrGameOver = errors.New("The game is over")
 
 func (game *Game) Move(moveRequest MoveRequest) error {
+	game.mutex.Lock()
+	defer game.mutex.Unlock()
 	position := moveRequest.Position
 	move := moveRequest.Move
 	piece := game.board[position.File][position.Rank]
@@ -80,35 +84,65 @@ func getOppositeColor(color Color) (opposite Color) {
 func NewGame() Game {
 	board := NewFullBoard()
 	return Game{
-		&board, White, false, GameResult{}, Move{}, nil, board[4][7], board[4][0],
+		board: &board, turn: White,
+		blackKing: board[4][7], whiteKing: board[4][0],
 	}
 }
 
 func NewGameNoPawns() Game {
 	board := NewBoardNoPawns()
 	return Game{
-		&board, White, false, GameResult{}, Move{}, nil, board[4][7], board[4][0],
+		board: &board, turn: White,
+		blackKing: board[4][7], whiteKing: board[4][0],
 	}
 }
 
 func (game *Game) Board() *board {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
 	return game.board
 }
 
+func (game *Game) PointAdvantage(color Color) int8 {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	var points int8 = 0
+	for _, file := range game.board {
+		for _, piece := range file {
+			if piece != nil {
+				if piece.Color() == color {
+					points += piece.Value()
+				} else {
+					points -= piece.Value()
+				}
+			}
+		}
+	}
+	return points
+}
+
 func (game *Game) Turn() Color {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
 	return game.turn
 }
 
 func (game *Game) GameOver() bool {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
 	return game.gameOver
 }
 
 func (game *Game) SetGameResult(winner Color, draw bool) {
+	game.mutex.Lock()
+	defer game.mutex.Unlock()
 	game.gameOver = true
 	game.result.Winner = winner
 	game.result.Draw = draw
 }
 
 func (game *Game) Result() GameResult {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
 	return game.result
 }

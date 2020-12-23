@@ -77,6 +77,48 @@ license that can be found in the LICENSE file.
             animation: spin 1s linear infinite;
             display: inline-block
         }
+        .wrapper {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            grid-auto-rows: minmax(10px, auto);
+        }
+        // As per https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Grid_Layout
+        .matchdetails_opponent_name {
+            grid-column: 1;
+            grid-row: 1;
+        }
+        .matchdetails_opponent_remainingtime {
+            grid-column: 2;
+            grid-row: 1;
+        }
+        .matchdetails_opponent_points {
+            grid-column: 3;
+            grid-row: 1;
+        }
+        .board-board {
+            grid-column: 1/6;
+            grid-row 2;
+        }
+        .matchdetails_player_name {
+            grid-column: 1;
+            grid-row: 3;
+        }
+        .matchdetails_player_remainingtime {
+            grid-column: 2;
+            grid-row: 3;
+        }
+        .matchdetails_player_points {
+            grid-column: 3;
+            grid-row: 3;
+        }
+        .controls {
+            grid-column: 1/6;
+            grid-row: 4;
+        }
+        .hidden {
+            visibility: hidden;
+        }
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -106,21 +148,31 @@ license that can be found in the LICENSE file.
 	</script>
 
 
-    <div id="matchdetails_opponent">
-        <h3 id="matchdetails_opponent_name"></h3>
+    <div class="wrapper">
+        <h3 id="matchdetails_opponent_name" class="matchdetails_opponent_name"></h3>
+        <h3 id="matchdetails_opponent_remainingtime" class="matchdetails_opponent_remainingtime"></h3>
+        <h3 id="matchdetails_opponent_points" class="matchdetails_opponent_points"></h3>
+        <div id="board-layout-chessboard" class="board-layout-chessboard board-board" style="width: 500px; height: 500px; padding-bottom: 0px;">
+            <chess-board class="board" id="board-game">
+                <svg viewBox="0 0 100 100" class="coordinates" />
+            </chess-board>
+        </div>
+        <h3 id="matchdetails_player_name" class="matchdetails_player_name"></h3>
+        <h3 id="matchdetails_player_remainingtime" class="matchdetails_player_remainingtime"></h3>
+        <h3 id="matchdetails_player_points" class="matchdetails_player_points"></h3>
+        <div class="controls">
+            <input type="text" id="username" />
+            <button onClick="beginMatchmaking('username');" id="beginMatchmakingButton">
+                Search for match
+            </button>
+            <button onClick="resign();" id="resignButton" class="hidden">
+                Resign
+            </button>
+            <button onClick="draw();" id="drawButton" class="hidden">
+                Draw
+            </button>
+        </div>
     </div>
-    <div id="board-layout-chessboard" class="board-layout-chessboard board-board" style="width: 500px; height: 500px; padding-bottom: 0px;">
-        <chess-board class="board" id="board-game">
-            <svg viewBox="0 0 100 100" class="coordinates" />
-        </chess-board>
-    </div>
-    <div id="matchdetails_player">
-        <h3 id="matchdetails_player_name"></h3>
-    </div>
-    <input type="text" id="username" />
-    <button onClick="beginMatchmaking('username');" id="beginMatchmakingButton">
-        Search for match
-    </button>
 </body>
 
 </html>

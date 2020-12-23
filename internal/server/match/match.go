@@ -3,6 +3,7 @@ package matchserver
 import (
 	"errors"
 	"github.com/Ekotlikoff/gochess/internal/model"
+	"sync"
 	"time"
 )
 
@@ -13,6 +14,7 @@ type Match struct {
 	gameOver      chan struct{}
 	maxTimeMs     int64
 	requestedDraw *Player
+	mutex         sync.RWMutex
 }
 
 type MatchGenerator func(black *Player, white *Player) Match
@@ -27,11 +29,35 @@ func NewMatch(black *Player, white *Player, maxTimeMs int64) Match {
 	black.elapsedMs = 0
 	white.elapsedMs = 0
 	game := model.NewGame()
-	return Match{black, white, &game, make(chan struct{}), maxTimeMs, nil}
+	return Match{black, white, &game, make(chan struct{}), maxTimeMs, nil,
+		sync.RWMutex{}}
 }
 
 func DefaultMatchGenerator(black *Player, white *Player) Match {
 	return NewMatch(black, white, 1200000)
+}
+
+func (match *Match) PlayerName(color model.Color) string {
+	if color == model.Black {
+		return match.black.Name()
+	}
+	return match.white.Name()
+}
+
+func (match *Match) GetRequestedDraw() *Player {
+	match.mutex.RLock()
+	defer match.mutex.RUnlock()
+	return match.requestedDraw
+}
+
+func (match *Match) SetRequestedDraw(player *Player) {
+	match.mutex.Lock()
+	defer match.mutex.Unlock()
+	match.requestedDraw = player
+}
+
+func (match *Match) MaxTimeMs() int64 {
+	return match.maxTimeMs
 }
 
 func (match *Match) play() {
@@ -75,6 +101,7 @@ func (match *Match) handleTurn() {
 			}
 		}
 	}
+	match.SetRequestedDraw(nil)
 	player.responseChanSync <- ResponseSync{moveSuccess: true}
 	opponent.opponentPlayedMove <- model.MoveRequest{request.position, request.move}
 	if match.game.GameOver() {
@@ -111,13 +138,13 @@ func (match *Match) handleAsyncRequests() {
 			match.handleGameOver(false, true, false, opponent)
 			return
 		} else if request.RequestToDraw {
-			if match.requestedDraw == opponent {
+			if match.GetRequestedDraw() == opponent {
 				match.handleGameOver(true, false, false, opponent)
-			} else if match.requestedDraw == player {
+			} else if match.GetRequestedDraw() == player {
 				// Consider the second requestToDraw a toggle.
-				match.requestedDraw = nil
+				match.SetRequestedDraw(nil)
 			} else {
-				match.requestedDraw = player
+				match.SetRequestedDraw(player)
 				go func() {
 					select {
 					case opponent.responseChanAsync <- ResponseAsync{

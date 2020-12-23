@@ -32,6 +32,25 @@ func TestMoves(t *testing.T) {
 	}
 }
 
+func TestPoints(t *testing.T) {
+	game := NewGame()
+	if debug {
+		fmt.Println(game.board)
+	}
+	if game.PointAdvantage(Black) != 0 {
+		t.Error("Expected zero point advantage")
+	}
+	game.Move(MoveRequest{Position{0, 1}, Move{0, 2}})
+	game.Move(MoveRequest{Position{1, 6}, Move{0, -2}})
+	game.Move(MoveRequest{Position{0, 3}, Move{1, 1}})
+	if debug {
+		fmt.Println(game.board)
+	}
+	if game.PointAdvantage(Black) != -1 || game.PointAdvantage(White) != 1 {
+		t.Error("Expected point advantage == 1")
+	}
+}
+
 func TestCheckMate(t *testing.T) {
 	game := NewGame()
 	game.Move(MoveRequest{Position{4, 1}, Move{0, 2}})

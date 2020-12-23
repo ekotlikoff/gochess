@@ -7,6 +7,7 @@ import (
 	"github.com/Ekotlikoff/gochess/internal/model"
 	"strconv"
 	"syscall/js"
+	"time"
 )
 
 func (clientModel *ClientModel) initStyle() {
@@ -26,13 +27,72 @@ func (clientModel *ClientModel) initStyle() {
 	}
 }
 
+func (cm *ClientModel) viewSetMatchControls() {
+	usernameInput := cm.document.Call(
+		"getElementById", "username")
+	usernameInput.Call("remove")
+	matchButton := cm.document.Call(
+		"getElementById", "beginMatchmakingButton")
+	matchButton.Call("remove")
+	resignButton := cm.document.Call(
+		"getElementById", "resignButton")
+	removeClass(resignButton, "hidden")
+	drawButton := cm.document.Call(
+		"getElementById", "drawButton")
+	removeClass(drawButton, "hidden")
+}
+
 func (cm *ClientModel) viewSetMatchDetails() {
 	opponentMatchDetailsName := cm.document.Call(
 		"getElementById", "matchdetails_opponent_name")
-	opponentMatchDetailsName.Set("innerText", cm.opponentName)
+	opponentMatchDetailsName.Set("innerText", cm.remoteMatchModel.opponentName)
 	playerMatchDetailsName := cm.document.Call(
 		"getElementById", "matchdetails_player_name")
 	playerMatchDetailsName.Set("innerText", cm.playerName)
+	opponentMatchDetailsRemainingTime := cm.document.Call(
+		"getElementById", "matchdetails_opponent_remainingtime")
+	cm.viewSetMatchDetailsPoints(cm.GetPlayerColor(),
+		"matchdetails_player_points")
+	cm.viewSetMatchDetailsPoints(cm.GetOpponentColor(),
+		"matchdetails_opponent_points")
+	opponentRemainingMs := cm.GetMaxTimeMs() -
+		cm.GetPlayerElapsedMs(cm.GetOpponentColor())
+	if opponentRemainingMs < 0 {
+		opponentRemainingMs = 0
+	}
+	opponentMatchDetailsRemainingTime.Set("innerText",
+		cm.formatTime(opponentRemainingMs))
+	playerMatchDetailsRemainingTime := cm.document.Call(
+		"getElementById", "matchdetails_player_remainingtime")
+	playerRemainingMs := cm.GetMaxTimeMs() -
+		cm.GetPlayerElapsedMs(cm.GetPlayerColor())
+	if playerRemainingMs < 0 {
+		playerRemainingMs = 0
+	}
+	playerMatchDetailsRemainingTime.Set("innerText",
+		cm.formatTime(playerRemainingMs))
+	drawButtonText := "Draw"
+	if cm.GetRequestedDraw() {
+		drawButtonText = fmt.Sprintf("Draw, %s requested a draw",
+			cm.remoteMatchModel.opponentName)
+	}
+	drawButton := cm.document.Call("getElementById", "drawButton")
+	drawButton.Set("innerText", drawButtonText)
+}
+
+func (cm *ClientModel) viewSetMatchDetailsPoints(
+	color model.Color, elementID string) {
+	points := cm.GetPointAdvantage(color)
+	pointSummary := ""
+	if points > 0 {
+		pointSummary = strconv.Itoa(int(points))
+	}
+	matchDetailsPoints := cm.document.Call("getElementById", elementID)
+	matchDetailsPoints.Set("innerText", pointSummary)
+}
+
+func (cm *ClientModel) formatTime(ms int64) string {
+	return (time.Duration(ms) * time.Millisecond).String()
 }
 
 func (clientModel *ClientModel) viewClearBoard() {
@@ -137,7 +197,7 @@ func addClass(element js.Value, class string) {
 }
 
 func removeClass(element js.Value, class string) {
-	element.Get("classList").Call("remove", "dragging")
+	element.Get("classList").Call("remove", class)
 }
 
 func (clientModel *ClientModel) viewDragPiece(
