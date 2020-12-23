@@ -35,7 +35,7 @@ TODO
         - [ ] Check cookies for session token instead of using hasSession bool
             - Not sure if possible, the golang cookiejar doesn't seem like it supports this.
         - [ ] Display gameover results
-        - [ ] Request a draw
+        - [x] Request a draw/resign
         - [x] Display remaining time
         - [ ] Display point advantage/captured pieces
         - [x] Play local match vs begin matchmaking
