@@ -51,6 +51,10 @@ func (cm *ClientModel) viewSetMatchDetails() {
 	playerMatchDetailsName.Set("innerText", cm.playerName)
 	opponentMatchDetailsRemainingTime := cm.document.Call(
 		"getElementById", "matchdetails_opponent_remainingtime")
+	cm.viewSetMatchDetailsPoints(cm.GetPlayerColor(),
+		"matchdetails_player_points")
+	cm.viewSetMatchDetailsPoints(cm.GetOpponentColor(),
+		"matchdetails_opponent_points")
 	opponentRemainingMs := cm.GetMaxTimeMs() -
 		cm.GetPlayerElapsedMs(cm.GetOpponentColor())
 	if opponentRemainingMs < 0 {
@@ -74,6 +78,17 @@ func (cm *ClientModel) viewSetMatchDetails() {
 	}
 	drawButton := cm.document.Call("getElementById", "drawButton")
 	drawButton.Set("innerText", drawButtonText)
+}
+
+func (cm *ClientModel) viewSetMatchDetailsPoints(
+	color model.Color, elementID string) {
+	points := cm.GetPointAdvantage(color)
+	pointSummary := ""
+	if points > 0 {
+		pointSummary = strconv.Itoa(int(points))
+	}
+	matchDetailsPoints := cm.document.Call("getElementById", elementID)
+	matchDetailsPoints.Set("innerText", pointSummary)
 }
 
 func (cm *ClientModel) formatTime(ms int64) string {

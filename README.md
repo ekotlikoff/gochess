@@ -37,7 +37,7 @@ TODO
         - [ ] Display gameover results
         - [x] Request a draw/resign
         - [x] Display remaining time
-        - [ ] Display point advantage/captured pieces
+        - [x] Display point advantage/captured pieces
         - [x] Play local match vs begin matchmaking
         - [x] Mobile support
 * General

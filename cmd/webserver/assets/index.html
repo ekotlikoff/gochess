@@ -91,6 +91,10 @@ license that can be found in the LICENSE file.
             grid-column: 2;
             grid-row: 1;
         }
+        .matchdetails_opponent_points {
+            grid-column: 3;
+            grid-row: 1;
+        }
         .board-board {
             grid-column: 1/6;
             grid-row 2;
@@ -101,6 +105,10 @@ license that can be found in the LICENSE file.
         }
         .matchdetails_player_remainingtime {
             grid-column: 2;
+            grid-row: 3;
+        }
+        .matchdetails_player_points {
+            grid-column: 3;
             grid-row: 3;
         }
         .controls {
@@ -142,6 +150,7 @@ license that can be found in the LICENSE file.
     <div class="wrapper">
         <h3 id="matchdetails_opponent_name" class="matchdetails_opponent_name"></h3>
         <h3 id="matchdetails_opponent_remainingtime" class="matchdetails_opponent_remainingtime"></h3>
+        <h3 id="matchdetails_opponent_points" class="matchdetails_opponent_points"></h3>
         <div id="board-layout-chessboard" class="board-layout-chessboard board-board" style="width: 500px; height: 500px; padding-bottom: 0px;">
             <chess-board class="board" id="board-game">
                 <svg viewBox="0 0 100 100" class="coordinates" />
@@ -149,6 +158,7 @@ license that can be found in the LICENSE file.
         </div>
         <h3 id="matchdetails_player_name" class="matchdetails_player_name"></h3>
         <h3 id="matchdetails_player_remainingtime" class="matchdetails_player_remainingtime"></h3>
+        <h3 id="matchdetails_player_points" class="matchdetails_player_points"></h3>
         <div class="controls">
             <input type="text" id="username" />
             <button onClick="beginMatchmaking('username');" id="beginMatchmakingButton">

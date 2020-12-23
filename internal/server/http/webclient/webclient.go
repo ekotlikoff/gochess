@@ -71,6 +71,12 @@ func (cm *ClientModel) GetTurn() model.Color {
 	return cm.game.Turn()
 }
 
+func (cm *ClientModel) GetPointAdvantage(color model.Color) int8 {
+	cm.gameMutex.Lock()
+	defer cm.gameMutex.Unlock()
+	return cm.game.PointAdvantage(color)
+}
+
 func (cm *ClientModel) MakeMove(moveRequest model.MoveRequest) error {
 	cm.gameMutex.Lock()
 	defer cm.gameMutex.Unlock()
