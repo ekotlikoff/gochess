@@ -5,7 +5,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/Ekotlikoff/gochess/internal/model"
 	"github.com/Ekotlikoff/gochess/internal/server/http/webserver"
 	"github.com/Ekotlikoff/gochess/internal/server/match"
@@ -31,6 +30,10 @@ func (clientModel *ClientModel) initController(quiet bool) {
 	js.Global().Set("beginMatchmaking", clientModel.genBeginMatchmaking())
 	js.Global().Set("resign", clientModel.genResign())
 	js.Global().Set("draw", clientModel.genDraw())
+	js.Global().Set("onclick", clientModel.genGlobalOnclick())
+	clientModel.document.Call("getElementById",
+		"gameover_modal_close").Set("onclick",
+		clientModel.genCloseModalOnClick())
 	if quiet {
 		log.SetOutput(ioutil.Discard)
 	}
@@ -55,6 +58,35 @@ func (clientModel *ClientModel) genTouchStart() js.Func {
 		}
 		return 0
 	})
+}
+
+func (cm *ClientModel) genGlobalOnclick() js.Func {
+	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
+		gameoverModal := cm.document.Call("getElementById", "gameover_modal")
+		if i[0].Get("target").Equal(gameoverModal) {
+			cm.closeGameoverModal()
+		}
+		return 0
+	})
+}
+
+func (cm *ClientModel) genCloseModalOnClick() js.Func {
+	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
+		cm.closeGameoverModal()
+		return 0
+	})
+}
+
+func (clientModel *ClientModel) closeGameoverModal() {
+	removeClass(clientModel.document.Call("getElementById", "gameover_modal"),
+		"gameover_modal")
+	addClass(clientModel.document.Call("getElementById", "gameover_modal"),
+		"hidden")
+	clientModel.viewSetMatchMakingControls()
+	clientModel.viewClearMatchDetails()
+	clientModel.SetGameType(Local)
+	clientModel.SetIsMatched(false)
+	clientModel.resetGame()
 }
 
 func (clientModel *ClientModel) handleClickStart(
@@ -159,7 +191,6 @@ func (cm *ClientModel) takeMove(
 		cm.SetRequestedDraw(false)
 		cm.viewHandleMove(moveRequest, newPos, elMoving)
 	} else {
-		fmt.Println(err)
 		if successfulRemoteMove {
 			// TODO handle strange case where http call was successful but local
 			// game did not accept the move.
@@ -230,21 +261,18 @@ func (cm *ClientModel) listenForAsyncUpdate() {
 			if asyncResponse.GameOver {
 				close(cm.remoteMatchModel.endRemoteGameChan)
 				winType := ""
-				// TODO update UI
 				if asyncResponse.Resignation {
-					// TODO update UI
 					winType = "resignation"
 				} else if asyncResponse.Draw {
-					// TODO update UI
 					winType = "draw"
 					cm.SetRequestedDraw(false)
 				} else if asyncResponse.Timeout {
-					// TODO update UI
 					winType = "timeout"
 				} else {
 					winType = "mate"
 				}
 				log.Println("Winner:", asyncResponse.Winner, "by", winType)
+				cm.viewSetGameOver(asyncResponse.Winner, winType)
 				return
 			} else if asyncResponse.RequestToDraw {
 				log.Println("Requested draw")

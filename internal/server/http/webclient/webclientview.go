@@ -30,16 +30,31 @@ func (clientModel *ClientModel) initStyle() {
 func (cm *ClientModel) viewSetMatchControls() {
 	usernameInput := cm.document.Call(
 		"getElementById", "username")
-	usernameInput.Call("remove")
+	addClass(usernameInput, "hidden")
 	matchButton := cm.document.Call(
 		"getElementById", "beginMatchmakingButton")
-	matchButton.Call("remove")
+	addClass(matchButton, "hidden")
 	resignButton := cm.document.Call(
 		"getElementById", "resignButton")
 	removeClass(resignButton, "hidden")
 	drawButton := cm.document.Call(
 		"getElementById", "drawButton")
 	removeClass(drawButton, "hidden")
+}
+
+func (cm *ClientModel) viewSetMatchMakingControls() {
+	usernameInput := cm.document.Call(
+		"getElementById", "username")
+	removeClass(usernameInput, "hidden")
+	matchButton := cm.document.Call(
+		"getElementById", "beginMatchmakingButton")
+	removeClass(matchButton, "hidden")
+	resignButton := cm.document.Call(
+		"getElementById", "resignButton")
+	addClass(resignButton, "hidden")
+	drawButton := cm.document.Call(
+		"getElementById", "drawButton")
+	addClass(drawButton, "hidden")
 }
 
 func (cm *ClientModel) viewSetMatchDetails() {
@@ -80,6 +95,21 @@ func (cm *ClientModel) viewSetMatchDetails() {
 	drawButton.Set("innerText", drawButtonText)
 }
 
+func (cm *ClientModel) viewClearMatchDetails() {
+	cm.document.Call("getElementById",
+		"matchdetails_player_name").Set("innerText", "")
+	cm.document.Call("getElementById",
+		"matchdetails_opponent_name").Set("innerText", "")
+	cm.document.Call("getElementById",
+		"matchdetails_player_remainingtime").Set("innerText", "")
+	cm.document.Call("getElementById",
+		"matchdetails_opponent_remainingtime").Set("innerText", "")
+	cm.document.Call("getElementById",
+		"matchdetails_player_points").Set("innerText", "")
+	cm.document.Call("getElementById",
+		"matchdetails_opponent_points").Set("innerText", "")
+}
+
 func (cm *ClientModel) viewSetMatchDetailsPoints(
 	color model.Color, elementID string) {
 	points := cm.GetPointAdvantage(color)
@@ -93,6 +123,13 @@ func (cm *ClientModel) viewSetMatchDetailsPoints(
 
 func (cm *ClientModel) formatTime(ms int64) string {
 	return (time.Duration(ms) * time.Millisecond).String()
+}
+
+func (cm *ClientModel) viewSetGameOver(winner, winType string) {
+	addClass(cm.document.Call("getElementById", "gameover_modal"), "gameover_modal")
+	removeClass(cm.document.Call("getElementById", "gameover_modal"), "hidden")
+	cm.document.Call("getElementById", "gameover_modal_text").Set("innerText",
+		fmt.Sprintf("Winner: %s by %s", winner, winType))
 }
 
 func (clientModel *ClientModel) viewClearBoard() {
