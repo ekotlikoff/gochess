@@ -47,6 +47,10 @@ type RemoteMatchModel struct {
 	endRemoteGameChan chan bool
 }
 
+func (cm *ClientModel) ResetRemoteMatchModel() {
+	cm.remoteMatchModel = RemoteMatchModel{}
+}
+
 func (cm *ClientModel) GetGameType() GameType {
 	cm.cmMutex.RLock()
 	defer cm.cmMutex.RUnlock()

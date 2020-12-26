@@ -86,6 +86,7 @@ func (clientModel *ClientModel) closeGameoverModal() {
 	clientModel.viewClearMatchDetails()
 	clientModel.SetGameType(Local)
 	clientModel.SetIsMatched(false)
+	clientModel.ResetRemoteMatchModel()
 	clientModel.resetGame()
 }
 

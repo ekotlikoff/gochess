@@ -67,6 +67,7 @@ func (player *Player) GetAsyncUpdate() ResponseAsync {
 }
 
 func (player *Player) Reset() {
+	player.elapsedMs = 0
 	player.requestChanSync = make(chan RequestSync, 1)
 	player.responseChanSync = make(chan ResponseSync, 10)
 	player.requestChanAsync = make(chan RequestAsync, 1)
