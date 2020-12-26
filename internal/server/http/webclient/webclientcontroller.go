@@ -189,7 +189,7 @@ func (cm *ClientModel) takeMove(
 	}
 	err := cm.MakeMove(moveRequest)
 	if err == nil {
-		cm.SetRequestedDraw(false)
+		cm.ClearRequestedDraw()
 		cm.viewHandleMove(moveRequest, newPos, elMoving)
 	} else {
 		if successfulRemoteMove {
@@ -221,7 +221,7 @@ func (cm *ClientModel) listenForSyncUpdate() {
 			if err != nil {
 				log.Println("FATAL: We do not expect an invalid move from the opponent.")
 			}
-			cm.SetRequestedDraw(false)
+			cm.ClearRequestedDraw()
 			newPos := model.Position{
 				opponentMove.Position.File + uint8(opponentMove.Move.X),
 				opponentMove.Position.Rank + uint8(opponentMove.Move.Y),
@@ -269,7 +269,7 @@ func (cm *ClientModel) listenForAsyncUpdate() {
 					winType = "resignation"
 				} else if asyncResponse.Draw {
 					winType = "draw"
-					cm.SetRequestedDraw(false)
+					cm.ClearRequestedDraw()
 				} else if asyncResponse.Timeout {
 					winType = "timeout"
 				} else {
@@ -280,7 +280,8 @@ func (cm *ClientModel) listenForAsyncUpdate() {
 				return
 			} else if asyncResponse.RequestToDraw {
 				log.Println("Requested draw")
-				cm.SetRequestedDraw(!cm.GetRequestedDraw())
+				cm.SetRequestedDraw(cm.GetOpponentColor(),
+					!cm.GetRequestedDraw(cm.GetOpponentColor()))
 			}
 		} else {
 			log.Println(err)
@@ -317,12 +318,20 @@ func (clientModel *ClientModel) genResign() js.Func {
 
 func (clientModel *ClientModel) genDraw() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		requestBuf := new(bytes.Buffer)
-		request := matchserver.RequestAsync{RequestToDraw: true}
-		json.NewEncoder(requestBuf).Encode(request)
-		go clientModel.client.Post("async", ctp, requestBuf)
+		go clientModel.sendDraw()
 		return 0
 	})
+}
+
+func (clientModel *ClientModel) sendDraw() {
+	requestBuf := new(bytes.Buffer)
+	request := matchserver.RequestAsync{RequestToDraw: true}
+	json.NewEncoder(requestBuf).Encode(request)
+	_, err := clientModel.client.Post("async", ctp, requestBuf)
+	if err == nil {
+		clientModel.SetRequestedDraw(clientModel.GetPlayerColor(),
+			!clientModel.GetRequestedDraw(clientModel.GetPlayerColor()))
+	}
 }
 
 func (clientModel *ClientModel) lookForMatch() {

@@ -87,9 +87,11 @@ func (cm *ClientModel) viewSetMatchDetails() {
 	playerMatchDetailsRemainingTime.Set("innerText",
 		cm.formatTime(playerRemainingMs))
 	drawButtonText := "Draw"
-	if cm.GetRequestedDraw() {
+	if cm.GetRequestedDraw(cm.GetOpponentColor()) {
 		drawButtonText = fmt.Sprintf("Draw, %s requested a draw",
 			cm.remoteMatchModel.opponentName)
+	} else if cm.GetRequestedDraw(cm.GetPlayerColor()) {
+		drawButtonText = fmt.Sprintf("Draw, requesting a draw...")
 	}
 	drawButton := cm.document.Call("getElementById", "drawButton")
 	drawButton.Set("innerText", drawButtonText)

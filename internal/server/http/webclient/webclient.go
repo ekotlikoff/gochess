@@ -39,12 +39,13 @@ type ClientModel struct {
 }
 
 type RemoteMatchModel struct {
-	opponentName      string
-	maxTimeMs         int64
-	playerElapsedMs   int64
-	opponentElapsedMs int64
-	requestedDraw     bool
-	endRemoteGameChan chan bool
+	opponentName          string
+	maxTimeMs             int64
+	playerElapsedMs       int64
+	opponentElapsedMs     int64
+	opponentRequestedDraw bool
+	playerRequestedDraw   bool
+	endRemoteGameChan     chan bool
 }
 
 func (cm *ClientModel) ResetRemoteMatchModel() {
@@ -236,16 +237,31 @@ func (cm *ClientModel) AddPlayerElapsedMs(color model.Color, elapsedMs int64) {
 	}
 }
 
-func (cm *ClientModel) GetRequestedDraw() bool {
+func (cm *ClientModel) GetRequestedDraw(color model.Color) bool {
 	cm.cmMutex.RLock()
 	defer cm.cmMutex.RUnlock()
-	return cm.remoteMatchModel.requestedDraw
+	if color == cm.playerColor {
+		return cm.remoteMatchModel.playerRequestedDraw
+	} else {
+		return cm.remoteMatchModel.opponentRequestedDraw
+	}
 }
 
-func (cm *ClientModel) SetRequestedDraw(requestedDraw bool) {
+func (cm *ClientModel) ClearRequestedDraw() {
 	cm.cmMutex.Lock()
 	defer cm.cmMutex.Unlock()
-	cm.remoteMatchModel.requestedDraw = requestedDraw
+	cm.remoteMatchModel.playerRequestedDraw = false
+	cm.remoteMatchModel.opponentRequestedDraw = false
+}
+
+func (cm *ClientModel) SetRequestedDraw(color model.Color, requestedDraw bool) {
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
+	if color == cm.playerColor {
+		cm.remoteMatchModel.playerRequestedDraw = requestedDraw
+	} else {
+		cm.remoteMatchModel.opponentRequestedDraw = requestedDraw
+	}
 }
 
 func (cm *ClientModel) GetHasSession() bool {

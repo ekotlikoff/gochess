@@ -33,7 +33,7 @@ TODO
         - [x] testing
 * Client
     - [ ] Golang WebAssembly web client
-        - [ ] Show "pending draw" when requesting a draw
+        - [x] Show "pending draw" when requesting a draw
         - [ ] Handle 200 response from GET sync with no update
         - [x] Display matched opponent name
         - [ ] Check cookies for session token instead of using hasSession bool
