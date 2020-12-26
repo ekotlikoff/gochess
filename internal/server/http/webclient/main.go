@@ -7,13 +7,15 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"syscall/js"
+	"time"
 )
 
 func main() {
 	done := make(chan struct{}, 0)
 	game := model.NewGame()
 	jar, _ := cookiejar.New(&cookiejar.Options{})
-	client := &http.Client{Jar: jar}
+	clientTimeout, _ := time.ParseDuration("60s")
+	client := &http.Client{Jar: jar, Timeout: clientTimeout}
 	clientModel := ClientModel{
 		game: &game, playerColor: model.White,
 		document: js.Global().Get("document"),

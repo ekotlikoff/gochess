@@ -15,6 +15,8 @@ TODO
         Just need a hash function to go from position -> positionId
 * Server
     - [x] http server
+      - [ ] Instead of hanging on GET sync, return immediately with no update
+      - [ ] Instead of hanging on GET match, return after 2 seconds so that we can have tighter timeouts
       - [ ] If no response from client in x seconds then call disconnect win for opponent
       - [ ] Support some mechanism for a user cancelling their matchmaking
       - [ ] GET /sync should also provide player and opponent's remaining time to keep client, server in sync
@@ -31,6 +33,8 @@ TODO
         - [x] testing
 * Client
     - [ ] Golang WebAssembly web client
+        - [ ] Show "pending draw" when requesting a draw
+        - [ ] Handle 200 response from GET sync with no update
         - [x] Display matched opponent name
         - [ ] Check cookies for session token instead of using hasSession bool
             - Not sure if possible, the golang cookiejar doesn't seem like it supports this.

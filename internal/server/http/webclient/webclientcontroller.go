@@ -214,6 +214,7 @@ func (cm *ClientModel) listenForSyncUpdate() {
 		resp, err := cm.client.Get("sync")
 		if err == nil {
 			defer resp.Body.Close()
+			retries = 0
 			opponentMove := model.MoveRequest{}
 			json.NewDecoder(resp.Body).Decode(&opponentMove)
 			err := cm.MakeMove(opponentMove)
@@ -231,6 +232,7 @@ func (cm *ClientModel) listenForSyncUpdate() {
 			elMoving := elements.Index(0)
 			cm.viewHandleMove(opponentMove, newPos, elMoving)
 		} else {
+			log.Println(err)
 			time.Sleep(500 * time.Millisecond)
 			retries++
 			if retries >= maxRetries {
@@ -257,6 +259,7 @@ func (cm *ClientModel) listenForAsyncUpdate() {
 		resp, err := cm.client.Get("async")
 		if err == nil {
 			defer resp.Body.Close()
+			retries = 0
 			asyncResponse := matchserver.ResponseAsync{}
 			json.NewDecoder(resp.Body).Decode(&asyncResponse)
 			if asyncResponse.GameOver {
@@ -280,6 +283,7 @@ func (cm *ClientModel) listenForAsyncUpdate() {
 				cm.SetRequestedDraw(!cm.GetRequestedDraw())
 			}
 		} else {
+			log.Println(err)
 			time.Sleep(500 * time.Millisecond)
 			retries++
 			if retries >= maxRetries {

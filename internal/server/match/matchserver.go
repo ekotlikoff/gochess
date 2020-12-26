@@ -67,6 +67,11 @@ func (player *Player) GetAsyncUpdate() ResponseAsync {
 }
 
 func (player *Player) Reset() {
+	// If the player preexisted there may be a client waiting on the opponent's
+	// move.
+	if player.opponentPlayedMove != nil {
+		close(player.opponentPlayedMove)
+	}
 	player.elapsedMs = 0
 	player.requestChanSync = make(chan RequestSync, 1)
 	player.responseChanSync = make(chan ResponseSync, 10)
