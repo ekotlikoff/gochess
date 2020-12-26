@@ -19,15 +19,9 @@ type Player struct {
 }
 
 func NewPlayer(name string) Player {
-	return Player{
-		name: name, color: model.Black,
-		requestChanSync:    make(chan RequestSync, 1),
-		responseChanSync:   make(chan ResponseSync, 10),
-		requestChanAsync:   make(chan RequestAsync, 1),
-		responseChanAsync:  make(chan ResponseAsync, 1),
-		opponentPlayedMove: make(chan model.MoveRequest, 10),
-		matchStart:         make(chan struct{}),
-	}
+	player := Player{name: name, color: model.Black}
+	player.Reset()
+	return player
 }
 
 func (player *Player) Name() string {
@@ -72,12 +66,13 @@ func (player *Player) GetAsyncUpdate() ResponseAsync {
 	return <-player.responseChanAsync
 }
 
-func (player *Player) Stop() {
-	close(player.requestChanSync)
-	close(player.responseChanSync)
-	close(player.requestChanAsync)
-	close(player.responseChanAsync)
-	close(player.matchStart)
+func (player *Player) Reset() {
+	player.requestChanSync = make(chan RequestSync, 1)
+	player.responseChanSync = make(chan ResponseSync, 10)
+	player.requestChanAsync = make(chan RequestAsync, 1)
+	player.responseChanAsync = make(chan ResponseAsync, 1)
+	player.opponentPlayedMove = make(chan model.MoveRequest, 10)
+	player.matchStart = make(chan struct{})
 }
 
 type RequestSync struct {

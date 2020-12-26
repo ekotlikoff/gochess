@@ -99,6 +99,7 @@ func createSearchForMatchHandler(
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		log.SetPrefix("SearchForMatch: ")
 		player := getSession(w, r)
+		player.Reset()
 		if player == nil {
 			return
 		}

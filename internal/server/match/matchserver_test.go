@@ -119,6 +119,44 @@ func TestMatchingServerResignation(t *testing.T) {
 	}
 }
 
+func TestMatchingServerPlayerSecondGame(t *testing.T) {
+	player1 := NewPlayer("player1")
+	player2 := NewPlayer("player2")
+	matchingServer := NewMatchingServer()
+	go matchingServer.MatchPlayer(&player1)
+	go matchingServer.MatchPlayer(&player2)
+	exitChan := make(chan bool, 1)
+	go matchingServer.StartMatchServers(1, exitChan)
+	tries := 0
+	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
+		time.Sleep(time.Millisecond)
+		tries++
+	}
+	liveMatch := matchingServer.LiveMatches()[0]
+	player1.requestChanAsync <- RequestAsync{Resign: true}
+	response := <-player1.responseChanAsync
+	if !liveMatch.game.GameOver() || !response.GameOver ||
+		!response.Resignation || len(matchingServer.LiveMatches()) > 0 {
+		t.Error("Expected resignation got ", response)
+	}
+	player1.Reset()
+	player2.Reset()
+	go matchingServer.MatchPlayer(&player1)
+	go matchingServer.MatchPlayer(&player2)
+	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
+		time.Sleep(time.Millisecond)
+		tries++
+	}
+	liveMatch = matchingServer.LiveMatches()[0]
+	player1.requestChanAsync <- RequestAsync{Resign: true}
+	response = <-player1.responseChanAsync
+	if !liveMatch.game.GameOver() || !response.GameOver ||
+		!response.Resignation {
+		t.Error("Expected resignation got ", response)
+	}
+	exitChan <- true
+}
+
 func TestMatchingServerValidMoves(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
