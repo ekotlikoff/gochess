@@ -216,22 +216,25 @@ func (cm *ClientModel) listenForSyncUpdate() {
 		if err == nil {
 			defer resp.Body.Close()
 			retries = 0
-			opponentMove := model.MoveRequest{}
-			json.NewDecoder(resp.Body).Decode(&opponentMove)
-			err := cm.MakeMove(opponentMove)
-			if err != nil {
-				log.Println("FATAL: We do not expect an invalid move from the opponent.")
+			if resp.StatusCode == 200 {
+				opponentMove := model.MoveRequest{}
+				json.NewDecoder(resp.Body).Decode(&opponentMove)
+				err := cm.MakeMove(opponentMove)
+				if err != nil {
+					log.Println("FATAL: We do not expect an invalid move from the opponent.")
+				}
+				cm.ClearRequestedDraw()
+				newPos := model.Position{
+					opponentMove.Position.File + uint8(opponentMove.Move.X),
+					opponentMove.Position.Rank + uint8(opponentMove.Move.Y),
+				}
+				originalPosClass :=
+					getPositionClass(opponentMove.Position, cm.GetPlayerColor())
+				elements :=
+					cm.document.Call("getElementsByClassName", originalPosClass)
+				elMoving := elements.Index(0)
+				cm.viewHandleMove(opponentMove, newPos, elMoving)
 			}
-			cm.ClearRequestedDraw()
-			newPos := model.Position{
-				opponentMove.Position.File + uint8(opponentMove.Move.X),
-				opponentMove.Position.Rank + uint8(opponentMove.Move.Y),
-			}
-			originalPosClass :=
-				getPositionClass(opponentMove.Position, cm.GetPlayerColor())
-			elements := cm.document.Call("getElementsByClassName", originalPosClass)
-			elMoving := elements.Index(0)
-			cm.viewHandleMove(opponentMove, newPos, elMoving)
 		} else {
 			log.Println(err)
 			time.Sleep(500 * time.Millisecond)
@@ -261,28 +264,30 @@ func (cm *ClientModel) listenForAsyncUpdate() {
 		if err == nil {
 			defer resp.Body.Close()
 			retries = 0
-			asyncResponse := matchserver.ResponseAsync{}
-			json.NewDecoder(resp.Body).Decode(&asyncResponse)
-			if asyncResponse.GameOver {
-				close(cm.remoteMatchModel.endRemoteGameChan)
-				winType := ""
-				if asyncResponse.Resignation {
-					winType = "resignation"
-				} else if asyncResponse.Draw {
-					winType = "draw"
-					cm.ClearRequestedDraw()
-				} else if asyncResponse.Timeout {
-					winType = "timeout"
-				} else {
-					winType = "mate"
+			if resp.StatusCode == 200 {
+				asyncResponse := matchserver.ResponseAsync{}
+				json.NewDecoder(resp.Body).Decode(&asyncResponse)
+				if asyncResponse.GameOver {
+					close(cm.remoteMatchModel.endRemoteGameChan)
+					winType := ""
+					if asyncResponse.Resignation {
+						winType = "resignation"
+					} else if asyncResponse.Draw {
+						winType = "draw"
+						cm.ClearRequestedDraw()
+					} else if asyncResponse.Timeout {
+						winType = "timeout"
+					} else {
+						winType = "mate"
+					}
+					log.Println("Winner:", asyncResponse.Winner, "by", winType)
+					cm.viewSetGameOver(asyncResponse.Winner, winType)
+					return
+				} else if asyncResponse.RequestToDraw {
+					log.Println("Requested draw")
+					cm.SetRequestedDraw(cm.GetOpponentColor(),
+						!cm.GetRequestedDraw(cm.GetOpponentColor()))
 				}
-				log.Println("Winner:", asyncResponse.Winner, "by", winType)
-				cm.viewSetGameOver(asyncResponse.Winner, winType)
-				return
-			} else if asyncResponse.RequestToDraw {
-				log.Println("Requested draw")
-				cm.SetRequestedDraw(cm.GetOpponentColor(),
-					!cm.GetRequestedDraw(cm.GetOpponentColor()))
 			}
 		} else {
 			log.Println(err)

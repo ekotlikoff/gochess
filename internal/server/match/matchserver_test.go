@@ -230,13 +230,13 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	white.MakeMove(model.MoveRequest{model.Position{4, 1}, model.Move{0, 2}})
 	opponentMove := black.GetSyncUpdate()
 	expectedMove := model.MoveRequest{model.Position{4, 1}, model.Move{0, 2}}
-	if opponentMove != expectedMove {
+	if *opponentMove != expectedMove {
 		t.Error("Expected opponent's move got ", opponentMove)
 	}
 	black.MakeMove(model.MoveRequest{model.Position{0, 6}, model.Move{0, -1}})
 	opponentMove = white.GetSyncUpdate()
 	expectedMove = model.MoveRequest{model.Position{0, 6}, model.Move{0, -1}}
-	if opponentMove != expectedMove {
+	if *opponentMove != expectedMove {
 		t.Error("Expected opponent's move got ", opponentMove)
 	}
 	white.MakeMove(model.MoveRequest{model.Position{3, 0}, model.Move{4, 4}})

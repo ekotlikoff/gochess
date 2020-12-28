@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+var DefaultTimeout time.Duration = 10 * time.Second
+
 type Player struct {
 	name               string
 	color              model.Color
@@ -75,7 +77,7 @@ func (player *Player) HasMatchStarted() bool {
 	select {
 	case <-player.matchStart:
 		return true
-	case <-time.After(2 * time.Second):
+	case <-time.After(DefaultTimeout):
 		return false
 	}
 }
@@ -86,16 +88,26 @@ func (player *Player) MakeMove(pieceMove model.MoveRequest) bool {
 	return response.moveSuccess
 }
 
-func (player *Player) GetSyncUpdate() model.MoveRequest {
-	return <-player.opponentPlayedMove
+func (player *Player) GetSyncUpdate() *model.MoveRequest {
+	select {
+	case update := <-player.opponentPlayedMove:
+		return &update
+	case <-time.After(DefaultTimeout):
+		return nil
+	}
 }
 
 func (player *Player) RequestAsync(requestAsync RequestAsync) {
 	player.requestChanAsync <- requestAsync
 }
 
-func (player *Player) GetAsyncUpdate() ResponseAsync {
-	return <-player.responseChanAsync
+func (player *Player) GetAsyncUpdate() *ResponseAsync {
+	select {
+	case update := <-player.responseChanAsync:
+		return &update
+	case <-time.After(DefaultTimeout):
+		return nil
+	}
 }
 
 func (player *Player) Reset() {

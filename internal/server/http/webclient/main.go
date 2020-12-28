@@ -14,7 +14,7 @@ func main() {
 	done := make(chan struct{}, 0)
 	game := model.NewGame()
 	jar, _ := cookiejar.New(&cookiejar.Options{})
-	clientTimeout, _ := time.ParseDuration("60s")
+	clientTimeout, _ := time.ParseDuration("15s")
 	client := &http.Client{Jar: jar, Timeout: clientTimeout}
 	clientModel := ClientModel{
 		game: &game, playerColor: model.White,
