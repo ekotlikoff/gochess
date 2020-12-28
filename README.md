@@ -16,7 +16,7 @@ TODO
 * Server
     - [x] http server
       - [ ] Instead of hanging on GET sync/async, return immediately with no update
-      - [ ] Instead of hanging on GET match, return after 2 seconds so that we can have tighter timeouts
+      - [x] Instead of hanging on GET match, return after 2 seconds so that we can have tighter timeouts
       - [ ] If no response from client in x seconds then call disconnect win for opponent
       - [ ] Support some mechanism for a user cancelling their matchmaking
       - [ ] GET /sync should also provide player and opponent's remaining time to keep client, server in sync
@@ -34,6 +34,7 @@ TODO
 * Client
     - [ ] Golang WebAssembly web client
         - [x] Show "pending draw" when requesting a draw
+        - [x] Handle 202 responses from GET match while still pending
         - [ ] Handle 200 response from GET sync/async with no update
         - [x] Display matched opponent name
         - [ ] Check cookies for session token instead of using hasSession bool

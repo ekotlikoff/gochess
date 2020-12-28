@@ -10,6 +10,7 @@ import (
 	"github.com/Ekotlikoff/gochess/internal/server/match"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"syscall/js"
 	"time"
 )
@@ -352,27 +353,41 @@ func (clientModel *ClientModel) lookForMatch() {
 		clientModel.SetPlayerName(username)
 		clientModel.SetHasSession(true)
 	}
-	resp, err := clientModel.client.Get("match")
-	if err == nil {
-		var matchResponse webserver.MatchedResponse
-		json.NewDecoder(resp.Body).Decode(&matchResponse)
-		resp.Body.Close()
-		clientModel.SetPlayerColor(matchResponse.Color)
-		clientModel.SetOpponentName(matchResponse.OpponentName)
-		clientModel.SetMaxTimeMs(matchResponse.MaxTimeMs)
-		clientModel.resetGame()
-		// - TODO once matched briefly display matched icon?
-		// - TODO once matched set and display time remaining
-		clientModel.SetGameType(Remote)
-		clientModel.SetIsMatched(true)
-		clientModel.SetIsMatchmaking(false)
-		buttonLoader.Call("remove")
-		clientModel.remoteMatchModel.endRemoteGameChan = make(chan bool, 0)
-		clientModel.viewSetMatchControls()
-		go clientModel.matchDetailsUpdateLoop()
-		go clientModel.listenForSyncUpdate()
-		go clientModel.listenForAsyncUpdate()
+	retries := 0
+	maxRetries := 6000
+	var resp *http.Response
+	var err error
+	for true {
+		resp, err = clientModel.client.Get("match")
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode == 200 {
+				break
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+		retries++
+		if retries >= maxRetries {
+			log.Printf("Reached maxRetries on uri=%s retries=%d",
+				"match", maxRetries)
+		}
 	}
+	var matchResponse webserver.MatchedResponse
+	json.NewDecoder(resp.Body).Decode(&matchResponse)
+	clientModel.SetPlayerColor(matchResponse.Color)
+	clientModel.SetOpponentName(matchResponse.OpponentName)
+	clientModel.SetMaxTimeMs(matchResponse.MaxTimeMs)
+	clientModel.resetGame()
+	// - TODO once matched briefly display matched icon?
+	clientModel.SetGameType(Remote)
+	clientModel.SetIsMatched(true)
+	clientModel.SetIsMatchmaking(false)
+	buttonLoader.Call("remove")
+	clientModel.remoteMatchModel.endRemoteGameChan = make(chan bool, 0)
+	clientModel.viewSetMatchControls()
+	go clientModel.matchDetailsUpdateLoop()
+	go clientModel.listenForSyncUpdate()
+	go clientModel.listenForAsyncUpdate()
 }
 
 func (clientModel *ClientModel) matchDetailsUpdateLoop() {

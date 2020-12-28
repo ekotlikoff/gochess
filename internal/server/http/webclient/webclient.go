@@ -49,6 +49,8 @@ type RemoteMatchModel struct {
 }
 
 func (cm *ClientModel) ResetRemoteMatchModel() {
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
 	cm.remoteMatchModel = RemoteMatchModel{}
 }
 
@@ -59,8 +61,8 @@ func (cm *ClientModel) GetGameType() GameType {
 }
 
 func (cm *ClientModel) SetGameType(gameType GameType) {
-	cm.cmMutex.RLock()
-	defer cm.cmMutex.RUnlock()
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
 	cm.gameType = gameType
 }
 
@@ -105,8 +107,8 @@ func (cm *ClientModel) GetOpponentColor() model.Color {
 }
 
 func (cm *ClientModel) SetPlayerColor(color model.Color) {
-	cm.cmMutex.RLock()
-	defer cm.cmMutex.RUnlock()
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
 	cm.playerColor = color
 }
 

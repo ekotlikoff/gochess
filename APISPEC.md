@@ -1,7 +1,7 @@
 - POST /session
     - Start the session and fetch sessionToken, providing username
 - GET /match
-    - Begin matching, receive color when match is found
+    - Begin matching, receive color when match is found, otherwise HTTP 202
 - POST /sync
     - Make a move, receive 200 if move is succesful, 400 otherwise
 - POST /async

@@ -99,17 +99,24 @@ func createSearchForMatchHandler(
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		log.SetPrefix("SearchForMatch: ")
 		player := getSession(w, r)
-		player.Reset()
 		if player == nil {
 			return
+		} else if !player.GetSearchingForMatch() {
+			player.Reset()
+			player.SetSearchingForMatch(true)
+			matchServer.MatchPlayer(player)
 		}
-		matchServer.MatchPlayer(player)
-		player.WaitForMatchStart()
-		matchResponse :=
-			MatchedResponse{player.Color(), player.MatchedOpponentName(),
-				player.MatchMaxTimeMs(),
-			}
-		json.NewEncoder(w).Encode(matchResponse)
+		if player.HasMatchStarted() {
+			player.SetSearchingForMatch(false)
+			matchResponse :=
+				MatchedResponse{player.Color(), player.MatchedOpponentName(),
+					player.MatchMaxTimeMs(),
+				}
+			json.NewEncoder(w).Encode(matchResponse)
+		} else {
+			// Return HTTP 202 until match starts.
+			w.WriteHeader(http.StatusAccepted)
+		}
 	}
 	return http.HandlerFunc(handler)
 }
