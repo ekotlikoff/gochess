@@ -15,7 +15,7 @@ TODO
         Just need a hash function to go from position -> positionId
 * Server
     - [x] http server
-      - [ ] Make a websocket server/client as an alternative to long polling
+      - [ ] Make a websocket server/client as an alternative to polling
       - [x] Instead of hanging indefinitely on GET sync/async, return with no update after timeout
       - [x] Instead of hanging indefinitely on GET match, return after a server timeout with http 204
       - [ ] If no response from client in x seconds then call disconnect win for opponent
