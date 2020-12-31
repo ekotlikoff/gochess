@@ -5,12 +5,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"github.com/Ekotlikoff/gochess/internal/model"
 	"github.com/Ekotlikoff/gochess/internal/server/http/webserver"
 	"github.com/Ekotlikoff/gochess/internal/server/match"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"syscall/js"
 	"time"
 )
@@ -31,6 +31,10 @@ func (clientModel *ClientModel) initController(quiet bool) {
 	js.Global().Set("beginMatchmaking", clientModel.genBeginMatchmaking())
 	js.Global().Set("resign", clientModel.genResign())
 	js.Global().Set("draw", clientModel.genDraw())
+	js.Global().Set("onclick", clientModel.genGlobalOnclick())
+	clientModel.document.Call("getElementById",
+		"gameover_modal_close").Set("onclick",
+		clientModel.genCloseModalOnClick())
 	if quiet {
 		log.SetOutput(ioutil.Discard)
 	}
@@ -55,6 +59,36 @@ func (clientModel *ClientModel) genTouchStart() js.Func {
 		}
 		return 0
 	})
+}
+
+func (cm *ClientModel) genGlobalOnclick() js.Func {
+	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
+		gameoverModal := cm.document.Call("getElementById", "gameover_modal")
+		if i[0].Get("target").Equal(gameoverModal) {
+			cm.closeGameoverModal()
+		}
+		return 0
+	})
+}
+
+func (cm *ClientModel) genCloseModalOnClick() js.Func {
+	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
+		cm.closeGameoverModal()
+		return 0
+	})
+}
+
+func (clientModel *ClientModel) closeGameoverModal() {
+	removeClass(clientModel.document.Call("getElementById", "gameover_modal"),
+		"gameover_modal")
+	addClass(clientModel.document.Call("getElementById", "gameover_modal"),
+		"hidden")
+	clientModel.viewSetMatchMakingControls()
+	clientModel.viewClearMatchDetails()
+	clientModel.SetGameType(Local)
+	clientModel.SetIsMatched(false)
+	clientModel.ResetRemoteMatchModel()
+	clientModel.resetGame()
 }
 
 func (clientModel *ClientModel) handleClickStart(
@@ -156,10 +190,9 @@ func (cm *ClientModel) takeMove(
 	}
 	err := cm.MakeMove(moveRequest)
 	if err == nil {
-		cm.SetRequestedDraw(false)
+		cm.ClearRequestedDraw()
 		cm.viewHandleMove(moveRequest, newPos, elMoving)
 	} else {
-		fmt.Println(err)
 		if successfulRemoteMove {
 			// TODO handle strange case where http call was successful but local
 			// game did not accept the move.
@@ -182,23 +215,28 @@ func (cm *ClientModel) listenForSyncUpdate() {
 		resp, err := cm.client.Get("sync")
 		if err == nil {
 			defer resp.Body.Close()
-			opponentMove := model.MoveRequest{}
-			json.NewDecoder(resp.Body).Decode(&opponentMove)
-			err := cm.MakeMove(opponentMove)
-			if err != nil {
-				log.Println("FATAL: We do not expect an invalid move from the opponent.")
+			retries = 0
+			if resp.StatusCode == 200 {
+				opponentMove := model.MoveRequest{}
+				json.NewDecoder(resp.Body).Decode(&opponentMove)
+				err := cm.MakeMove(opponentMove)
+				if err != nil {
+					log.Println("FATAL: We do not expect an invalid move from the opponent.")
+				}
+				cm.ClearRequestedDraw()
+				newPos := model.Position{
+					opponentMove.Position.File + uint8(opponentMove.Move.X),
+					opponentMove.Position.Rank + uint8(opponentMove.Move.Y),
+				}
+				originalPosClass :=
+					getPositionClass(opponentMove.Position, cm.GetPlayerColor())
+				elements :=
+					cm.document.Call("getElementsByClassName", originalPosClass)
+				elMoving := elements.Index(0)
+				cm.viewHandleMove(opponentMove, newPos, elMoving)
 			}
-			cm.SetRequestedDraw(false)
-			newPos := model.Position{
-				opponentMove.Position.File + uint8(opponentMove.Move.X),
-				opponentMove.Position.Rank + uint8(opponentMove.Move.Y),
-			}
-			originalPosClass :=
-				getPositionClass(opponentMove.Position, cm.GetPlayerColor())
-			elements := cm.document.Call("getElementsByClassName", originalPosClass)
-			elMoving := elements.Index(0)
-			cm.viewHandleMove(opponentMove, newPos, elMoving)
 		} else {
+			log.Println(err)
 			time.Sleep(500 * time.Millisecond)
 			retries++
 			if retries >= maxRetries {
@@ -225,32 +263,34 @@ func (cm *ClientModel) listenForAsyncUpdate() {
 		resp, err := cm.client.Get("async")
 		if err == nil {
 			defer resp.Body.Close()
-			asyncResponse := matchserver.ResponseAsync{}
-			json.NewDecoder(resp.Body).Decode(&asyncResponse)
-			if asyncResponse.GameOver {
-				close(cm.remoteMatchModel.endRemoteGameChan)
-				winType := ""
-				// TODO update UI
-				if asyncResponse.Resignation {
-					// TODO update UI
-					winType = "resignation"
-				} else if asyncResponse.Draw {
-					// TODO update UI
-					winType = "draw"
-					cm.SetRequestedDraw(false)
-				} else if asyncResponse.Timeout {
-					// TODO update UI
-					winType = "timeout"
-				} else {
-					winType = "mate"
+			retries = 0
+			if resp.StatusCode == 200 {
+				asyncResponse := matchserver.ResponseAsync{}
+				json.NewDecoder(resp.Body).Decode(&asyncResponse)
+				if asyncResponse.GameOver {
+					close(cm.remoteMatchModel.endRemoteGameChan)
+					winType := ""
+					if asyncResponse.Resignation {
+						winType = "resignation"
+					} else if asyncResponse.Draw {
+						winType = "draw"
+						cm.ClearRequestedDraw()
+					} else if asyncResponse.Timeout {
+						winType = "timeout"
+					} else {
+						winType = "mate"
+					}
+					log.Println("Winner:", asyncResponse.Winner, "by", winType)
+					cm.viewSetGameOver(asyncResponse.Winner, winType)
+					return
+				} else if asyncResponse.RequestToDraw {
+					log.Println("Requested draw")
+					cm.SetRequestedDraw(cm.GetOpponentColor(),
+						!cm.GetRequestedDraw(cm.GetOpponentColor()))
 				}
-				log.Println("Winner:", asyncResponse.Winner, "by", winType)
-				return
-			} else if asyncResponse.RequestToDraw {
-				log.Println("Requested draw")
-				cm.SetRequestedDraw(!cm.GetRequestedDraw())
 			}
 		} else {
+			log.Println(err)
 			time.Sleep(500 * time.Millisecond)
 			retries++
 			if retries >= maxRetries {
@@ -284,12 +324,20 @@ func (clientModel *ClientModel) genResign() js.Func {
 
 func (clientModel *ClientModel) genDraw() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		requestBuf := new(bytes.Buffer)
-		request := matchserver.RequestAsync{RequestToDraw: true}
-		json.NewEncoder(requestBuf).Encode(request)
-		go clientModel.client.Post("async", ctp, requestBuf)
+		go clientModel.sendDraw()
 		return 0
 	})
+}
+
+func (clientModel *ClientModel) sendDraw() {
+	requestBuf := new(bytes.Buffer)
+	request := matchserver.RequestAsync{RequestToDraw: true}
+	json.NewEncoder(requestBuf).Encode(request)
+	_, err := clientModel.client.Post("async", ctp, requestBuf)
+	if err == nil {
+		clientModel.SetRequestedDraw(clientModel.GetPlayerColor(),
+			!clientModel.GetRequestedDraw(clientModel.GetPlayerColor()))
+	}
 }
 
 func (clientModel *ClientModel) lookForMatch() {
@@ -310,27 +358,41 @@ func (clientModel *ClientModel) lookForMatch() {
 		clientModel.SetPlayerName(username)
 		clientModel.SetHasSession(true)
 	}
-	resp, err := clientModel.client.Get("match")
-	if err == nil {
-		var matchResponse webserver.MatchedResponse
-		json.NewDecoder(resp.Body).Decode(&matchResponse)
-		resp.Body.Close()
-		clientModel.SetPlayerColor(matchResponse.Color)
-		clientModel.SetOpponentName(matchResponse.OpponentName)
-		clientModel.SetMaxTimeMs(matchResponse.MaxTimeMs)
-		clientModel.resetGame()
-		// - TODO once matched briefly display matched icon?
-		// - TODO once matched set and display time remaining
-		clientModel.SetGameType(Remote)
-		clientModel.SetIsMatched(true)
-		clientModel.SetIsMatchmaking(false)
-		buttonLoader.Call("remove")
-		clientModel.remoteMatchModel.endRemoteGameChan = make(chan bool, 0)
-		clientModel.viewSetMatchControls()
-		go clientModel.matchDetailsUpdateLoop()
-		go clientModel.listenForSyncUpdate()
-		go clientModel.listenForAsyncUpdate()
+	retries := 0
+	maxRetries := 6000
+	var resp *http.Response
+	var err error
+	for true {
+		resp, err = clientModel.client.Get("match")
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode == 200 {
+				break
+			}
+		}
+		time.Sleep(100 * time.Millisecond)
+		retries++
+		if retries >= maxRetries {
+			log.Printf("Reached maxRetries on uri=%s retries=%d",
+				"match", maxRetries)
+		}
 	}
+	var matchResponse webserver.MatchedResponse
+	json.NewDecoder(resp.Body).Decode(&matchResponse)
+	clientModel.SetPlayerColor(matchResponse.Color)
+	clientModel.SetOpponentName(matchResponse.OpponentName)
+	clientModel.SetMaxTimeMs(matchResponse.MaxTimeMs)
+	clientModel.resetGame()
+	// - TODO once matched briefly display matched icon?
+	clientModel.SetGameType(Remote)
+	clientModel.SetIsMatched(true)
+	clientModel.SetIsMatchmaking(false)
+	buttonLoader.Call("remove")
+	clientModel.remoteMatchModel.endRemoteGameChan = make(chan bool, 0)
+	clientModel.viewSetMatchControls()
+	go clientModel.matchDetailsUpdateLoop()
+	go clientModel.listenForSyncUpdate()
+	go clientModel.listenForAsyncUpdate()
 }
 
 func (clientModel *ClientModel) matchDetailsUpdateLoop() {

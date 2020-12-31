@@ -83,7 +83,7 @@ license that can be found in the LICENSE file.
             gap: 10px;
             grid-auto-rows: minmax(10px, auto);
         }
-        // As per https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Grid_Layout
+        /* As per https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Grid_Layout */
         .matchdetails_opponent_name {
             grid-column: 1;
             grid-row: 1;
@@ -117,7 +117,45 @@ license that can be found in the LICENSE file.
             grid-row: 4;
         }
         .hidden {
-            visibility: hidden;
+            display: none;
+        }
+
+        /* As per https://www.w3schools.com/howto/howto_css_modals.asp */
+        .gameover_modal {
+            display: block;
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+
+        /* Modal Content/Box */
+        .gameover_modal_content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+        }
+
+        /* The Close Button */
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
         }
 
         @keyframes spin {
@@ -149,6 +187,13 @@ license that can be found in the LICENSE file.
 
 
     <div class="wrapper">
+        <div id="gameover_modal" class="hidden">
+            <!-- Modal content -->
+            <div class="gameover_modal_content">
+                <span id="gameover_modal_close" class="close">&times;</span>
+                <p id="gameover_modal_text"/>
+            </div>
+        </div>
         <h3 id="matchdetails_opponent_name" class="matchdetails_opponent_name"></h3>
         <h3 id="matchdetails_opponent_remainingtime" class="matchdetails_opponent_remainingtime"></h3>
         <h3 id="matchdetails_opponent_points" class="matchdetails_opponent_points"></h3>

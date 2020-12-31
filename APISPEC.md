@@ -1,16 +1,16 @@
 - POST /session
     - Start the session and fetch sessionToken, providing username
 - GET /match
-    - Begin matching, receive color when match is found
+    - Begin matching, receive color when match is found, otherwise HTTP 202
 - POST /sync
     - Make a move, receive 200 if move is succesful, 400 otherwise
 - POST /async
     - Make an async request (draw/resign) receive 200 if request received
 - GET /async
-    - Get any async updates (should be constantly polling this endpoint)
+    - Get any async updates (should be constantly polling this endpoint), returns HTTP 204 if no update after server timeout
         - gameOver, requestToDraw, gameOver results
 - GET /sync
-    - Get opponents move (should query this after a succesful move)
+    - Get opponents move (should query this after a succesful move), returns HTTP 204 if no update after server timeout
 - GET /currentgame
     - Get the state of the board (call this to check if in a game and to get the state of it if so)
     - Return 404 if not in a game, 200 with state otherwise

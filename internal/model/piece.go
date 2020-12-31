@@ -104,8 +104,7 @@ func (piece *Piece) Value() int8 {
 		return 9
 	case Rook:
 		return 5
-	case Knight:
-	case Bishop:
+	case Knight, Bishop:
 		return 3
 	case Pawn:
 		return 1

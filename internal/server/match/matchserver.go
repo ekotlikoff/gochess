@@ -3,7 +3,10 @@ package matchserver
 import (
 	"github.com/Ekotlikoff/gochess/internal/model"
 	"sync"
+	"time"
 )
+
+var DefaultTimeout time.Duration = 10 * time.Second
 
 type Player struct {
 	name               string
@@ -15,23 +18,43 @@ type Player struct {
 	responseChanAsync  chan ResponseAsync
 	opponentPlayedMove chan model.MoveRequest
 	matchStart         chan struct{}
+	matchMutex         sync.RWMutex
+	searchingForMatch  bool
 	match              *Match
 }
 
 func NewPlayer(name string) Player {
-	return Player{
-		name: name, color: model.Black,
-		requestChanSync:    make(chan RequestSync, 1),
-		responseChanSync:   make(chan ResponseSync, 10),
-		requestChanAsync:   make(chan RequestAsync, 1),
-		responseChanAsync:  make(chan ResponseAsync, 1),
-		opponentPlayedMove: make(chan model.MoveRequest, 10),
-		matchStart:         make(chan struct{}),
-	}
+	player := Player{name: name, color: model.Black}
+	player.Reset()
+	return player
 }
 
 func (player *Player) Name() string {
 	return player.name
+}
+
+func (player *Player) GetSearchingForMatch() bool {
+	player.matchMutex.RLock()
+	defer player.matchMutex.RUnlock()
+	return player.searchingForMatch
+}
+
+func (player *Player) SetSearchingForMatch(searchingForMatch bool) {
+	player.matchMutex.Lock()
+	defer player.matchMutex.Unlock()
+	player.searchingForMatch = searchingForMatch
+}
+
+func (player *Player) GetMatch() *Match {
+	player.matchMutex.RLock()
+	defer player.matchMutex.RUnlock()
+	return player.match
+}
+
+func (player *Player) SetMatch(match *Match) {
+	player.matchMutex.Lock()
+	defer player.matchMutex.Unlock()
+	player.match = match
 }
 
 func (player *Player) MatchedOpponentName() string {
@@ -39,19 +62,24 @@ func (player *Player) MatchedOpponentName() string {
 	if player.color == opponentColor {
 		opponentColor = model.White
 	}
-	return player.match.PlayerName(opponentColor)
+	return player.GetMatch().PlayerName(opponentColor)
 }
 
 func (player *Player) MatchMaxTimeMs() int64 {
-	return player.match.MaxTimeMs()
+	return player.GetMatch().MaxTimeMs()
 }
 
 func (player *Player) Color() model.Color {
 	return player.color
 }
 
-func (player *Player) WaitForMatchStart() {
-	<-player.matchStart
+func (player *Player) HasMatchStarted() bool {
+	select {
+	case <-player.matchStart:
+		return true
+	case <-time.After(DefaultTimeout):
+		return false
+	}
 }
 
 func (player *Player) MakeMove(pieceMove model.MoveRequest) bool {
@@ -60,24 +88,41 @@ func (player *Player) MakeMove(pieceMove model.MoveRequest) bool {
 	return response.moveSuccess
 }
 
-func (player *Player) GetSyncUpdate() model.MoveRequest {
-	return <-player.opponentPlayedMove
+func (player *Player) GetSyncUpdate() *model.MoveRequest {
+	select {
+	case update := <-player.opponentPlayedMove:
+		return &update
+	case <-time.After(DefaultTimeout):
+		return nil
+	}
 }
 
 func (player *Player) RequestAsync(requestAsync RequestAsync) {
 	player.requestChanAsync <- requestAsync
 }
 
-func (player *Player) GetAsyncUpdate() ResponseAsync {
-	return <-player.responseChanAsync
+func (player *Player) GetAsyncUpdate() *ResponseAsync {
+	select {
+	case update := <-player.responseChanAsync:
+		return &update
+	case <-time.After(DefaultTimeout):
+		return nil
+	}
 }
 
-func (player *Player) Stop() {
-	close(player.requestChanSync)
-	close(player.responseChanSync)
-	close(player.requestChanAsync)
-	close(player.responseChanAsync)
-	close(player.matchStart)
+func (player *Player) Reset() {
+	// If the player preexisted there may be a client waiting on the opponent's
+	// move.
+	if player.opponentPlayedMove != nil {
+		close(player.opponentPlayedMove)
+	}
+	player.elapsedMs = 0
+	player.requestChanSync = make(chan RequestSync, 1)
+	player.responseChanSync = make(chan ResponseSync, 10)
+	player.requestChanAsync = make(chan RequestAsync, 1)
+	player.responseChanAsync = make(chan ResponseAsync, 1)
+	player.opponentPlayedMove = make(chan model.MoveRequest, 10)
+	player.matchStart = make(chan struct{})
 }
 
 type RequestSync struct {
@@ -133,8 +178,8 @@ func (matchingServer *MatchingServer) matchAndPlay(
 		} else if player2 == nil {
 			player2 = player
 			match := matchGenerator(player1, player2)
-			player1.match = &match
-			player2.match = &match
+			player1.SetMatch(&match)
+			player2.SetMatch(&match)
 			matchingServer.mutex.Lock()
 			matchingServer.liveMatches =
 				append(matchingServer.liveMatches, &match)
@@ -144,6 +189,8 @@ func (matchingServer *MatchingServer) matchAndPlay(
 			close(player2.matchStart)
 			(&match).play()
 			matchingServer.removeMatch(&match)
+			player1.SetMatch(nil)
+			player2.SetMatch(nil)
 			player1, player2 = nil, nil
 			matchingServer.pendingMatch.Lock()
 		}

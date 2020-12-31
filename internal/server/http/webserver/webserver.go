@@ -101,14 +101,22 @@ func createSearchForMatchHandler(
 		player := getSession(w, r)
 		if player == nil {
 			return
+		} else if !player.GetSearchingForMatch() {
+			player.Reset()
+			player.SetSearchingForMatch(true)
+			matchServer.MatchPlayer(player)
 		}
-		matchServer.MatchPlayer(player)
-		player.WaitForMatchStart()
-		matchResponse :=
-			MatchedResponse{player.Color(), player.MatchedOpponentName(),
-				player.MatchMaxTimeMs(),
-			}
-		json.NewEncoder(w).Encode(matchResponse)
+		if player.HasMatchStarted() {
+			player.SetSearchingForMatch(false)
+			matchResponse :=
+				MatchedResponse{player.Color(), player.MatchedOpponentName(),
+					player.MatchMaxTimeMs(),
+				}
+			json.NewEncoder(w).Encode(matchResponse)
+		} else {
+			// Return HTTP 202 until match starts.
+			w.WriteHeader(http.StatusAccepted)
+		}
 	}
 	return http.HandlerFunc(handler)
 }
@@ -122,7 +130,12 @@ func SyncHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		pieceMove := player.GetSyncUpdate()
-		json.NewEncoder(w).Encode(pieceMove)
+		if pieceMove != nil {
+			json.NewEncoder(w).Encode(*pieceMove)
+			return
+		}
+		// Return HTTP 204 if no update.
+		w.WriteHeader(http.StatusNoContent)
 	case "POST":
 		var moveRequest model.MoveRequest
 		err := json.NewDecoder(r.Body).Decode(&moveRequest)
@@ -148,6 +161,11 @@ func AsyncHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		asyncUpdate := player.GetAsyncUpdate()
+		if asyncUpdate == nil {
+			// Return HTTP 204 if no update.
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(asyncUpdate); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)

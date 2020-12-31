@@ -15,6 +15,9 @@ TODO
         Just need a hash function to go from position -> positionId
 * Server
     - [x] http server
+      - [ ] Make a websocket server/client as an alternative to polling
+      - [x] Instead of hanging indefinitely on GET sync/async, return with no update after timeout
+      - [x] Instead of hanging indefinitely on GET match, return after a server timeout with http 204
       - [ ] If no response from client in x seconds then call disconnect win for opponent
       - [ ] Support some mechanism for a user cancelling their matchmaking
       - [ ] GET /sync should also provide player and opponent's remaining time to keep client, server in sync
@@ -31,10 +34,13 @@ TODO
         - [x] testing
 * Client
     - [ ] Golang WebAssembly web client
+        - [x] Show "pending draw" when requesting a draw
+        - [x] Handle 202 responses from GET match while still pending
+        - [x] Handle 200 response from GET sync/async with no update
         - [x] Display matched opponent name
         - [ ] Check cookies for session token instead of using hasSession bool
             - Not sure if possible, the golang cookiejar doesn't seem like it supports this.
-        - [ ] Display gameover results
+        - [x] Display gameover results
         - [x] Request a draw/resign
         - [x] Display remaining time
         - [x] Display point advantage/captured pieces
