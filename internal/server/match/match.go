@@ -38,6 +38,8 @@ func DefaultMatchGenerator(black *Player, white *Player) Match {
 }
 
 func (match *Match) PlayerName(color model.Color) string {
+	match.mutex.RLock()
+	defer match.mutex.RUnlock()
 	if color == model.Black {
 		return match.black.Name()
 	}

@@ -1,12 +1,36 @@
 package matchserver
 
 import (
+	"errors"
 	"github.com/Ekotlikoff/gochess/internal/model"
 	"sync"
 	"time"
 )
 
 var DefaultTimeout time.Duration = 10 * time.Second
+
+type WebsocketResponseType uint8
+
+const (
+	MatchStartT         = WebsocketResponseType(iota)
+	ResponseSyncT       = WebsocketResponseType(iota)
+	ResponseAsyncT      = WebsocketResponseType(iota)
+	OpponentPlayedMoveT = WebsocketResponseType(iota)
+)
+
+type WebsocketResponse struct {
+	WebsocketResponseType WebsocketResponseType
+	MatchedResponse       MatchedResponse
+	ResponseSync          ResponseSync
+	ResponseAsync         ResponseAsync
+	OpponentPlayedMove    model.MoveRequest
+}
+
+type MatchedResponse struct {
+	Color        model.Color
+	OpponentName string
+	MaxTimeMs    int64
+}
 
 type Player struct {
 	name               string
@@ -45,6 +69,17 @@ func (player *Player) SetSearchingForMatch(searchingForMatch bool) {
 	player.searchingForMatch = searchingForMatch
 }
 
+func (player *Player) GetGameover() bool {
+	player.matchMutex.RLock()
+	defer player.matchMutex.RUnlock()
+	select {
+	case <-player.match.gameOver:
+		return true
+	default:
+		return false
+	}
+}
+
 func (player *Player) GetMatch() *Match {
 	player.matchMutex.RLock()
 	defer player.matchMutex.RUnlock()
@@ -71,6 +106,47 @@ func (player *Player) MatchMaxTimeMs() int64 {
 
 func (player *Player) Color() model.Color {
 	return player.color
+}
+
+func (player *Player) GetWebsocketMessageToWrite() *WebsocketResponse {
+	var response WebsocketResponse
+	select {
+	case <-player.matchStart:
+		response = WebsocketResponse{
+			WebsocketResponseType: MatchStartT,
+			MatchedResponse: MatchedResponse{
+				player.Color(), player.MatchedOpponentName(),
+				player.MatchMaxTimeMs(),
+			},
+		}
+	case responseSync := <-player.responseChanSync:
+		response = WebsocketResponse{
+			WebsocketResponseType: ResponseSyncT,
+			ResponseSync:          responseSync,
+		}
+	case responseAsync := <-player.responseChanAsync:
+		response = WebsocketResponse{
+			WebsocketResponseType: ResponseAsyncT,
+			ResponseAsync:         responseAsync,
+		}
+	case opponentMove := <-player.opponentPlayedMove:
+		response = WebsocketResponse{
+			WebsocketResponseType: OpponentPlayedMoveT,
+			OpponentPlayedMove:    opponentMove,
+		}
+	default:
+		return nil
+	}
+	return &response
+}
+
+func (player *Player) WaitForMatchStart() error {
+	select {
+	case <-player.matchStart:
+		return nil
+	case <-time.After(120 * time.Second):
+		return errors.New("Timeout")
+	}
 }
 
 func (player *Player) HasMatchStarted() bool {
