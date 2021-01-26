@@ -26,6 +26,19 @@ type WebsocketResponse struct {
 	OpponentPlayedMove    model.MoveRequest
 }
 
+type WebsocketRequestType uint8
+
+const (
+	RequestSyncT  = WebsocketRequestType(iota)
+	RequestAsyncT = WebsocketRequestType(iota)
+)
+
+type WebsocketRequest struct {
+	WebsocketRequestType WebsocketRequestType
+	RequestSync          RequestSync
+	RequestAsync         RequestAsync
+}
+
 type MatchedResponse struct {
 	Color        model.Color
 	OpponentName string
