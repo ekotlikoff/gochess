@@ -23,8 +23,9 @@ type GameResult struct {
 }
 
 type MoveRequest struct {
-	Position Position
-	Move     Move
+	Position  Position
+	Move      Move
+	PromoteTo *PieceType
 }
 
 var ErrGameOver = errors.New("The game is over")
@@ -48,9 +49,8 @@ func (game *Game) Move(moveRequest MoveRequest) error {
 		king = game.whiteKing
 		enemyKing = game.blackKing
 	}
-	err := piece.takeMove(
-		game.board, move, game.previousMove, game.previousMover, king,
-	)
+	err := piece.takeMove(game.board, move, game.previousMove,
+		game.previousMover, king, moveRequest.PromoteTo)
 	if err != nil {
 		return err
 	}

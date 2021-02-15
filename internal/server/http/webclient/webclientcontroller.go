@@ -99,6 +99,7 @@ func (clientModel *ClientModel) handleClickStart(
 		clientModel.getEventMousePosition(event)
 	clientModel.positionOriginal = clientModel.getPositionFromGrid(
 		uint8(gridX), uint8(gridY))
+	clientModel.SetDraggingPiece(clientModel.positionOriginal)
 	addClass(clientModel.GetDraggingElement(), "dragging")
 	clientModel.SetDraggingOriginalTransform(
 		clientModel.GetDraggingElement().Get("style").Get("transform"))
@@ -153,10 +154,16 @@ func (cm *ClientModel) handleClickEnd(event js.Value) {
 	cm.SetDraggingElement(js.Undefined())
 	_, _, _, _, gridX, gridY := cm.getEventMousePosition(event)
 	newPosition := cm.getPositionFromGrid(uint8(gridX), uint8(gridY))
+	pieceDragging := cm.GetDraggingPiece()
+	var promoteTo *model.PieceType
+	if pieceDragging.PieceType() == model.Pawn &&
+		(newPosition.Rank == 0 || newPosition.Rank == 7) {
+		promoteTo = cm.handlePromotion()
+	}
 	moveRequest := model.MoveRequest{cm.positionOriginal, model.Move{
 		int8(newPosition.File) - int8(cm.positionOriginal.File),
-		int8(newPosition.Rank) - int8(cm.positionOriginal.Rank),
-	},
+		int8(newPosition.Rank) - int8(cm.positionOriginal.Rank)},
+		promoteTo,
 	}
 	if cm.gameType == Local || cm.playerColor == cm.game.Turn() {
 		go func() {
@@ -171,6 +178,12 @@ func (cm *ClientModel) handleClickEnd(event js.Value) {
 		removeClass(elDragging, "dragging")
 	}
 	cm.SetIsMouseDown(false)
+}
+
+func (cm *ClientModel) handlePromotion() *model.PieceType {
+	// TODO Allow user selection of promoteTo
+	promoteTo := model.Queen
+	return &promoteTo
 }
 
 func (cm *ClientModel) takeMove(

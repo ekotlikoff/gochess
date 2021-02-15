@@ -2,7 +2,7 @@ TODO
 * Detect all game end scenarios
     * https://www.chess.com/article/view/how-chess-games-can-end-8-ways-explained#:~:text=Agreement-,Win%2FLose%3A,%3A%20checkmate%2C%20resignation%20and%20timeout.
     - [x] Detect stalemate
-    - [ ] Handle pawn promotion
+    - [x] Handle pawn promotion
     - [ ] Insufficient material
     - [ ] 50 move rule
     - [x] timeout
@@ -46,5 +46,6 @@ TODO
         - [x] Display point advantage/captured pieces
         - [x] Play local match vs begin matchmaking
         - [x] Mobile support
+        - [] Support pieceType options for pawn promotion
 * General
     - [x] Travis CI test
