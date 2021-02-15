@@ -56,10 +56,8 @@ func (piece *Piece) takeMove(
 
 func (piece *Piece) takeMoveUnsafe(
 	board *board, move Move, previousMove Move, previousMover *Piece,
-	promoteTo *PieceType,
-) (newPosition Position, capturedPiece *Piece,
-	newCastledPosition Position, castledRook *Piece,
-) {
+	promoteTo *PieceType) (newPosition Position, capturedPiece *Piece,
+	newCastledPosition Position, castledRook *Piece) {
 	yDirection := int8(1)
 	if piece.Color() == Black {
 		yDirection *= -1
