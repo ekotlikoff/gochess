@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const debug bool = true
+const debug bool = false
 
 func TestNewGame(t *testing.T) {
 	game := NewGame()
