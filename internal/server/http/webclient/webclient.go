@@ -22,6 +22,7 @@ type ClientModel struct {
 	gameType                 GameType
 	playerColor              model.Color
 	elDragging               js.Value
+	pieceDragging            *model.Piece
 	draggingOrigTransform    js.Value
 	isMouseDown              bool
 	positionOriginal         model.Position
@@ -122,6 +123,24 @@ func (cm *ClientModel) SetDraggingElement(el js.Value) {
 	cm.cmMutex.Lock()
 	defer cm.cmMutex.Unlock()
 	cm.elDragging = el
+}
+
+func (cm *ClientModel) GetDraggingPiece() *model.Piece {
+	cm.cmMutex.RLock()
+	defer cm.cmMutex.RUnlock()
+	return cm.pieceDragging
+}
+
+func (cm *ClientModel) GetPiece(position model.Position) *model.Piece {
+	cm.cmMutex.RLock()
+	defer cm.cmMutex.RUnlock()
+	return cm.game.Board().Piece(position)
+}
+
+func (cm *ClientModel) SetDraggingPiece(position model.Position) {
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
+	cm.pieceDragging = cm.game.Board().Piece(position)
 }
 
 func (cm *ClientModel) GetDraggingOriginalTransform() js.Value {

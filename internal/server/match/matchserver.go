@@ -83,7 +83,9 @@ func (player *Player) HasMatchStarted() bool {
 }
 
 func (player *Player) MakeMove(pieceMove model.MoveRequest) bool {
-	player.requestChanSync <- RequestSync{pieceMove.Position, pieceMove.Move}
+	player.requestChanSync <- RequestSync{
+		pieceMove.Position, pieceMove.Move, pieceMove.PromoteTo,
+	}
 	response := <-player.responseChanSync
 	return response.moveSuccess
 }
@@ -126,8 +128,9 @@ func (player *Player) Reset() {
 }
 
 type RequestSync struct {
-	position model.Position
-	move     model.Move
+	position  model.Position
+	move      model.Move
+	promoteTo *model.PieceType
 }
 
 type ResponseSync struct {

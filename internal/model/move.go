@@ -38,25 +38,26 @@ var maxSlideMap = map[PieceType]uint8{
 }
 
 func (piece *Piece) takeMoveShort(board *board, move Move) {
-	piece.takeMove(board, move, Move{}, nil, nil)
+	piece.takeMove(board, move, Move{}, nil, nil, nil)
 }
 
 func (piece *Piece) takeMove(
 	board *board, move Move, previousMove Move, previousMover *Piece,
-	king *Piece,
+	king *Piece, promoteTo *PieceType,
 ) error {
-	if !piece.IsMoveValid(board, move, previousMove, previousMover, king) {
+	if !piece.IsMoveValid(board, move, previousMove, previousMover, king,
+		promoteTo) {
 		return errors.New("Piece attempted invalid move.")
 	}
-	piece.takeMoveUnsafe(board, move, previousMove, previousMover)
+	piece.takeMoveUnsafe(board, move, previousMove, previousMover, promoteTo)
 	piece.movesTaken += 1
 	return nil
 }
 
 func (piece *Piece) takeMoveUnsafe(
 	board *board, move Move, previousMove Move, previousMover *Piece,
-) (
-	newPosition Position, capturedPiece *Piece,
+	promoteTo *PieceType,
+) (newPosition Position, capturedPiece *Piece,
 	newCastledPosition Position, castledRook *Piece,
 ) {
 	yDirection := int8(1)
@@ -98,17 +99,20 @@ func (piece *Piece) takeMoveUnsafe(
 	board[piece.File()][piece.Rank()] = nil
 	newPosition = Position{newX, newY}
 	piece.position = newPosition
+	if promoteTo != nil {
+		piece.pieceType = *promoteTo
+	}
 	return newPosition, capturedPiece, newCastledPosition, castledRook
 }
 
 func (piece *Piece) IsMoveValid(
 	board *board, move Move, previousMove Move, previousMover *Piece,
-	king *Piece,
+	king *Piece, promoteTo *PieceType,
 ) bool {
 	validMoves :=
 		piece.ValidMoves(board, previousMove, previousMover, false, king)
 	for _, validMove := range validMoves {
-		if validMove == move {
+		if validMove == move && piece.promotionValid(move, promoteTo) {
 			return true
 		}
 	}
@@ -142,6 +146,22 @@ func (piece *Piece) ValidMoves(
 		)...)
 	}
 	return validMoves
+}
+
+func (piece *Piece) promotionValid(move Move, promoteTo *PieceType) bool {
+	validPromoteTypes := map[PieceType]struct{}{
+		Bishop: struct{}{}, Knight: struct{}{},
+		Rook: struct{}{}, Queen: struct{}{},
+	}
+	_, newY := addMoveToPosition(piece, move)
+	if piece.PieceType() == Pawn {
+		if promoteTo == nil {
+			return newY != 7 && newY != 0
+		}
+		_, promoteToIsValid := validPromoteTypes[*promoteTo]
+		return (newY == 7 || newY == 0) && promoteToIsValid
+	}
+	return promoteTo == nil
 }
 
 func (piece *Piece) getCastleMove(
@@ -370,7 +390,7 @@ func (piece *Piece) wouldBeInCheck(
 	}
 	originalPosition := piece.position
 	newPosition, capturedPiece, newCastledPosition, castledRook :=
-		piece.takeMoveUnsafe(board, move, previousMove, previousMover)
+		piece.takeMoveUnsafe(board, move, previousMove, previousMover, nil)
 	wouldBeInCheck := king.isThreatened(board, move, piece)
 	// Revert the move
 	board[newPosition.File][newPosition.Rank] = nil

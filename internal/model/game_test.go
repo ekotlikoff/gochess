@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const debug bool = false
+const debug bool = true
 
 func TestNewGame(t *testing.T) {
 	game := NewGame()
@@ -22,11 +22,11 @@ func TestMoves(t *testing.T) {
 	if debug {
 		fmt.Println(game.board)
 	}
-	game.Move(MoveRequest{Position{0, 1}, Move{0, 2}})
+	game.Move(MoveRequest{Position{0, 1}, Move{0, 2}, nil})
 	if debug {
 		fmt.Println(game.board)
 	}
-	game.Move(MoveRequest{Position{0, 6}, Move{0, -2}})
+	game.Move(MoveRequest{Position{0, 6}, Move{0, -2}, nil})
 	if game.board[0][3] == nil || game.board[0][4] == nil {
 		t.Error("Pawns did not move as expected")
 	}
@@ -40,9 +40,9 @@ func TestPoints(t *testing.T) {
 	if game.PointAdvantage(Black) != 0 {
 		t.Error("Expected zero point advantage")
 	}
-	game.Move(MoveRequest{Position{0, 1}, Move{0, 2}})
-	game.Move(MoveRequest{Position{1, 6}, Move{0, -2}})
-	game.Move(MoveRequest{Position{0, 3}, Move{1, 1}})
+	game.Move(MoveRequest{Position{0, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{1, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{0, 3}, Move{1, 1}, nil})
 	if debug {
 		fmt.Println(game.board)
 	}
@@ -53,13 +53,13 @@ func TestPoints(t *testing.T) {
 
 func TestCheckMate(t *testing.T) {
 	game := NewGame()
-	game.Move(MoveRequest{Position{4, 1}, Move{0, 2}})
-	game.Move(MoveRequest{Position{0, 6}, Move{0, -2}})
-	game.Move(MoveRequest{Position{3, 0}, Move{4, 4}})
-	game.Move(MoveRequest{Position{1, 6}, Move{0, -2}})
-	game.Move(MoveRequest{Position{5, 0}, Move{-3, 3}})
-	game.Move(MoveRequest{Position{2, 6}, Move{0, -2}})
-	game.Move(MoveRequest{Position{7, 4}, Move{-2, 2}})
+	game.Move(MoveRequest{Position{4, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{0, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{3, 0}, Move{4, 4}, nil})
+	game.Move(MoveRequest{Position{1, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{5, 0}, Move{-3, 3}, nil})
+	game.Move(MoveRequest{Position{2, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{7, 4}, Move{-2, 2}, nil})
 	if debug {
 		fmt.Println(game.board)
 	}
@@ -78,14 +78,14 @@ func TestStalemate(t *testing.T) {
 		game.board[7-i][0] = nil
 	}
 	game.board[3][0] = nil
-	game.Move(MoveRequest{Position{4, 0}, Move{1, 0}})
-	game.Move(MoveRequest{Position{7, 7}, Move{0, -6}})
-	game.Move(MoveRequest{Position{5, 0}, Move{1, 0}})
-	game.Move(MoveRequest{Position{0, 7}, Move{0, -6}})
-	game.Move(MoveRequest{Position{6, 0}, Move{-1, 0}})
-	game.Move(MoveRequest{Position{3, 7}, Move{0, -6}})
-	game.Move(MoveRequest{Position{5, 0}, Move{1, 0}})
-	game.Move(MoveRequest{Position{3, 1}, Move{1, 0}})
+	game.Move(MoveRequest{Position{4, 0}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{7, 7}, Move{0, -6}, nil})
+	game.Move(MoveRequest{Position{5, 0}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{0, 7}, Move{0, -6}, nil})
+	game.Move(MoveRequest{Position{6, 0}, Move{-1, 0}, nil})
+	game.Move(MoveRequest{Position{3, 7}, Move{0, -6}, nil})
+	game.Move(MoveRequest{Position{5, 0}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{3, 1}, Move{1, 0}, nil})
 	if debug {
 		fmt.Println(game.board)
 	}
@@ -99,18 +99,45 @@ func TestEnPassant(t *testing.T) {
 	if game.gameOver != false || game.result.Draw == true {
 		t.Error("Game should not be over")
 	}
-	game.Move(MoveRequest{Position{4, 1}, Move{0, 2}})
-	game.Move(MoveRequest{Position{7, 6}, Move{0, -2}})
-	game.Move(MoveRequest{Position{4, 3}, Move{0, 1}})
-	game.Move(MoveRequest{Position{3, 6}, Move{0, -2}})
+	game.Move(MoveRequest{Position{4, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{7, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{4, 3}, Move{0, 1}, nil})
+	game.Move(MoveRequest{Position{3, 6}, Move{0, -2}, nil})
 	if debug {
 		fmt.Println(game.board)
 	}
 	if game.board[3][4] == nil {
 		t.Error("Pawn should have moved as expected")
 	}
-	game.Move(MoveRequest{Position{4, 4}, Move{-1, 1}})
+	game.Move(MoveRequest{Position{4, 4}, Move{-1, 1}, nil})
 	if game.board[3][4] != nil || game.board[3][5] == nil {
 		t.Error("Pawn should have been taken en passant")
+	}
+}
+
+func TestPromotion(t *testing.T) {
+	game := NewGame()
+	if game.gameOver != false || game.result.Draw == true {
+		t.Error("Game should not be over")
+	}
+	promotionType := Rook
+	game.Move(MoveRequest{Position{4, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{7, 6}, Move{0, -1}, nil})
+	game.Move(MoveRequest{Position{4, 3}, Move{0, 1}, nil})
+	game.Move(MoveRequest{Position{7, 5}, Move{0, -1}, nil})
+	game.Move(MoveRequest{Position{4, 4}, Move{0, 1}, nil})
+	game.Move(MoveRequest{Position{3, 6}, Move{0, -1}, nil})
+	game.Move(MoveRequest{Position{4, 5}, Move{1, 1}, nil})
+	game.Move(MoveRequest{Position{4, 7}, Move{-1, -1}, nil})
+	err := game.Move(MoveRequest{Position{5, 6}, Move{1, 1}, nil})
+	if err == nil || game.board[6][7].PieceType() != Knight {
+		t.Error("Pawn should not have moved since the move is invalid without promotion.")
+	}
+	game.Move(MoveRequest{Position{5, 6}, Move{1, 1}, &promotionType})
+	if debug {
+		fmt.Println(game.board)
+	}
+	if game.board[6][7] == nil || game.board[6][7].PieceType() != Rook {
+		t.Error("Pawn should have been promoted")
 	}
 }

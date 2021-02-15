@@ -60,7 +60,7 @@ func TestValidMovesPawnEnPassant(t *testing.T) {
 	if (len(validMoves) != 2 || validMoves[0] != Move{-1, -1}) {
 		t.Error("Expected en passant moves got ", validMoves)
 	}
-	board[4][3].takeMove(&board, Move{-1, -1}, Move{0, 2}, board[3][3], nil)
+	board[4][3].takeMove(&board, Move{-1, -1}, Move{0, 2}, board[3][3], nil, nil)
 	if board[3][3] != nil {
 		t.Error("Expected en passant to take the en passant target")
 	}

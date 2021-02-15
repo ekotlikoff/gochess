@@ -87,7 +87,9 @@ func (match *Match) handleTurn() {
 	}
 	err := errors.New("")
 	for err != nil {
-		err = match.game.Move(model.MoveRequest{request.position, request.move})
+		err = match.game.Move(model.MoveRequest{
+			request.position, request.move, request.promoteTo,
+		})
 		if err != nil {
 			select {
 			case player.responseChanSync <- ResponseSync{moveSuccess: false}:
@@ -103,7 +105,9 @@ func (match *Match) handleTurn() {
 	}
 	match.SetRequestedDraw(nil)
 	player.responseChanSync <- ResponseSync{moveSuccess: true}
-	opponent.opponentPlayedMove <- model.MoveRequest{request.position, request.move}
+	opponent.opponentPlayedMove <- model.MoveRequest{
+		request.position, request.move, request.promoteTo,
+	}
 	if match.game.GameOver() {
 		result := match.game.Result()
 		winner := match.black
