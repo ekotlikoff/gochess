@@ -1,6 +1,7 @@
 package model
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 )
@@ -139,5 +140,115 @@ func TestPromotion(t *testing.T) {
 	}
 	if game.board[6][7] == nil || game.board[6][7].PieceType() != Rook {
 		t.Error("Pawn should have been promoted")
+	}
+}
+
+func TestPositionEncoding(t *testing.T) {
+	game := NewGame()
+	if game.gameOver != false || game.result.Draw == true {
+		t.Error("Game should not be over")
+	}
+	bytes1, _ := game.MarshalBinary()
+	game.Move(MoveRequest{Position{4, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{7, 6}, Move{0, -1}, nil})
+	game.Move(MoveRequest{Position{4, 3}, Move{0, 1}, nil})
+	game.Move(MoveRequest{Position{7, 5}, Move{0, -1}, nil})
+	game.Move(MoveRequest{Position{4, 4}, Move{0, 1}, nil})
+	game.Move(MoveRequest{Position{3, 6}, Move{0, -1}, nil})
+	game.Move(MoveRequest{Position{4, 5}, Move{1, 1}, nil})
+	game.Move(MoveRequest{Position{4, 7}, Move{-1, -1}, nil})
+	bytes2, _ := game.MarshalBinary()
+	if bytes.Compare(bytes1, bytes2) == 0 {
+		t.Error("Positions should not be equivalent")
+	}
+	if debug {
+		fmt.Println(game.board)
+		fmt.Println(bytes1)
+		fmt.Println(len(bytes1))
+		fmt.Println(bytes2)
+		fmt.Println(len(bytes2))
+	}
+	game.Move(MoveRequest{Position{3, 0}, Move{1, 1}, nil})
+	game.Move(MoveRequest{Position{3, 6}, Move{-1, -1}, nil})
+	game.Move(MoveRequest{Position{4, 1}, Move{-1, -1}, nil})
+	game.Move(MoveRequest{Position{2, 5}, Move{1, 1}, nil})
+	bytes3, _ := game.MarshalBinary()
+	if bytes.Compare(bytes2, bytes3) != 0 {
+		t.Error("Positions should be equivalent")
+	}
+}
+
+func TestPositionEncodingCastle(t *testing.T) {
+	game := NewGame()
+	if game.gameOver != false || game.result.Draw == true {
+		t.Error("Game should not be over")
+	}
+	game.Move(MoveRequest{Position{4, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{4, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{5, 0}, Move{-5, 5}, nil})
+	game.Move(MoveRequest{Position{5, 7}, Move{-5, -5}, nil})
+	game.Move(MoveRequest{Position{6, 0}, Move{1, 2}, nil})
+	game.Move(MoveRequest{Position{6, 7}, Move{1, -2}, nil})
+	positionWithCastle, _ := game.MarshalBinary()
+	if debug {
+		fmt.Println(game.board)
+	}
+	game.Move(MoveRequest{Position{4, 0}, Move{0, 1}, nil})
+	game.Move(MoveRequest{Position{4, 7}, Move{0, -1}, nil})
+	game.Move(MoveRequest{Position{4, 1}, Move{0, -1}, nil})
+	game.Move(MoveRequest{Position{4, 6}, Move{0, 1}, nil})
+	positionWithoutCastle, _ := game.MarshalBinary()
+	if bytes.Compare(positionWithCastle, positionWithoutCastle) == 0 {
+		t.Error("Positions should not be equivalent")
+	}
+}
+
+func TestPositionEncodingEnPassant(t *testing.T) {
+	game := NewGame()
+	if game.gameOver != false || game.result.Draw == true {
+		t.Error("Game should not be over")
+	}
+	game.Move(MoveRequest{Position{4, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{7, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{4, 3}, Move{0, 1}, nil})
+	game.Move(MoveRequest{Position{3, 6}, Move{0, -2}, nil})
+	positionWithEnPassant, _ := game.MarshalBinary()
+	if debug {
+		fmt.Println(game.board)
+	}
+	game.Move(MoveRequest{Position{3, 0}, Move{1, 1}, nil})
+	game.Move(MoveRequest{Position{3, 7}, Move{-1, -1}, nil})
+	game.Move(MoveRequest{Position{4, 1}, Move{-1, -1}, nil})
+	game.Move(MoveRequest{Position{2, 6}, Move{1, 1}, nil})
+	err := game.Move(MoveRequest{Position{4, 4}, Move{-1, 1}, nil})
+	if err == nil {
+		t.Error("En passant should no longer be an option")
+	}
+	positionWithoutEnPassant, _ := game.MarshalBinary()
+	if bytes.Compare(positionWithEnPassant, positionWithoutEnPassant) == 0 {
+		t.Error("Positions should not be equivalent")
+	}
+}
+
+func TestDrawByRepetion(t *testing.T) {
+	game := NewGame()
+	if game.gameOver != false || game.result.Draw == true {
+		t.Error("Game should not be over")
+	}
+	game.Move(MoveRequest{Position{4, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{7, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{4, 3}, Move{0, 1}, nil})
+	game.Move(MoveRequest{Position{3, 6}, Move{0, -2}, nil})
+	if debug {
+		fmt.Println(game.board)
+	}
+	for i := 0; i < 3; i++ {
+		game.Move(MoveRequest{Position{3, 0}, Move{1, 1}, nil})
+		game.Move(MoveRequest{Position{3, 7}, Move{0, -1}, nil})
+		game.Move(MoveRequest{Position{4, 1}, Move{-1, -1}, nil})
+		game.Move(MoveRequest{Position{3, 6}, Move{0, 1}, nil})
+	}
+	if !game.gameOver || !game.result.Draw {
+		t.Error("Game should be a draw")
 	}
 }

@@ -1,20 +1,23 @@
 package model
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"sync"
 )
 
 type Game struct {
-	board         *board
-	turn          Color
-	gameOver      bool
-	result        GameResult
-	previousMove  Move
-	previousMover *Piece
-	blackKing     *Piece
-	whiteKing     *Piece
-	mutex         sync.RWMutex
+	board           *board
+	turn            Color
+	gameOver        bool
+	result          GameResult
+	previousMove    Move
+	previousMover   *Piece
+	blackKing       *Piece
+	whiteKing       *Piece
+	positionHistory map[string]uint8
+	mutex           sync.RWMutex
 }
 
 type GameResult struct {
@@ -54,6 +57,10 @@ func (game *Game) Move(moveRequest MoveRequest) error {
 	if err != nil {
 		return err
 	}
+	drawByRepetion, err := game.updatePositionHistory()
+	if err != nil {
+		return err
+	}
 	enemyColor := getOppositeColor(piece.color)
 	possibleEnemyMoves := AllMoves(
 		game.board, enemyColor, move, piece, false, enemyKing,
@@ -62,7 +69,7 @@ func (game *Game) Move(moveRequest MoveRequest) error {
 		enemyKing.isThreatened(game.board, move, piece) {
 		game.gameOver = true
 		game.result.Winner = game.turn
-	} else if len(possibleEnemyMoves) == 0 {
+	} else if len(possibleEnemyMoves) == 0 || drawByRepetion {
 		game.gameOver = true
 		game.result.Draw = true
 	}
@@ -70,6 +77,43 @@ func (game *Game) Move(moveRequest MoveRequest) error {
 	game.previousMover = piece
 	game.turn = enemyColor
 	return nil
+}
+
+func (game *Game) updatePositionHistory() (bool, error) {
+	position, err := game.MarshalBinary()
+	if err != nil {
+		return false, err
+	}
+	game.positionHistory[string(position)] += 1
+	return game.positionHistory[string(position)] > 2, nil
+}
+
+func (game *Game) MarshalBinary() (data []byte, err error) {
+	buf := new(bytes.Buffer)
+	err = binary.Write(buf, binary.BigEndian, game.turn)
+	if err != nil {
+		return nil, err
+	}
+	for _, file := range game.board {
+		for _, piece := range file {
+			if piece != nil {
+				king := game.blackKing
+				if piece.color == White {
+					king = game.whiteKing
+				}
+				bytes, err := piece.MarshalBinary(
+					game.board, game.previousMove, game.previousMover, king)
+				if err != nil {
+					return nil, err
+				}
+				err = binary.Write(buf, binary.BigEndian, bytes)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return buf.Bytes(), nil
 }
 
 func getOppositeColor(color Color) (opposite Color) {
@@ -83,18 +127,22 @@ func getOppositeColor(color Color) (opposite Color) {
 
 func NewGame() Game {
 	board := NewFullBoard()
-	return Game{
-		board: &board, turn: White,
-		blackKing: board[4][7], whiteKing: board[4][0],
-	}
+	return createGame(board)
 }
 
 func NewGameNoPawns() Game {
 	board := NewBoardNoPawns()
-	return Game{
-		board: &board, turn: White,
-		blackKing: board[4][7], whiteKing: board[4][0],
+	return createGame(board)
+}
+
+func createGame(board board) Game {
+	game := Game{
+		board: &board, blackKing: board[4][7], whiteKing: board[4][0],
+		positionHistory: make(map[string]uint8),
 	}
+	game.updatePositionHistory()
+	game.turn = White
+	return game
 }
 
 func (game *Game) Board() *board {

@@ -318,20 +318,7 @@ func (piece *Piece) Moves(
 func (piece *Piece) canCastle(
 	board *board, previousMove Move, previousMover *Piece,
 ) (castleLeft, castleRight bool) {
-	if piece.pieceType != King || piece.movesTaken > 0 {
-		return false, false
-	}
-	rookPieces := [2]*Piece{board[0][piece.Rank()], board[7][piece.Rank()]}
-	castleLeft, castleRight = true, true
-	for i, rook := range rookPieces {
-		if rook == nil || rook.pieceType != Rook || rook.movesTaken != 0 {
-			if i == 0 {
-				castleLeft = false
-			} else {
-				castleRight = false
-			}
-		}
-	}
+	castleLeft, castleRight = piece.hasCastleRights(board)
 	if !castleLeft && !castleRight {
 		return false, false
 	}
@@ -347,6 +334,24 @@ func (piece *Piece) canCastle(
 		piece.wouldNotCastleThroughCheck(threatenedPositions)
 	castleLeft = castleLeft && noBlockLeft && noCheckLeft
 	castleRight = castleRight && noBlockRight && noCheckRight
+	return castleLeft, castleRight
+}
+
+func (piece *Piece) hasCastleRights(board *board) (castleLeft, castleRight bool) {
+	if piece.pieceType != King || piece.movesTaken > 0 {
+		return false, false
+	}
+	rookPieces := [2]*Piece{board[0][piece.Rank()], board[7][piece.Rank()]}
+	castleLeft, castleRight = true, true
+	for i, rook := range rookPieces {
+		if rook == nil || rook.pieceType != Rook || rook.movesTaken != 0 {
+			if i == 0 {
+				castleLeft = false
+			} else {
+				castleRight = false
+			}
+		}
+	}
 	return castleLeft, castleRight
 }
 
