@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"sync"
 )
 
@@ -85,14 +84,12 @@ func (game *Game) updatePositionHistory() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	fmt.Printf("%x\n", position)
 	game.positionHistory[string(position)] += 1
 	return game.positionHistory[string(position)] > 2, nil
 }
 
 func (game *Game) MarshalBinary() (data []byte, err error) {
 	buf := new(bytes.Buffer)
-	println(game.turn)
 	err = binary.Write(buf, binary.BigEndian, game.turn)
 	if err != nil {
 		return nil, err
