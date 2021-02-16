@@ -8,7 +8,7 @@ TODO
     - [x] timeout
     - [x] resignation
     - [x] agreed draw
-    - [ ] Detect draw by repetition (same position 3 times)
+    - [x] Detect draw by repetition (same position 3 times)
         See https://en.wikipedia.org/wiki/Threefold_repetition for the definition
         of position.
         Let's do this with a map[positionId]uint8
