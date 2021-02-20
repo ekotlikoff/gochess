@@ -44,14 +44,17 @@ func (piece *Piece) takeMoveShort(board *board, move Move) {
 func (piece *Piece) takeMove(
 	board *board, move Move, previousMove Move, previousMover *Piece,
 	king *Piece, promoteTo *PieceType,
-) error {
+) (bool, error) {
 	if !piece.IsMoveValid(board, move, previousMove, previousMover, king,
 		promoteTo) {
-		return errors.New("Piece attempted invalid move.")
+		return false, errors.New("Piece attempted invalid move.")
 	}
-	piece.takeMoveUnsafe(board, move, previousMove, previousMover, promoteTo)
+	_, capturedPiece, _, _ :=
+		piece.takeMoveUnsafe(
+			board, move, previousMove, previousMover, promoteTo,
+		)
 	piece.movesTaken += 1
-	return nil
+	return capturedPiece != nil, nil
 }
 
 func (piece *Piece) takeMoveUnsafe(
@@ -80,18 +83,7 @@ func (piece *Piece) takeMoveUnsafe(
 		capturedPiece = board[enPassantTarget.File()][enPassantTarget.Rank()]
 		board[enPassantTarget.File()][enPassantTarget.Rank()] = nil
 	} else if isCastle {
-		if move.X < 0 {
-			board[3][piece.Rank()] = board[0][piece.Rank()]
-			board[0][piece.Rank()] = nil
-			castledRook = board[3][piece.Rank()]
-			newCastledPosition = Position{3, piece.Rank()}
-		} else {
-			board[5][piece.Rank()] = board[7][piece.Rank()]
-			board[7][piece.Rank()] = nil
-			castledRook = board[5][piece.Rank()]
-			newCastledPosition = Position{5, piece.Rank()}
-		}
-		castledRook.position = newCastledPosition
+		castledRook, newCastledPosition = piece.handleCastle(board, move)
 	}
 	if board[newX][newY] != nil {
 		capturedPiece = board[newX][newY]
@@ -313,6 +305,24 @@ func (piece *Piece) Moves(
 		positions = append(positions, Position{threatenedX, threatenedY})
 	}
 	return positions
+}
+
+func (piece *Piece) handleCastle(
+	board *board, move Move,
+) (castledRook *Piece, newCastledPosition Position) {
+	if move.X < 0 {
+		board[3][piece.Rank()] = board[0][piece.Rank()]
+		board[0][piece.Rank()] = nil
+		castledRook = board[3][piece.Rank()]
+		newCastledPosition = Position{3, piece.Rank()}
+	} else {
+		board[5][piece.Rank()] = board[7][piece.Rank()]
+		board[7][piece.Rank()] = nil
+		castledRook = board[5][piece.Rank()]
+		newCastledPosition = Position{5, piece.Rank()}
+	}
+	castledRook.position = newCastledPosition
+	return castledRook, newCastledPosition
 }
 
 func (piece *Piece) canCastle(

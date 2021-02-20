@@ -4,7 +4,7 @@ TODO
     - [x] Detect stalemate
     - [x] Handle pawn promotion
     - [ ] Insufficient material
-    - [ ] 50 move rule
+    - [x] 50 move rule
     - [x] timeout
     - [x] resignation
     - [x] agreed draw
