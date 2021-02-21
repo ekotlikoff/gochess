@@ -37,7 +37,7 @@ func (game *Game) Move(moveRequest MoveRequest) error {
 	defer game.mutex.Unlock()
 	move := moveRequest.Move
 	piece := game.board[moveRequest.Position.File][moveRequest.Position.Rank]
-	err := game.isValidTimeToMove(piece)
+	err := game.isMoveRequestValid(piece)
 	if err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func (game *Game) Move(moveRequest MoveRequest) error {
 	return nil
 }
 
-func (game *Game) isValidTimeToMove(piece *Piece) error {
+func (game *Game) isMoveRequestValid(piece *Piece) error {
 	if game.gameOver {
 		return errors.New("The game is over")
 	} else if piece == nil {
