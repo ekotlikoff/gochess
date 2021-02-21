@@ -77,7 +77,9 @@ func (piece *Piece) takeMoveUnsafe(
 	isEnPassant := (piece.pieceType == Pawn && newX != piece.File() &&
 		enPassantTarget != nil && enPassantTarget == previousMover &&
 		enPassantTarget.pieceType == Pawn &&
-		(previousMove.Y == 2 || previousMove.Y == -2))
+		(previousMove.Y == 2 || previousMove.Y == -2) &&
+		piece.Rank() == enPassantTargetY &&
+		piece.Color() != enPassantTarget.Color())
 	isCastle := piece.pieceType == King && (move.X < -1 || move.X > 1)
 	if isEnPassant {
 		capturedPiece = board[enPassantTarget.File()][enPassantTarget.Rank()]

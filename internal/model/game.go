@@ -162,6 +162,12 @@ func createGame(board board) Game {
 	return game
 }
 
+func (game *Game) BoardString() string {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.board.String()
+}
+
 func (game *Game) Board() *board {
 	game.mutex.RLock()
 	defer game.mutex.RUnlock()

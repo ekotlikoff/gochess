@@ -5,16 +5,20 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"github.com/Ekotlikoff/gochess/internal/model"
 	"github.com/Ekotlikoff/gochess/internal/server/http/webserver"
 	"github.com/Ekotlikoff/gochess/internal/server/match"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"syscall/js"
 	"time"
 )
 
+var debug bool = false
 var ctp string = "application/json"
 
 func (clientModel *ClientModel) initController(quiet bool) {
@@ -93,16 +97,45 @@ func (clientModel *ClientModel) closeGameoverModal() {
 
 func (clientModel *ClientModel) handleClickStart(
 	this js.Value, event js.Value) {
-	clientModel.SetIsMouseDown(true)
+	clientModel.LockMouseDown()
 	clientModel.SetDraggingElement(this)
-	_, _, _, _, gridX, gridY :=
-		clientModel.getEventMousePosition(event)
-	clientModel.positionOriginal = clientModel.getPositionFromGrid(
-		uint8(gridX), uint8(gridY))
+	positionOriginal, err := getPositionFromPieceElement(this)
+	if err != nil {
+		log.Println("ERROR: Issue getting position from element,", err)
+		return
+	}
+	clientModel.positionOriginal = positionOriginal
 	clientModel.SetDraggingPiece(clientModel.positionOriginal)
+	if clientModel.GetDraggingPiece() == nil {
+		if debug {
+			log.Println("ERROR: Clicked a piece that is not on the board")
+			log.Println(clientModel.positionOriginal)
+			log.Println(clientModel.GetBoard())
+		}
+		clientModel.UnlockMouseDown()
+		return
+	}
 	addClass(clientModel.GetDraggingElement(), "dragging")
 	clientModel.SetDraggingOriginalTransform(
 		clientModel.GetDraggingElement().Get("style").Get("transform"))
+}
+
+func getPositionFromPieceElement(piece js.Value) (model.Position, error) {
+	className := piece.Get("className").String()
+	classElements := strings.Split(className, " ")
+	for i := range classElements {
+		if strings.Contains(classElements[i], "square") {
+			posString := strings.Split(classElements[i], "-")[1]
+			x, err := strconv.Atoi(string(posString[0]))
+			y, err := strconv.Atoi(string(posString[1]))
+			if err != nil {
+				return model.Position{}, err
+			}
+			return model.Position{uint8(x - 1), uint8(y - 1)}, nil
+		}
+	}
+	return model.Position{},
+		errors.New("Unable to convert class to position: " + className)
 }
 
 func (clientModel *ClientModel) genMouseMove() js.Func {
@@ -177,7 +210,7 @@ func (cm *ClientModel) handleClickEnd(event js.Value) {
 			cm.GetDraggingOriginalTransform())
 		removeClass(elDragging, "dragging")
 	}
-	cm.SetIsMouseDown(false)
+	cm.UnlockMouseDown()
 }
 
 func (cm *ClientModel) handlePromotion() *model.PieceType {
@@ -206,6 +239,9 @@ func (cm *ClientModel) takeMove(
 		cm.ClearRequestedDraw()
 		cm.viewHandleMove(moveRequest, newPos, elMoving)
 	} else {
+		if debug {
+			log.Println(err)
+		}
 		if successfulRemoteMove {
 			// TODO handle strange case where http call was successful but local
 			// game did not accept the move.

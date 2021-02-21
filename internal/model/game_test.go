@@ -33,6 +33,30 @@ func TestMoves(t *testing.T) {
 	}
 }
 
+func TestLotsOfPawns(t *testing.T) {
+	game := NewGame()
+	if debug {
+		fmt.Println(game.board)
+	}
+	game.Move(MoveRequest{Position{0, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{0, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{1, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{1, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{2, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{2, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{3, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{3, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{4, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{4, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{5, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{5, 6}, Move{0, -2}, nil})
+	for i := 0; i < 6; i++ {
+		if game.board[i][3] == nil || game.board[i][4] == nil {
+			t.Error("Pawns did not move as expected")
+		}
+	}
+}
+
 func TestPoints(t *testing.T) {
 	game := NewGame()
 	if debug {

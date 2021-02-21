@@ -24,6 +24,7 @@ type ClientModel struct {
 	elDragging               js.Value
 	pieceDragging            *model.Piece
 	draggingOrigTransform    js.Value
+	isMouseDownLock          sync.Mutex
 	isMouseDown              bool
 	positionOriginal         model.Position
 	isMatchmaking, isMatched bool
@@ -59,6 +60,12 @@ func (cm *ClientModel) GetGameType() GameType {
 	cm.cmMutex.RLock()
 	defer cm.cmMutex.RUnlock()
 	return cm.gameType
+}
+
+func (cm *ClientModel) GetBoard() string {
+	cm.cmMutex.RLock()
+	defer cm.cmMutex.RUnlock()
+	return cm.game.BoardString()
 }
 
 func (cm *ClientModel) SetGameType(gameType GameType) {
@@ -155,16 +162,24 @@ func (cm *ClientModel) SetDraggingOriginalTransform(el js.Value) {
 	cm.draggingOrigTransform = el
 }
 
+func (cm *ClientModel) LockMouseDown() {
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
+	cm.isMouseDownLock.Lock()
+	cm.isMouseDown = true
+}
+
+func (cm *ClientModel) UnlockMouseDown() {
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
+	defer cm.isMouseDownLock.Unlock()
+	cm.isMouseDown = false
+}
+
 func (cm *ClientModel) GetIsMouseDown() bool {
 	cm.cmMutex.RLock()
 	defer cm.cmMutex.RUnlock()
 	return cm.isMouseDown
-}
-
-func (cm *ClientModel) SetIsMouseDown(isMouseDown bool) {
-	cm.cmMutex.Lock()
-	defer cm.cmMutex.Unlock()
-	cm.isMouseDown = isMouseDown
 }
 
 func (cm *ClientModel) GetClickOriginalPosition() model.Position {
