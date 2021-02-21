@@ -62,7 +62,7 @@ func (cm *ClientModel) GetGameType() GameType {
 	return cm.gameType
 }
 
-func (cm *ClientModel) GetBoard() string {
+func (cm *ClientModel) GetBoardString() string {
 	cm.cmMutex.RLock()
 	defer cm.cmMutex.RUnlock()
 	return cm.game.BoardString()

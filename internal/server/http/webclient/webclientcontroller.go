@@ -110,7 +110,7 @@ func (clientModel *ClientModel) handleClickStart(
 		if debug {
 			log.Println("ERROR: Clicked a piece that is not on the board")
 			log.Println(clientModel.positionOriginal)
-			log.Println(clientModel.GetBoard())
+			log.Println(clientModel.GetBoardString())
 		}
 		clientModel.UnlockMouseDown()
 		return
