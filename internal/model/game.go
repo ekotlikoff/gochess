@@ -8,16 +8,17 @@ import (
 )
 
 type Game struct {
-	board           *board
-	turn            Color
-	gameOver        bool
-	result          GameResult
-	previousMove    Move
-	previousMover   *Piece
-	blackKing       *Piece
-	whiteKing       *Piece
-	positionHistory map[string]uint8
-	mutex           sync.RWMutex
+	board                       *board
+	turn                        Color
+	gameOver                    bool
+	result                      GameResult
+	previousMove                Move
+	previousMover               *Piece
+	blackKing                   *Piece
+	whiteKing                   *Piece
+	positionHistory             map[string]uint8
+	turnsSinceCaptureOrPawnMove uint8
+	mutex                       sync.RWMutex
 }
 
 type GameResult struct {
@@ -31,28 +32,17 @@ type MoveRequest struct {
 	PromoteTo *PieceType
 }
 
-var ErrGameOver = errors.New("The game is over")
-
 func (game *Game) Move(moveRequest MoveRequest) error {
 	game.mutex.Lock()
 	defer game.mutex.Unlock()
-	position := moveRequest.Position
 	move := moveRequest.Move
-	piece := game.board[position.File][position.Rank]
-	if game.gameOver {
-		return ErrGameOver
-	} else if piece == nil {
-		return errors.New("Cannot move nil piece")
-	} else if piece.color != game.turn {
-		return errors.New("It's not your turn")
+	piece := game.board[moveRequest.Position.File][moveRequest.Position.Rank]
+	err := game.isMoveRequestValid(piece)
+	if err != nil {
+		return err
 	}
-	king := game.blackKing
-	enemyKing := game.whiteKing
-	if game.turn == White {
-		king = game.whiteKing
-		enemyKing = game.blackKing
-	}
-	err := piece.takeMove(game.board, move, game.previousMove,
+	king, enemyKing := game.getKings()
+	isCapture, err := piece.takeMove(game.board, move, game.previousMove,
 		game.previousMover, king, moveRequest.PromoteTo)
 	if err != nil {
 		return err
@@ -61,6 +51,12 @@ func (game *Game) Move(moveRequest MoveRequest) error {
 	if err != nil {
 		return err
 	}
+	if piece.pieceType != Pawn && !isCapture {
+		game.turnsSinceCaptureOrPawnMove++
+	} else {
+		game.turnsSinceCaptureOrPawnMove = 0
+	}
+	fiftyMoveRule := game.turnsSinceCaptureOrPawnMove >= 100
 	enemyColor := getOppositeColor(piece.color)
 	possibleEnemyMoves := AllMoves(
 		game.board, enemyColor, move, piece, false, enemyKing,
@@ -69,7 +65,7 @@ func (game *Game) Move(moveRequest MoveRequest) error {
 		enemyKing.isThreatened(game.board, move, piece) {
 		game.gameOver = true
 		game.result.Winner = game.turn
-	} else if len(possibleEnemyMoves) == 0 || drawByRepetion {
+	} else if len(possibleEnemyMoves) == 0 || drawByRepetion || fiftyMoveRule {
 		game.gameOver = true
 		game.result.Draw = true
 	}
@@ -77,6 +73,27 @@ func (game *Game) Move(moveRequest MoveRequest) error {
 	game.previousMover = piece
 	game.turn = enemyColor
 	return nil
+}
+
+func (game *Game) isMoveRequestValid(piece *Piece) error {
+	if game.gameOver {
+		return errors.New("The game is over")
+	} else if piece == nil {
+		return errors.New("Cannot move nil piece")
+	} else if piece.color != game.turn {
+		return errors.New("It's not your turn")
+	}
+	return nil
+}
+
+func (game *Game) getKings() (king, enemyKing *Piece) {
+	king = game.blackKing
+	enemyKing = game.whiteKing
+	if game.turn == White {
+		king = game.whiteKing
+		enemyKing = game.blackKing
+	}
+	return
 }
 
 func (game *Game) updatePositionHistory() (bool, error) {
@@ -143,6 +160,12 @@ func createGame(board board) Game {
 	game.updatePositionHistory()
 	game.turn = White
 	return game
+}
+
+func (game *Game) BoardString() string {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.board.String()
 }
 
 func (game *Game) Board() *board {

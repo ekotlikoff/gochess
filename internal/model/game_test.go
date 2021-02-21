@@ -33,6 +33,30 @@ func TestMoves(t *testing.T) {
 	}
 }
 
+func TestLotsOfPawns(t *testing.T) {
+	game := NewGame()
+	if debug {
+		fmt.Println(game.board)
+	}
+	game.Move(MoveRequest{Position{0, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{0, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{1, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{1, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{2, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{2, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{3, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{3, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{4, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{4, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{5, 1}, Move{0, 2}, nil})
+	game.Move(MoveRequest{Position{5, 6}, Move{0, -2}, nil})
+	for i := 0; i < 6; i++ {
+		if game.board[i][3] == nil || game.board[i][4] == nil {
+			t.Error("Pawns did not move as expected")
+		}
+	}
+}
+
 func TestPoints(t *testing.T) {
 	game := NewGame()
 	if debug {
@@ -242,12 +266,96 @@ func TestDrawByRepetion(t *testing.T) {
 	if debug {
 		fmt.Println(game.board)
 	}
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2; i++ {
 		game.Move(MoveRequest{Position{3, 0}, Move{1, 1}, nil})
 		game.Move(MoveRequest{Position{3, 7}, Move{0, -1}, nil})
 		game.Move(MoveRequest{Position{4, 1}, Move{-1, -1}, nil})
-		game.Move(MoveRequest{Position{3, 6}, Move{0, 1}, nil})
+		err := game.Move(MoveRequest{Position{3, 6}, Move{0, 1}, nil})
+		if err != nil {
+			t.Error("Draw too early")
+		}
 	}
+	if !game.gameOver || !game.result.Draw {
+		t.Error("Game should be a draw")
+	}
+}
+
+func TestDrawByFiftyMoveRule(t *testing.T) {
+	game := NewGameNoPawns()
+	if game.gameOver != false || game.result.Draw == true {
+		t.Error("Game should not be over")
+	}
+	if debug {
+		fmt.Println(game.board)
+	}
+	game.Move(MoveRequest{Position{2, 0}, Move{-2, 2}, nil})
+	game.Move(MoveRequest{Position{5, 7}, Move{-5, -5}, nil})
+	// 1 move without capture
+	game.Move(MoveRequest{Position{3, 0}, Move{0, 1}, nil})
+	game.Move(MoveRequest{Position{0, 2}, Move{5, 5}, nil})
+	// 24 moves without capture
+	for i := uint8(0); i < 6; i++ {
+		// Move knight out and back
+		game.Move(MoveRequest{Position{1, 0}, Move{1, 2}, nil})
+		game.Move(MoveRequest{Position{1, 7}, Move{1, -2}, nil})
+		game.Move(MoveRequest{Position{2, 2}, Move{-1, -2}, nil})
+		game.Move(MoveRequest{Position{2, 5}, Move{-1, 2}, nil})
+		// Move bishop out and back
+		if i%2 == 0 {
+			game.Move(MoveRequest{Position{5, 0}, Move{-1, 1}, nil})
+			game.Move(MoveRequest{Position{5, 7}, Move{-1, -1}, nil})
+		} else {
+			game.Move(MoveRequest{Position{4, 1}, Move{1, -1}, nil})
+			game.Move(MoveRequest{Position{4, 6}, Move{1, 1}, nil})
+		}
+		// Move rook
+		game.Move(MoveRequest{Position{0, i}, Move{0, 1}, nil})
+		err := game.Move(MoveRequest{Position{7, 7 - i}, Move{0, -1}, nil})
+		if err != nil {
+			t.Error("Draw too early")
+		}
+	}
+	// 1 move without capture
+	game.Move(MoveRequest{Position{0, 6}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{7, 1}, Move{-1, 0}, nil})
+	// 5 moves without capture
+	for i := uint8(0); i < 5; i++ {
+		game.Move(MoveRequest{Position{1, 6 - i}, Move{0, -1}, nil})
+		err := game.Move(MoveRequest{Position{6, i + 1}, Move{0, 1}, nil})
+		if err != nil {
+			t.Error("Draw too early")
+		}
+	}
+	// 1 move without capture
+	game.Move(MoveRequest{Position{1, 1}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{6, 6}, Move{-1, 0}, nil})
+	// 16 moves without capture
+	for i := uint8(0); i < 4; i++ {
+		// Move knight out and back
+		game.Move(MoveRequest{Position{1, 0}, Move{-1, 2}, nil})
+		game.Move(MoveRequest{Position{1, 7}, Move{-1, -2}, nil})
+		game.Move(MoveRequest{Position{0, 2}, Move{1, -2}, nil})
+		game.Move(MoveRequest{Position{0, 5}, Move{1, 2}, nil})
+		// Move bishop out and back
+		if i%2 == 0 {
+			game.Move(MoveRequest{Position{5, 0}, Move{-1, 1}, nil})
+			game.Move(MoveRequest{Position{5, 7}, Move{-1, -1}, nil})
+		} else {
+			game.Move(MoveRequest{Position{4, 1}, Move{1, -1}, nil})
+			game.Move(MoveRequest{Position{4, 6}, Move{1, 1}, nil})
+		}
+		// Move rook
+		game.Move(MoveRequest{Position{2, i + 1}, Move{0, 1}, nil})
+		err := game.Move(MoveRequest{Position{5, 6 - i}, Move{0, -1}, nil})
+		if err != nil {
+			t.Error("Draw too early")
+		}
+	}
+	// 2 moves without capture
+	game.Move(MoveRequest{Position{1, 0}, Move{-1, 2}, nil})
+	game.Move(MoveRequest{Position{1, 7}, Move{-1, -2}, nil})
+	game.Move(MoveRequest{Position{0, 2}, Move{1, -2}, nil})
+	game.Move(MoveRequest{Position{0, 5}, Move{1, 2}, nil})
 	if !game.gameOver || !game.result.Draw {
 		t.Error("Game should be a draw")
 	}

@@ -4,7 +4,7 @@ TODO
     - [x] Detect stalemate
     - [x] Handle pawn promotion
     - [ ] Insufficient material
-    - [ ] 50 move rule
+    - [x] 50 move rule
     - [x] timeout
     - [x] resignation
     - [x] agreed draw
@@ -46,6 +46,6 @@ TODO
         - [x] Display point advantage/captured pieces
         - [x] Play local match vs begin matchmaking
         - [x] Mobile support
-        - [] Support pieceType options for pawn promotion
+        - [ ] Support pieceType options for pawn promotion
 * General
     - [x] Travis CI test
