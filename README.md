@@ -17,6 +17,7 @@ TODO
     - [x] http server
       - [ ] Make a websocket server/client as an alternative to polling
       - [ ] Move ttlmap out to a separate package that can be shared by http and websocket
+      - [ ] Move web client out of server directory to client directory as it will use both HTTP and websocket server depending on compile flags (or whatever)
       - [x] Instead of hanging indefinitely on GET sync/async, return with no update after timeout
       - [x] Instead of hanging indefinitely on GET match, return after a server timeout with http 204
       - [ ] If no response from client in x seconds then call disconnect win for opponent
