@@ -16,6 +16,7 @@ TODO
 * Server
     - [x] http server
       - [ ] Make a websocket server/client as an alternative to polling
+        = [ ] Restructure the webservers so that we have a front line webserver for auth and static files, and for other requests it proxies to a distinct websocket or http webserver
       - [x] Instead of hanging indefinitely on GET sync/async, return with no update after timeout
       - [x] Instead of hanging indefinitely on GET match, return after a server timeout with http 204
       - [ ] If no response from client in x seconds then call disconnect win for opponent

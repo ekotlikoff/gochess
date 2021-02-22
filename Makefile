@@ -8,7 +8,7 @@ webserver_cmd_package := github.com/Ekotlikoff/gochess/cmd/webserver
 
 buildweb:
 	GOARCH=wasm GOOS=js go build \
-		   -o $(GOPATH)/src/gochess/cmd/webserver/assets/lib.wasm \
+		   -o $(GOPATH)/src/gochess/internal/server/http/webserver/assets/lib.wasm \
 		   -tags webclient $(webclient_package)
 
 runweb: buildweb

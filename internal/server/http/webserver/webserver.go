@@ -1,6 +1,7 @@
 package webserver
 
 import (
+	"embed"
 	"encoding/json"
 	"github.com/Ekotlikoff/gochess/internal/model"
 	"github.com/Ekotlikoff/gochess/internal/server/match"
@@ -29,6 +30,10 @@ type MatchedResponse struct {
 	MaxTimeMs    int64
 }
 
+// Content is our static web server content.
+//go:embed assets
+var content embed.FS
+
 func Serve(
 	matchServer *matchserver.MatchingServer, port int, logFile *string,
 	quiet bool,
@@ -45,7 +50,7 @@ func Serve(
 	}
 	mux := http.NewServeMux()
 
-	mux.Handle("/", http.FileServer(http.Dir("./cmd/webserver/assets")))
+	mux.Handle("/", http.FileServer(http.FS(content)))
 	mux.HandleFunc("/session", StartSession)
 	mux.Handle("/match", createSearchForMatchHandler(matchServer))
 	mux.HandleFunc("/sync", SyncHandler)
@@ -55,10 +60,6 @@ func Serve(
 
 func SetQuiet() {
 	log.SetOutput(ioutil.Discard)
-}
-
-func ServeRoot(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "../webclient/assets/wasm_exec.html")
 }
 
 // Credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
