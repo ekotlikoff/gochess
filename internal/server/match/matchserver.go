@@ -13,6 +13,8 @@ type WebsocketResponseType uint8
 
 const (
 	MatchStartT         = WebsocketResponseType(iota)
+	RequestSyncT        = WebsocketRequestType(iota)
+	RequestAsyncT       = WebsocketRequestType(iota)
 	ResponseSyncT       = WebsocketResponseType(iota)
 	ResponseAsyncT      = WebsocketResponseType(iota)
 	OpponentPlayedMoveT = WebsocketResponseType(iota)
@@ -28,14 +30,9 @@ type WebsocketResponse struct {
 
 type WebsocketRequestType uint8
 
-const (
-	RequestSyncT  = WebsocketRequestType(iota)
-	RequestAsyncT = WebsocketRequestType(iota)
-)
-
 type WebsocketRequest struct {
 	WebsocketRequestType WebsocketRequestType
-	RequestSync          RequestSync
+	RequestSync          model.MoveRequest
 	RequestAsync         RequestAsync
 }
 
@@ -49,7 +46,7 @@ type Player struct {
 	name               string
 	color              model.Color
 	elapsedMs          int64
-	requestChanSync    chan RequestSync
+	requestChanSync    chan model.MoveRequest
 	responseChanSync   chan ResponseSync
 	requestChanAsync   chan RequestAsync
 	responseChanAsync  chan ResponseAsync
@@ -124,14 +121,6 @@ func (player *Player) Color() model.Color {
 func (player *Player) GetWebsocketMessageToWrite() *WebsocketResponse {
 	var response WebsocketResponse
 	select {
-	case <-player.matchStart:
-		response = WebsocketResponse{
-			WebsocketResponseType: MatchStartT,
-			MatchedResponse: MatchedResponse{
-				player.Color(), player.MatchedOpponentName(),
-				player.MatchMaxTimeMs(),
-			},
-		}
 	case responseSync := <-player.responseChanSync:
 		response = WebsocketResponse{
 			WebsocketResponseType: ResponseSyncT,
@@ -171,10 +160,14 @@ func (player *Player) HasMatchStarted() bool {
 	}
 }
 
+func (player *Player) MakeMoveWS(pieceMove model.MoveRequest) {
+	player.requestChanSync <- pieceMove
+}
+
 func (player *Player) MakeMove(pieceMove model.MoveRequest) bool {
-	player.requestChanSync <- RequestSync{pieceMove.Position, pieceMove.Move}
+	player.requestChanSync <- pieceMove
 	response := <-player.responseChanSync
-	return response.moveSuccess
+	return response.MoveSuccess
 }
 
 func (player *Player) GetSyncUpdate() *model.MoveRequest {
@@ -206,7 +199,7 @@ func (player *Player) Reset() {
 		close(player.opponentPlayedMove)
 	}
 	player.elapsedMs = 0
-	player.requestChanSync = make(chan RequestSync, 1)
+	player.requestChanSync = make(chan model.MoveRequest, 1)
 	player.responseChanSync = make(chan ResponseSync, 10)
 	player.requestChanAsync = make(chan RequestAsync, 1)
 	player.responseChanAsync = make(chan ResponseAsync, 1)
@@ -214,13 +207,8 @@ func (player *Player) Reset() {
 	player.matchStart = make(chan struct{})
 }
 
-type RequestSync struct {
-	position model.Position
-	move     model.Move
-}
-
 type ResponseSync struct {
-	moveSuccess bool
+	MoveSuccess bool
 }
 
 type RequestAsync struct {

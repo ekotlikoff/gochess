@@ -3,15 +3,24 @@ package websocketserver
 import (
 	"encoding/json"
 	"github.com/Ekotlikoff/gochess/internal/server/match"
+	"github.com/gofrs/uuid"
 	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 )
 
-var upgrader = websocket.Upgrader{} // use default options
+var (
+	cache    *TTLMap
+	upgrader = websocket.Upgrader{} // use default options
+)
+
+func init() {
+	cache = NewTTLMap(50, 1800, 10)
+}
 
 type Credentials struct {
 	Username string
@@ -34,7 +43,8 @@ func Serve(
 	mux := http.NewServeMux()
 
 	mux.Handle("/", http.FileServer(http.Dir("./cmd/webserver/assets")))
-	mux.HandleFunc("/session", runSession)
+	mux.HandleFunc("/session", StartSession)
+	mux.Handle("/matchandplay", createMatchAndPlayHandler(matchServer))
 	http.ListenAndServe(":"+strconv.Itoa(port), mux)
 }
 
@@ -42,8 +52,9 @@ func ServeRoot(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "../webclient/assets/wasm_exec.html")
 }
 
-func runSession(w http.ResponseWriter, r *http.Request) {
-	log.SetPrefix("runSession: ")
+// Credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
+func StartSession(w http.ResponseWriter, r *http.Request) {
+	log.SetPrefix("StartSession: ")
 	var creds Credentials
 	err := json.NewDecoder(r.Body).Decode(&creds)
 	if err != nil {
@@ -56,73 +67,112 @@ func runSession(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Missing username"))
 		return
 	}
+	// Create a new random session token
+	sessionToken, err := uuid.NewV4()
 	if err != nil {
-		log.Println("fatal: Failed to generate session token")
+		log.Println("Failed to generate session token")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	c, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("Upgrade error:", err)
-		return
-	}
-	defer c.Close()
+	sessionTokenStr := sessionToken.String()
 	player := matchserver.NewPlayer(creds.Username)
-	err = player.WaitForMatchStart()
-	if err != nil {
-		log.Println("fatal: Failed to find match")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	go readLoop(c, player)
-	go writeLoop(c, player)
+	cache.Put(sessionTokenStr, &player)
+	http.SetCookie(w, &http.Cookie{
+		Name:    "session_token",
+		Value:   sessionTokenStr,
+		Expires: time.Now().Add(1800 * time.Second),
+	})
 }
 
-func writeLoop(c *websocket.Conn, player matchserver.Player) {
-	matchedResponse := WebsocketResponse{
-		WebsocketResponseType: MatchStartT,
-		MatchedResponse: MatchedResponse{
+func getSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
+	c, err := r.Cookie("session_token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			log.Println("session_token is not set")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("Missing session_token"))
+			return nil
+		}
+		log.Println("ERROR ", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return nil
+	}
+	sessionToken := c.Value
+	player, err := cache.Get(sessionToken)
+	if err != nil {
+		log.Println("ERROR ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return nil
+	} else if player == nil {
+		log.Println("No player found for token ", sessionToken)
+		w.WriteHeader(http.StatusUnauthorized)
+		return nil
+	}
+	return player
+}
+
+func createMatchAndPlayHandler(matchServer *matchserver.MatchingServer,
+) http.Handler {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		log.SetPrefix("runSession: ")
+		player := getSession(w, r)
+		c, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Println("Upgrade error:", err)
+			return
+		}
+		defer c.Close()
+		player.SetSearchingForMatch(true)
+		matchServer.MatchPlayer(player)
+		err = player.WaitForMatchStart()
+		if err != nil {
+			log.Println("fatal: Failed to find match")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		go readLoop(c, player)
+		writeLoop(c, player)
+	}
+	return http.HandlerFunc(handler)
+}
+
+func writeLoop(c *websocket.Conn, player *matchserver.Player) {
+	matchedResponse := matchserver.WebsocketResponse{
+		WebsocketResponseType: matchserver.MatchStartT,
+		MatchedResponse: matchserver.MatchedResponse{
 			player.Color(), player.MatchedOpponentName(),
 			player.MatchMaxTimeMs(),
 		},
 	}
-	c.WriteJSON(matchedResponse)
+	c.WriteJSON(&matchedResponse)
 	for {
 		if player.GetGameover() {
 			return
 		}
-		message := player.GetWebsocketMessageToWrite()
-		err := c.WriteJSON(*message)
-		if err != nil {
-			log.Println("Write error:", err)
+		if message := player.GetWebsocketMessageToWrite(); message != nil {
+			err := c.WriteJSON(message)
+			if err != nil {
+				log.Println("Write error:", err)
+				return
+			}
 		}
 	}
 }
 
-func readLoop(c *websocket.Conn, player matchserver.Player) {
+func readLoop(c *websocket.Conn, player *matchserver.Player) {
+	defer c.Close()
 	for {
-		if messageType, r, err := c.NextReader(); err != nil {
-			defer c.Close()
-			// TODO When match is over then return?
-			message := WebsocketRequest{}
-			c.ReadJSON(message)
-			switch message.WebsocketRequestType {
-			case RequestSyncT:
-				var moveRequest model.MoveRequest
-				err := json.NewDecoder(r.Body).Decode(&moveRequest)
-				if err != nil {
-					log.Println("Failed to parse move body ", err)
-					w.WriteHeader(http.StatusBadRequest)
-					return
-				}
-				success := player.MakeMove(moveRequest)
-				if !success {
-					w.WriteHeader(http.StatusBadRequest)
-					return
-				}
-			case RequestAsyncT:
-				//TODO
-			}
+		message := matchserver.WebsocketRequest{}
+		if err := c.ReadJSON(&message); err != nil {
+			log.Println("Read error:", err)
+			return
+		}
+		// TODO When match is over then return?
+		switch message.WebsocketRequestType {
+		case matchserver.RequestSyncT:
+			player.MakeMoveWS(message.RequestSync)
+		case matchserver.RequestAsyncT:
+			//TODO
 		}
 	}
 }
