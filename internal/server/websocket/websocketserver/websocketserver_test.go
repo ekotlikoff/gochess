@@ -87,7 +87,7 @@ func TestWSMatch(t *testing.T) {
 	message = matchserver.WebsocketRequest{
 		WebsocketRequestType: matchserver.RequestSyncT,
 		RequestSync: model.MoveRequest{
-			model.Position{0, 1}, model.Move{0, 2}},
+			model.Position{0, 1}, model.Move{0, 2}, nil},
 	}
 	white.WriteJSON(&message)
 	white.ReadJSON(&wsResponse)

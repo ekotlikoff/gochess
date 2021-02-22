@@ -174,12 +174,6 @@ func (cm *ClientModel) viewHandleMove(
 	cm.viewHandleEnPassant(moveRequest.Move, newPos, elementsLength == 0)
 	elMoving.Get("classList").Call("remove", originalPositionClass)
 	elMoving.Get("classList").Call("add", newPositionClass)
-	if moveRequest.PromoteTo != nil {
-		elMoving.Get("classList").Call("remove", "bp")
-		elMoving.Get("classList").Call("remove", "wp")
-		elMoving.Get("classList").Call("add",
-			cm.GetPiece(newPos).ClientString())
-	}
 }
 
 func (cm *ClientModel) viewHandleEnPassant(

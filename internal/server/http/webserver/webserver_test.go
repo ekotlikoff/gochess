@@ -147,7 +147,7 @@ func TestHTTPServerCheckmate(t *testing.T) {
 	body, _ := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if !strings.Contains(string(body),
-		"{\"Position\":{\"File\":2,\"Rank\":1},\"Move\":{\"X\":0,\"Y\":2}}") {
+		"{\"Position\":{\"File\":2,\"Rank\":1},\"Move\":{\"X\":0,\"Y\":2}") {
 		t.Error("Expected opponent's move got ", string(body))
 	}
 	sendMove(black, serverSync, 4, 6, 0, -2)
@@ -155,7 +155,7 @@ func TestHTTPServerCheckmate(t *testing.T) {
 	body, _ = ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if !strings.Contains(string(body),
-		"{\"Position\":{\"File\":4,\"Rank\":6},\"Move\":{\"X\":0,\"Y\":-2}}") {
+		"{\"Position\":{\"File\":4,\"Rank\":6},\"Move\":{\"X\":0,\"Y\":-2}") {
 		t.Error("Expected opponent's move got ", string(body))
 	}
 	sendMove(white, serverSync, 2, 3, 0, 1)
@@ -272,9 +272,8 @@ func createMatch(testMatchServer *httptest.Server) (
 func sendMove(client *http.Client, serverSync *httptest.Server, x, y,
 	moveX, moveY int) {
 	movePayloadBuf := new(bytes.Buffer)
-	moveRequest := model.MoveRequest{
-		model.Position{uint8(x), uint8(y)}, model.Move{int8(moveX), int8(moveY)},
-	}
+	moveRequest := model.MoveRequest{model.Position{uint8(x), uint8(y)},
+		model.Move{int8(moveX), int8(moveY)}, nil}
 	json.NewEncoder(movePayloadBuf).Encode(moveRequest)
 	resp, err := client.Post(serverSync.URL, "application/json", movePayloadBuf)
 	if err == nil {

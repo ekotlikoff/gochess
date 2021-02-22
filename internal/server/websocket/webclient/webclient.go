@@ -22,9 +22,7 @@ type ClientModel struct {
 	gameType                 GameType
 	playerColor              model.Color
 	elDragging               js.Value
-	pieceDragging            *model.Piece
 	draggingOrigTransform    js.Value
-	isMouseDownLock          sync.Mutex
 	isMouseDown              bool
 	positionOriginal         model.Position
 	isMatchmaking, isMatched bool
@@ -60,12 +58,6 @@ func (cm *ClientModel) GetGameType() GameType {
 	cm.cmMutex.RLock()
 	defer cm.cmMutex.RUnlock()
 	return cm.gameType
-}
-
-func (cm *ClientModel) GetBoardString() string {
-	cm.cmMutex.RLock()
-	defer cm.cmMutex.RUnlock()
-	return cm.game.BoardString()
 }
 
 func (cm *ClientModel) SetGameType(gameType GameType) {
@@ -132,24 +124,6 @@ func (cm *ClientModel) SetDraggingElement(el js.Value) {
 	cm.elDragging = el
 }
 
-func (cm *ClientModel) GetDraggingPiece() *model.Piece {
-	cm.cmMutex.RLock()
-	defer cm.cmMutex.RUnlock()
-	return cm.pieceDragging
-}
-
-func (cm *ClientModel) GetPiece(position model.Position) *model.Piece {
-	cm.cmMutex.RLock()
-	defer cm.cmMutex.RUnlock()
-	return cm.game.Board().Piece(position)
-}
-
-func (cm *ClientModel) SetDraggingPiece(position model.Position) {
-	cm.cmMutex.Lock()
-	defer cm.cmMutex.Unlock()
-	cm.pieceDragging = cm.game.Board().Piece(position)
-}
-
 func (cm *ClientModel) GetDraggingOriginalTransform() js.Value {
 	cm.cmMutex.RLock()
 	defer cm.cmMutex.RUnlock()
@@ -162,24 +136,16 @@ func (cm *ClientModel) SetDraggingOriginalTransform(el js.Value) {
 	cm.draggingOrigTransform = el
 }
 
-func (cm *ClientModel) LockMouseDown() {
-	cm.cmMutex.Lock()
-	defer cm.cmMutex.Unlock()
-	cm.isMouseDownLock.Lock()
-	cm.isMouseDown = true
-}
-
-func (cm *ClientModel) UnlockMouseDown() {
-	cm.cmMutex.Lock()
-	defer cm.cmMutex.Unlock()
-	defer cm.isMouseDownLock.Unlock()
-	cm.isMouseDown = false
-}
-
 func (cm *ClientModel) GetIsMouseDown() bool {
 	cm.cmMutex.RLock()
 	defer cm.cmMutex.RUnlock()
 	return cm.isMouseDown
+}
+
+func (cm *ClientModel) SetIsMouseDown(isMouseDown bool) {
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
+	cm.isMouseDown = isMouseDown
 }
 
 func (cm *ClientModel) GetClickOriginalPosition() model.Position {

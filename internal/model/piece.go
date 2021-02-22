@@ -1,5 +1,10 @@
 package model
 
+import (
+	"bytes"
+	"encoding/binary"
+)
+
 type Piece struct {
 	pieceType  PieceType
 	position   Position
@@ -110,6 +115,36 @@ func (piece *Piece) Value() int8 {
 		return 1
 	}
 	return 0
+}
+
+func (piece *Piece) MarshalBinary(
+	board *board, previousMove Move, previousMover *Piece, king *Piece,
+) (data []byte, err error) {
+	// Ensure temporary options (castle/en passant) are taken into account
+	// for draw by repetition.
+	temporaryMoveRights := uint8(0)
+	if piece.pieceType == Pawn {
+		validMoves :=
+			piece.ValidMoves(board, previousMove, previousMover, false, king)
+		temporaryMoveRights = uint8(len(validMoves))
+	} else if piece.pieceType == King {
+		castleLeft, castleRight := piece.hasCastleRights(board)
+		if castleLeft {
+			temporaryMoveRights += 1
+		}
+		if castleRight {
+			temporaryMoveRights += 1
+		}
+	}
+	buf := new(bytes.Buffer)
+	err = binary.Write(buf, binary.BigEndian, []byte{
+		byte(piece.pieceType),
+		byte(piece.color),
+		piece.position.File,
+		piece.position.Rank,
+		temporaryMoveRights,
+	})
+	return buf.Bytes(), err
 }
 
 func (piece *Piece) StringSimple() string {
