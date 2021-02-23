@@ -99,7 +99,7 @@ func (clientModel *ClientModel) handleClickStart(
 	this js.Value, event js.Value) {
 	clientModel.LockMouseDown()
 	clientModel.SetDraggingElement(this)
-	positionOriginal, err := getPositionFromPieceElement(this)
+	positionOriginal, err := clientModel.getGamePositionFromPieceElement(this)
 	if err != nil {
 		log.Println("ERROR: Issue getting position from element,", err)
 		return
@@ -120,7 +120,8 @@ func (clientModel *ClientModel) handleClickStart(
 		clientModel.GetDraggingElement().Get("style").Get("transform"))
 }
 
-func getPositionFromPieceElement(piece js.Value) (model.Position, error) {
+func (cm *ClientModel) getGamePositionFromPieceElement(
+	piece js.Value) (model.Position, error) {
 	className := piece.Get("className").String()
 	classElements := strings.Split(className, " ")
 	for i := range classElements {
@@ -131,7 +132,13 @@ func getPositionFromPieceElement(piece js.Value) (model.Position, error) {
 			if err != nil {
 				return model.Position{}, err
 			}
-			return model.Position{uint8(x - 1), uint8(y - 1)}, nil
+			x--
+			y--
+			if cm.GetPlayerColor() == model.Black {
+				x = 7 - x
+				y = 7 - y
+			}
+			return model.Position{uint8(x), uint8(y)}, nil
 		}
 	}
 	return model.Position{},
