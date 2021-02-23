@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/Ekotlikoff/gochess/internal/server/http/webserver"
+	"github.com/Ekotlikoff/gochess/internal/server/api/http"
 	"github.com/Ekotlikoff/gochess/internal/server/match"
 )
 
@@ -10,5 +10,5 @@ func main() {
 	exitChan := make(chan bool, 1)
 	go matchingServer.StartMatchServers(10, exitChan)
 	println("Listening on port 8000...")
-	webserver.Serve(&matchingServer, 8000, nil, false)
+	httpserver.Serve(&matchingServer, 8000, nil, false)
 }

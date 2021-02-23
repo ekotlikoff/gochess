@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/Ekotlikoff/gochess/internal/model"
-	"github.com/Ekotlikoff/gochess/internal/server/http/webserver"
+	"github.com/Ekotlikoff/gochess/internal/server/api/http"
 	"github.com/Ekotlikoff/gochess/internal/server/match"
 	"io/ioutil"
 	"log"
@@ -410,7 +410,7 @@ func (clientModel *ClientModel) lookForMatch() {
 		username := clientModel.document.Call(
 			"getElementById", "username").Get("value").String()
 		credentialsBuf := new(bytes.Buffer)
-		credentials := webserver.Credentials{username}
+		credentials := httpserver.Credentials{username}
 		json.NewEncoder(credentialsBuf).Encode(credentials)
 		resp, err := clientModel.client.Post("session", ctp, credentialsBuf)
 		if err == nil {
@@ -438,7 +438,7 @@ func (clientModel *ClientModel) lookForMatch() {
 				"match", maxRetries)
 		}
 	}
-	var matchResponse webserver.MatchedResponse
+	var matchResponse httpserver.MatchedResponse
 	json.NewDecoder(resp.Body).Decode(&matchResponse)
 	clientModel.SetPlayerColor(matchResponse.Color)
 	clientModel.SetOpponentName(matchResponse.OpponentName)

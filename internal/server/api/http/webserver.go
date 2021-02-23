@@ -1,9 +1,10 @@
-package webserver
+package httpserver
 
 import (
 	"embed"
 	"encoding/json"
 	"github.com/Ekotlikoff/gochess/internal/model"
+	"github.com/Ekotlikoff/gochess/internal/server/api/cache"
 	"github.com/Ekotlikoff/gochess/internal/server/match"
 	"github.com/gofrs/uuid"
 	"io/ioutil"
@@ -14,10 +15,10 @@ import (
 	"time"
 )
 
-var cache *TTLMap
+var sessionCache *cache.TTLMap
 
 func init() {
-	cache = NewTTLMap(50, 1800, 10)
+	sessionCache = cache.NewTTLMap(50, 1800, 10)
 }
 
 type Credentials struct {
@@ -91,7 +92,7 @@ func StartSession(w http.ResponseWriter, r *http.Request) {
 	}
 	sessionTokenStr := sessionToken.String()
 	player := matchserver.NewPlayer(creds.Username)
-	cache.Put(sessionTokenStr, &player)
+	sessionCache.Put(sessionTokenStr, &player)
 	http.SetCookie(w, &http.Cookie{
 		Name:    "session_token",
 		Value:   sessionTokenStr,
@@ -202,7 +203,7 @@ func getSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 		return nil
 	}
 	sessionToken := c.Value
-	player, err := cache.Get(sessionToken)
+	player, err := sessionCache.Get(sessionToken)
 	if err != nil {
 		log.Println("ERROR ", err)
 		w.WriteHeader(http.StatusInternalServerError)
