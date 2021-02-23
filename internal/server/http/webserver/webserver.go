@@ -31,8 +31,8 @@ type MatchedResponse struct {
 }
 
 // Content is our static web server content.
-//go:embed assets
-var content embed.FS
+//go:embed static
+var webStaticFS embed.FS
 
 func Serve(
 	matchServer *matchserver.MatchingServer, port int, logFile *string,
@@ -50,7 +50,7 @@ func Serve(
 	}
 	mux := http.NewServeMux()
 
-	mux.Handle("/", http.FileServer(http.FS(content)))
+	mux.HandleFunc("/", HandleWebRoot)
 	mux.HandleFunc("/session", StartSession)
 	mux.Handle("/match", createSearchForMatchHandler(matchServer))
 	mux.HandleFunc("/sync", SyncHandler)
@@ -60,6 +60,11 @@ func Serve(
 
 func SetQuiet() {
 	log.SetOutput(ioutil.Discard)
+}
+
+func HandleWebRoot(w http.ResponseWriter, r *http.Request) {
+	r.URL.Path = "/static" + r.URL.Path // This is a hack to get the embedded path
+	http.FileServer(http.FS(webStaticFS)).ServeHTTP(w, r)
 }
 
 // Credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
