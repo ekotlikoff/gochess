@@ -239,6 +239,11 @@ func (cm *ClientModel) takeMove(
 				return
 			}
 			successfulRemoteMove = true
+		} else {
+			if debug {
+				log.Println(err)
+			}
+			return
 		}
 	}
 	err := cm.MakeMove(moveRequest)
