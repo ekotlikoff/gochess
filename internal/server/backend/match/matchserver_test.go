@@ -73,6 +73,7 @@ func TestMatchingServerDraw(t *testing.T) {
 	player1.requestChanAsync <- RequestAsync{RequestToDraw: true}
 	<-player2.responseChanAsync
 	player1.requestChanAsync <- RequestAsync{RequestToDraw: true}
+	<-player2.responseChanAsync
 	tries := 0
 	for liveMatch.GetRequestedDraw() != nil && tries < 10 {
 		time.Sleep(time.Millisecond)

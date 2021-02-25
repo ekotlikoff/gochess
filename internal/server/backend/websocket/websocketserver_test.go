@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Ekotlikoff/gochess/internal/model"
-	"github.com/Ekotlikoff/gochess/internal/server/match"
+	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	"github.com/Ekotlikoff/gochess/internal/server/frontend"
 	"github.com/gorilla/websocket"
 	"net/http"
 	"net/http/cookiejar"
@@ -27,8 +28,8 @@ func init() {
 	exitChan := make(chan bool, 1)
 	close(exitChan)
 	matchingServer.StartMatchServers(10, exitChan)
-	serverSession = httptest.NewServer(http.HandlerFunc(StartSession))
-	serverMatchAndPlay = httptest.NewServer(http.Handler(createMatchAndPlayHandler(&matchingServer)))
+	serverSession = httptest.NewServer(http.HandlerFunc(gateway.StartSession))
+	serverMatchAndPlay = httptest.NewServer(http.Handler(makeMatchAndPlayHandler(&matchingServer, gateway.SessionCache)))
 }
 
 func TestWSMatch(t *testing.T) {
@@ -102,7 +103,7 @@ func TestWSMatch(t *testing.T) {
 
 func startSession(client *http.Client, username string) {
 	credentialsBuf := new(bytes.Buffer)
-	credentials := Credentials{username}
+	credentials := gateway.Credentials{username}
 	json.NewEncoder(credentialsBuf).Encode(credentials)
 	resp, err := client.Post(serverSession.URL, "application/json", credentialsBuf)
 	serverSessionURL, _ := url.Parse(serverSession.URL)
