@@ -9,8 +9,6 @@ import (
 
 var DefaultTimeout time.Duration = 10 * time.Second
 
-type WebsocketResponseType uint8
-
 const (
 	MatchStartT         = WebsocketResponseType(iota)
 	RequestSyncT        = WebsocketRequestType(iota)
@@ -20,42 +18,46 @@ const (
 	OpponentPlayedMoveT = WebsocketResponseType(iota)
 )
 
-type WebsocketResponse struct {
-	WebsocketResponseType WebsocketResponseType
-	MatchedResponse       MatchedResponse
-	ResponseSync          ResponseSync
-	ResponseAsync         ResponseAsync
-	OpponentPlayedMove    model.MoveRequest
-}
+type (
+	WebsocketResponseType uint8
 
-type WebsocketRequestType uint8
+	WebsocketResponse struct {
+		WebsocketResponseType WebsocketResponseType
+		MatchedResponse       MatchedResponse
+		ResponseSync          ResponseSync
+		ResponseAsync         ResponseAsync
+		OpponentPlayedMove    model.MoveRequest
+	}
 
-type WebsocketRequest struct {
-	WebsocketRequestType WebsocketRequestType
-	RequestSync          model.MoveRequest
-	RequestAsync         RequestAsync
-}
+	WebsocketRequestType uint8
 
-type MatchedResponse struct {
-	Color        model.Color
-	OpponentName string
-	MaxTimeMs    int64
-}
+	WebsocketRequest struct {
+		WebsocketRequestType WebsocketRequestType
+		RequestSync          model.MoveRequest
+		RequestAsync         RequestAsync
+	}
 
-type Player struct {
-	name               string
-	color              model.Color
-	elapsedMs          int64
-	requestChanSync    chan model.MoveRequest
-	responseChanSync   chan ResponseSync
-	requestChanAsync   chan RequestAsync
-	responseChanAsync  chan ResponseAsync
-	opponentPlayedMove chan model.MoveRequest
-	matchStart         chan struct{}
-	matchMutex         sync.RWMutex
-	searchingForMatch  bool
-	match              *Match
-}
+	MatchedResponse struct {
+		Color        model.Color
+		OpponentName string
+		MaxTimeMs    int64
+	}
+
+	Player struct {
+		name               string
+		color              model.Color
+		elapsedMs          int64
+		requestChanSync    chan model.MoveRequest
+		responseChanSync   chan ResponseSync
+		requestChanAsync   chan RequestAsync
+		responseChanAsync  chan ResponseAsync
+		opponentPlayedMove chan model.MoveRequest
+		matchStart         chan struct{}
+		matchMutex         sync.RWMutex
+		searchingForMatch  bool
+		match              *Match
+	}
+)
 
 func NewPlayer(name string) Player {
 	player := Player{name: name, color: model.Black}

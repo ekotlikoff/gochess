@@ -1,35 +1,21 @@
 package websocketserver
 
 import (
-	"encoding/json"
-	"github.com/Ekotlikoff/gochess/internal/server/api/cache"
-	"github.com/Ekotlikoff/gochess/internal/server/match"
-	"github.com/gofrs/uuid"
+	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	"github.com/Ekotlikoff/gochess/internal/server/frontend"
 	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 )
 
-var (
-	sessionCache *cache.TTLMap
-	upgrader     = websocket.Upgrader{} // use default options
-)
-
-func init() {
-	sessionCache = cache.NewTTLMap(50, 1800, 10)
-}
-
-type Credentials struct {
-	Username string
-}
+var upgrader = websocket.Upgrader{} // use default options
 
 func Serve(
-	matchServer *matchserver.MatchingServer, port int, logFile *string,
-	quiet bool,
+	matchServer *matchserver.MatchingServer, cache *gateway.TTLMap, port int,
+	logFile *string, quiet bool,
 ) {
 	if logFile != nil {
 		file, err := os.OpenFile(*logFile, os.O_CREATE|os.O_APPEND, 0644)
@@ -42,50 +28,12 @@ func Serve(
 		log.SetOutput(ioutil.Discard)
 	}
 	mux := http.NewServeMux()
-
-	mux.Handle("/", http.FileServer(http.Dir("./cmd/webserver/assets")))
-	mux.HandleFunc("/session", StartSession)
-	mux.Handle("/matchandplay", createMatchAndPlayHandler(matchServer))
+	mux.Handle("/ws/matchandplay", makeMatchAndPlayHandler(matchServer, cache))
 	http.ListenAndServe(":"+strconv.Itoa(port), mux)
 }
 
-func ServeRoot(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "../webclient/assets/wasm_exec.html")
-}
-
-// Credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
-func StartSession(w http.ResponseWriter, r *http.Request) {
-	log.SetPrefix("StartSession: ")
-	var creds Credentials
-	err := json.NewDecoder(r.Body).Decode(&creds)
-	if err != nil {
-		log.Println("Bad request", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	} else if creds.Username == "" {
-		log.Println("Missing username")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Missing username"))
-		return
-	}
-	// Create a new random session token
-	sessionToken, err := uuid.NewV4()
-	if err != nil {
-		log.Println("Failed to generate session token")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	sessionTokenStr := sessionToken.String()
-	player := matchserver.NewPlayer(creds.Username)
-	sessionCache.Put(sessionTokenStr, &player)
-	http.SetCookie(w, &http.Cookie{
-		Name:    "session_token",
-		Value:   sessionTokenStr,
-		Expires: time.Now().Add(1800 * time.Second),
-	})
-}
-
-func getSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
+func getSession(w http.ResponseWriter, r *http.Request, cache *gateway.TTLMap,
+) *matchserver.Player {
 	c, err := r.Cookie("session_token")
 	if err != nil {
 		if err == http.ErrNoCookie {
@@ -99,7 +47,7 @@ func getSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 		return nil
 	}
 	sessionToken := c.Value
-	player, err := sessionCache.Get(sessionToken)
+	player, err := cache.Get(sessionToken)
 	if err != nil {
 		log.Println("ERROR ", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -112,11 +60,11 @@ func getSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 	return player
 }
 
-func createMatchAndPlayHandler(matchServer *matchserver.MatchingServer,
-) http.Handler {
+func makeMatchAndPlayHandler(matchServer *matchserver.MatchingServer,
+	cache *gateway.TTLMap) http.Handler {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		log.SetPrefix("runSession: ")
-		player := getSession(w, r)
+		player := getSession(w, r, cache)
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println("Upgrade error:", err)

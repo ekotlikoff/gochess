@@ -1,10 +1,10 @@
-package cache
+package gateway
 
 // Credit to https://stackoverflow.com/questions/25484122/map-with-ttl-option-in-go
 
 import (
 	"errors"
-	"github.com/Ekotlikoff/gochess/internal/server/match"
+	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
 	"sync"
 	"time"
 )

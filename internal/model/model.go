@@ -1,15 +1,19 @@
 package model
 
-type Color uint8
-
 const (
 	Black = Color(iota)
 	White = Color(iota)
 )
 
-type Position struct {
-	File, Rank uint8
-}
+type (
+	Color uint8
+
+	Position struct {
+		File, Rank uint8
+	}
+
+	board [8][8]*Piece
+)
 
 func NewPosition(file, rank uint8) Position {
 	switch {
@@ -20,8 +24,6 @@ func NewPosition(file, rank uint8) Position {
 	}
 	return Position{file, rank}
 }
-
-type board [8][8]*Piece
 
 func NewFullBoard() board {
 	var board board

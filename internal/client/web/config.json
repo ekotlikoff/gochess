@@ -1,0 +1,4 @@
+{
+    "BackendType": "http",
+    "ClientTimeout": "15s"
+}

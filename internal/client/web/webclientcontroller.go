@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/Ekotlikoff/gochess/internal/model"
-	"github.com/Ekotlikoff/gochess/internal/server/api/http"
-	"github.com/Ekotlikoff/gochess/internal/server/match"
-	"io/ioutil"
+	"github.com/Ekotlikoff/gochess/internal/server/backend/http"
+	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	"github.com/Ekotlikoff/gochess/internal/server/frontend"
 	"log"
 	"net/http"
 	"strconv"
@@ -18,48 +18,42 @@ import (
 	"time"
 )
 
-var debug bool = false
-var ctp string = "application/json"
+var (
+	debug bool   = false
+	ctp   string = "application/json"
+)
 
-func (clientModel *ClientModel) initController(quiet bool) {
-	clientModel.document.Call("addEventListener", "mousemove",
-		clientModel.genMouseMove(), false)
-	clientModel.document.Call("addEventListener", "touchmove",
-		clientModel.genTouchMove(), false)
-	clientModel.document.Call("addEventListener", "mouseup",
-		clientModel.genMouseUp(), false)
-	clientModel.document.Call("addEventListener", "touchend",
-		clientModel.genTouchEnd(), false)
-	clientModel.board.Call("addEventListener", "contextmenu",
+func (cm *ClientModel) initController() {
+	cm.document.Call("addEventListener", "mousemove", cm.genMouseMove(), false)
+	cm.document.Call("addEventListener", "touchmove", cm.genTouchMove(), false)
+	cm.document.Call("addEventListener", "mouseup", cm.genMouseUp(), false)
+	cm.document.Call("addEventListener", "touchend", cm.genTouchEnd(), false)
+	cm.board.Call("addEventListener", "contextmenu",
 		js.FuncOf(preventDefault), false)
-	js.Global().Set("beginMatchmaking", clientModel.genBeginMatchmaking())
-	js.Global().Set("resign", clientModel.genResign())
-	js.Global().Set("draw", clientModel.genDraw())
-	js.Global().Set("onclick", clientModel.genGlobalOnclick())
-	clientModel.document.Call("getElementById",
-		"gameover_modal_close").Set("onclick",
-		clientModel.genCloseModalOnClick())
-	if quiet {
-		log.SetOutput(ioutil.Discard)
-	}
+	js.Global().Set("beginMatchmaking", cm.genBeginMatchmaking())
+	js.Global().Set("resign", cm.genResign())
+	js.Global().Set("draw", cm.genDraw())
+	js.Global().Set("onclick", cm.genGlobalOnclick())
+	cm.document.Call("getElementById", "gameover_modal_close").Set("onclick",
+		cm.genCloseModalOnClick())
 }
 
-func (clientModel *ClientModel) genMouseDown() js.Func {
+func (cm *ClientModel) genMouseDown() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		if len(i) > 0 && !clientModel.GetIsMouseDown() {
+		if len(i) > 0 && !cm.GetIsMouseDown() {
 			i[0].Call("preventDefault")
-			clientModel.handleClickStart(this, i[0])
+			cm.handleClickStart(this, i[0])
 		}
 		return 0
 	})
 }
 
-func (clientModel *ClientModel) genTouchStart() js.Func {
+func (cm *ClientModel) genTouchStart() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		if len(i) > 0 && !clientModel.GetIsMouseDown() {
+		if len(i) > 0 && !cm.GetIsMouseDown() {
 			i[0].Call("preventDefault")
 			touch := i[0].Get("touches").Index(0)
-			clientModel.handleClickStart(this, touch)
+			cm.handleClickStart(this, touch)
 		}
 		return 0
 	})
@@ -82,42 +76,41 @@ func (cm *ClientModel) genCloseModalOnClick() js.Func {
 	})
 }
 
-func (clientModel *ClientModel) closeGameoverModal() {
-	removeClass(clientModel.document.Call("getElementById", "gameover_modal"),
+func (cm *ClientModel) closeGameoverModal() {
+	removeClass(cm.document.Call("getElementById", "gameover_modal"),
 		"gameover_modal")
-	addClass(clientModel.document.Call("getElementById", "gameover_modal"),
-		"hidden")
-	clientModel.viewSetMatchMakingControls()
-	clientModel.viewClearMatchDetails()
-	clientModel.SetGameType(Local)
-	clientModel.SetIsMatched(false)
-	clientModel.ResetRemoteMatchModel()
-	clientModel.resetGame()
+	addClass(cm.document.Call("getElementById", "gameover_modal"), "hidden")
+	cm.viewSetMatchMakingControls()
+	cm.viewClearMatchDetails()
+	cm.SetGameType(Local)
+	cm.SetIsMatched(false)
+	cm.ResetRemoteMatchModel()
+	cm.resetGame()
 }
 
-func (clientModel *ClientModel) handleClickStart(
+func (cm *ClientModel) handleClickStart(
 	this js.Value, event js.Value) {
-	clientModel.LockMouseDown()
-	clientModel.SetDraggingElement(this)
-	positionOriginal, err := clientModel.getGamePositionFromPieceElement(this)
+	cm.LockMouseDown()
+	cm.SetDraggingElement(this)
+	positionOriginal, err := cm.getGamePositionFromPieceElement(this)
 	if err != nil {
 		log.Println("ERROR: Issue getting position from element,", err)
 		return
 	}
-	clientModel.positionOriginal = positionOriginal
-	clientModel.SetDraggingPiece(clientModel.positionOriginal)
-	if clientModel.GetDraggingPiece() == nil {
+	cm.positionOriginal = positionOriginal
+	cm.SetDraggingPiece(cm.positionOriginal)
+	if cm.GetDraggingPiece() == nil {
 		if debug {
 			log.Println("ERROR: Clicked a piece that is not on the board")
-			log.Println(clientModel.positionOriginal)
-			log.Println(clientModel.GetBoardString())
+			log.Println(cm.positionOriginal)
+			log.Println(cm.GetBoardString())
 		}
-		clientModel.UnlockMouseDown()
+		cm.UnlockMouseDown()
 		return
 	}
-	addClass(clientModel.GetDraggingElement(), "dragging")
-	clientModel.SetDraggingOriginalTransform(
-		clientModel.GetDraggingElement().Get("style").Get("transform"))
+	addClass(cm.GetDraggingElement(), "dragging")
+	cm.SetDraggingOriginalTransform(
+		cm.GetDraggingElement().Get("style").Get("transform"))
 }
 
 func (cm *ClientModel) getGamePositionFromPieceElement(
@@ -145,45 +138,45 @@ func (cm *ClientModel) getGamePositionFromPieceElement(
 		errors.New("Unable to convert class to position: " + className)
 }
 
-func (clientModel *ClientModel) genMouseMove() js.Func {
+func (cm *ClientModel) genMouseMove() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
 		i[0].Call("preventDefault")
-		clientModel.handleMoveEvent(i[0])
+		cm.handleMoveEvent(i[0])
 		return 0
 	})
 }
 
-func (clientModel *ClientModel) genTouchMove() js.Func {
+func (cm *ClientModel) genTouchMove() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
 		i[0].Call("preventDefault")
 		touch := i[0].Get("touches").Index(0)
-		clientModel.handleMoveEvent(touch)
+		cm.handleMoveEvent(touch)
 		return 0
 	})
 }
 
-func (clientModel *ClientModel) handleMoveEvent(moveEvent js.Value) {
-	if clientModel.GetIsMouseDown() {
-		clientModel.viewDragPiece(clientModel.GetDraggingElement(), moveEvent)
+func (cm *ClientModel) handleMoveEvent(moveEvent js.Value) {
+	if cm.GetIsMouseDown() {
+		cm.viewDragPiece(cm.GetDraggingElement(), moveEvent)
 	}
 }
 
-func (clientModel *ClientModel) genMouseUp() js.Func {
+func (cm *ClientModel) genMouseUp() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		if clientModel.GetIsMouseDown() && len(i) > 0 {
+		if cm.GetIsMouseDown() && len(i) > 0 {
 			i[0].Call("preventDefault")
-			clientModel.handleClickEnd(i[0])
+			cm.handleClickEnd(i[0])
 		}
 		return 0
 	})
 }
 
-func (clientModel *ClientModel) genTouchEnd() js.Func {
+func (cm *ClientModel) genTouchEnd() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		if clientModel.GetIsMouseDown() && len(i) > 0 {
+		if cm.GetIsMouseDown() && len(i) > 0 {
 			i[0].Call("preventDefault")
 			touch := i[0].Get("changedTouches").Index(0)
-			clientModel.handleClickEnd(touch)
+			cm.handleClickEnd(touch)
 		}
 		return 0
 	})
@@ -230,20 +223,24 @@ func (cm *ClientModel) takeMove(
 	moveRequest model.MoveRequest, newPos model.Position, elMoving js.Value) {
 	successfulRemoteMove := false
 	if cm.GetGameType() == Remote {
-		movePayloadBuf := new(bytes.Buffer)
-		json.NewEncoder(movePayloadBuf).Encode(moveRequest)
-		resp, err := cm.client.Post("sync", ctp, movePayloadBuf)
-		if err == nil {
-			defer resp.Body.Close()
-			if resp.StatusCode != 200 {
+		if cm.backendType == HttpBackend {
+			movePayloadBuf := new(bytes.Buffer)
+			json.NewEncoder(movePayloadBuf).Encode(moveRequest)
+			resp, err := cm.client.Post("http/sync", ctp, movePayloadBuf)
+			if err == nil {
+				defer resp.Body.Close()
+				if resp.StatusCode != 200 {
+					return
+				}
+				successfulRemoteMove = true
+			} else {
+				if debug {
+					log.Println(err)
+				}
 				return
 			}
-			successfulRemoteMove = true
-		} else {
-			if debug {
-				log.Println(err)
-			}
-			return
+		} else if cm.backendType == WebsocketBackend {
+			// TODO handle websocket backend
 		}
 	}
 	err := cm.MakeMove(moveRequest)
@@ -264,174 +261,190 @@ func (cm *ClientModel) takeMove(
 
 func (cm *ClientModel) listenForSyncUpdate() {
 	log.SetPrefix("listenForSyncUpdate: ")
-	endRemoteGame := cm.remoteMatchModel.endRemoteGameChan
-	retries := 0
-	maxRetries := 5
+	if cm.backendType == HttpBackend {
+		cm.listenForSyncUpdateHttp()
+	} else if cm.backendType == WebsocketBackend {
+		// TODO handle websocket backend
+	}
+}
+
+func (cm *ClientModel) listenForSyncUpdateHttp() {
 	for true {
+		log.SetPrefix("listenForSyncUpdate: ")
 		select {
-		case <-endRemoteGame:
+		case <-cm.remoteMatchModel.endRemoteGameChan:
 			return
 		default:
 		}
-		resp, err := cm.client.Get("sync")
-		if err == nil {
-			defer resp.Body.Close()
-			retries = 0
-			if resp.StatusCode == 200 {
-				opponentMove := model.MoveRequest{}
-				json.NewDecoder(resp.Body).Decode(&opponentMove)
-				err := cm.MakeMove(opponentMove)
-				if err != nil {
-					log.Println("FATAL: We do not expect an invalid move from the opponent.")
-				}
-				cm.ClearRequestedDraw()
-				newPos := model.Position{
-					opponentMove.Position.File + uint8(opponentMove.Move.X),
-					opponentMove.Position.Rank + uint8(opponentMove.Move.Y),
-				}
-				originalPosClass :=
-					getPositionClass(opponentMove.Position, cm.GetPlayerColor())
-				elements :=
-					cm.document.Call("getElementsByClassName", originalPosClass)
-				elMoving := elements.Index(0)
-				cm.viewHandleMove(opponentMove, newPos, elMoving)
+		resp, err := retryWrapper(
+			func() (*http.Response, error) {
+				return cm.client.Get("http/sync")
+			},
+			"http/sync",
+			func() { cm.remoteGameEnd() },
+		)
+		if err != nil {
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == 200 {
+			opponentMove := model.MoveRequest{}
+			json.NewDecoder(resp.Body).Decode(&opponentMove)
+			log.Println(opponentMove)
+			err := cm.MakeMove(opponentMove)
+			if err != nil {
+				log.Println("FATAL: We do not expect an invalid move from the opponent.")
 			}
-		} else {
-			log.Println(err)
-			time.Sleep(500 * time.Millisecond)
-			retries++
-			if retries >= maxRetries {
-				log.Printf("Reached maxRetries on uri=%s retries=%d",
-					"sync", maxRetries)
-				close(cm.remoteMatchModel.endRemoteGameChan)
-				return
+			cm.ClearRequestedDraw()
+			newPos := model.Position{
+				opponentMove.Position.File + uint8(opponentMove.Move.X),
+				opponentMove.Position.Rank + uint8(opponentMove.Move.Y),
 			}
+			originalPosClass :=
+				getPositionClass(opponentMove.Position, cm.GetPlayerColor())
+			elements :=
+				cm.document.Call("getElementsByClassName", originalPosClass)
+			elMoving := elements.Index(0)
+			cm.viewHandleMove(opponentMove, newPos, elMoving)
 		}
 	}
 }
 
 func (cm *ClientModel) listenForAsyncUpdate() {
 	log.SetPrefix("listenForAsyncUpdate: ")
-	endRemoteGame := cm.remoteMatchModel.endRemoteGameChan
-	retries := 0
-	maxRetries := 5
+	if cm.backendType == HttpBackend {
+		cm.listenForAsyncUpdateHttp()
+	} else if cm.backendType == WebsocketBackend {
+		// TODO handle websocket backend
+	}
+}
+
+func (cm *ClientModel) listenForAsyncUpdateHttp() {
 	for true {
+		log.SetPrefix("listenForAsyncUpdate: ")
 		select {
-		case <-endRemoteGame:
+		case <-cm.remoteMatchModel.endRemoteGameChan:
 			return
 		default:
 		}
-		resp, err := cm.client.Get("async")
-		if err == nil {
-			defer resp.Body.Close()
-			retries = 0
-			if resp.StatusCode == 200 {
-				asyncResponse := matchserver.ResponseAsync{}
-				json.NewDecoder(resp.Body).Decode(&asyncResponse)
-				if asyncResponse.GameOver {
-					close(cm.remoteMatchModel.endRemoteGameChan)
-					winType := ""
-					if asyncResponse.Resignation {
-						winType = "resignation"
-					} else if asyncResponse.Draw {
-						winType = "draw"
-						cm.ClearRequestedDraw()
-					} else if asyncResponse.Timeout {
-						winType = "timeout"
-					} else {
-						winType = "mate"
-					}
-					log.Println("Winner:", asyncResponse.Winner, "by", winType)
-					cm.viewSetGameOver(asyncResponse.Winner, winType)
-					return
-				} else if asyncResponse.RequestToDraw {
-					log.Println("Requested draw")
-					cm.SetRequestedDraw(cm.GetOpponentColor(),
-						!cm.GetRequestedDraw(cm.GetOpponentColor()))
+		resp, err := retryWrapper(
+			func() (*http.Response, error) {
+				return cm.client.Get("http/async")
+			},
+			"http/async",
+			func() { cm.remoteGameEnd() },
+		)
+		if err != nil {
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == 200 {
+			asyncResponse := matchserver.ResponseAsync{}
+			json.NewDecoder(resp.Body).Decode(&asyncResponse)
+			if asyncResponse.GameOver {
+				cm.remoteGameEnd()
+				winType := ""
+				if asyncResponse.Resignation {
+					winType = "resignation"
+				} else if asyncResponse.Draw {
+					winType = "draw"
+					cm.ClearRequestedDraw()
+				} else if asyncResponse.Timeout {
+					winType = "timeout"
+				} else {
+					winType = "mate"
 				}
-			}
-		} else {
-			log.Println(err)
-			time.Sleep(500 * time.Millisecond)
-			retries++
-			if retries >= maxRetries {
-				log.Printf("Reached maxRetries on uri=%s retries=%d",
-					"async", maxRetries)
-				close(cm.remoteMatchModel.endRemoteGameChan)
+				log.Println("Winner:", asyncResponse.Winner, "by", winType)
+				cm.viewSetGameOver(asyncResponse.Winner, winType)
 				return
+			} else if asyncResponse.RequestToDraw {
+				log.Println("Requested draw")
+				cm.SetRequestedDraw(cm.GetOpponentColor(),
+					!cm.GetRequestedDraw(cm.GetOpponentColor()))
 			}
 		}
 	}
 }
 
-func (clientModel *ClientModel) genBeginMatchmaking() js.Func {
+func (cm *ClientModel) genBeginMatchmaking() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		if !clientModel.GetIsMatchmaking() && !clientModel.GetIsMatched() {
-			go clientModel.lookForMatch()
+		if !cm.GetIsMatchmaking() && !cm.GetIsMatched() {
+			go cm.lookForMatch()
 		}
 		return 0
 	})
 }
 
-func (clientModel *ClientModel) genResign() js.Func {
+func (cm *ClientModel) genResign() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
 		requestBuf := new(bytes.Buffer)
 		request := matchserver.RequestAsync{Resign: true}
 		json.NewEncoder(requestBuf).Encode(request)
-		go clientModel.client.Post("async", ctp, requestBuf)
+		if cm.backendType == HttpBackend {
+			go cm.client.Post("http/async", ctp, requestBuf)
+		} else if cm.backendType == WebsocketBackend {
+			// TODO handle websocket backend
+		}
 		return 0
 	})
 }
 
-func (clientModel *ClientModel) genDraw() js.Func {
+func (cm *ClientModel) genDraw() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
-		go clientModel.sendDraw()
+		go cm.sendDraw()
 		return 0
 	})
 }
 
-func (clientModel *ClientModel) sendDraw() {
+func (cm *ClientModel) sendDraw() {
 	requestBuf := new(bytes.Buffer)
 	request := matchserver.RequestAsync{RequestToDraw: true}
 	json.NewEncoder(requestBuf).Encode(request)
-	_, err := clientModel.client.Post("async", ctp, requestBuf)
-	if err == nil {
-		clientModel.SetRequestedDraw(clientModel.GetPlayerColor(),
-			!clientModel.GetRequestedDraw(clientModel.GetPlayerColor()))
+	if cm.backendType == HttpBackend {
+		_, err := cm.client.Post("http/async", ctp, requestBuf)
+		if err == nil {
+			cm.SetRequestedDraw(cm.GetPlayerColor(),
+				!cm.GetRequestedDraw(cm.GetPlayerColor()))
+		}
+	} else if cm.backendType == WebsocketBackend {
+		// TODO handle websocket backend
 	}
 }
 
-func (clientModel *ClientModel) lookForMatch() {
-	clientModel.SetIsMatchmaking(true)
-	buttonLoader := clientModel.buttonBeginLoading(
-		clientModel.document.Call(
-			"getElementById", "beginMatchmakingButton"))
-	if !clientModel.GetHasSession() {
-		username := clientModel.document.Call(
+func (cm *ClientModel) lookForMatch() {
+	cm.SetIsMatchmaking(true)
+	buttonLoader := cm.buttonBeginLoading(
+		cm.document.Call("getElementById", "beginMatchmakingButton"))
+	if !cm.GetHasSession() {
+		username := cm.document.Call(
 			"getElementById", "username").Get("value").String()
 		credentialsBuf := new(bytes.Buffer)
-		credentials := httpserver.Credentials{username}
+		credentials := gateway.Credentials{username}
 		json.NewEncoder(credentialsBuf).Encode(credentials)
-		resp, err := clientModel.client.Post("session", ctp, credentialsBuf)
+		resp, err := cm.client.Post("session", ctp, credentialsBuf)
 		if err == nil {
 			resp.Body.Close()
 		}
-		clientModel.SetPlayerName(username)
-		clientModel.SetHasSession(true)
+		cm.SetPlayerName(username)
+		cm.SetHasSession(true)
 	}
 	retries := 0
 	maxRetries := 6000
 	var resp *http.Response
 	var err error
 	for true {
-		resp, err = clientModel.client.Get("match")
-		if err == nil {
-			defer resp.Body.Close()
-			if resp.StatusCode == 200 {
-				break
+		if cm.backendType == HttpBackend {
+			resp, err = cm.client.Get("http/match")
+			if err == nil {
+				defer resp.Body.Close()
+				if resp.StatusCode == 200 {
+					break
+				}
 			}
+		} else if cm.backendType == WebsocketBackend {
+			// TODO handle websocket backend
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(2000 * time.Millisecond)
 		retries++
 		if retries >= maxRetries {
 			log.Printf("Reached maxRetries on uri=%s retries=%d",
@@ -440,39 +453,39 @@ func (clientModel *ClientModel) lookForMatch() {
 	}
 	var matchResponse httpserver.MatchedResponse
 	json.NewDecoder(resp.Body).Decode(&matchResponse)
-	clientModel.SetPlayerColor(matchResponse.Color)
-	clientModel.SetOpponentName(matchResponse.OpponentName)
-	clientModel.SetMaxTimeMs(matchResponse.MaxTimeMs)
-	clientModel.resetGame()
+	cm.SetPlayerColor(matchResponse.Color)
+	cm.SetOpponentName(matchResponse.OpponentName)
+	cm.SetMaxTimeMs(matchResponse.MaxTimeMs)
+	cm.resetGame()
 	// - TODO once matched briefly display matched icon?
-	clientModel.SetGameType(Remote)
-	clientModel.SetIsMatched(true)
-	clientModel.SetIsMatchmaking(false)
+	cm.SetGameType(Remote)
+	cm.SetIsMatched(true)
+	cm.SetIsMatchmaking(false)
 	buttonLoader.Call("remove")
-	clientModel.remoteMatchModel.endRemoteGameChan = make(chan bool, 0)
-	clientModel.viewSetMatchControls()
-	go clientModel.matchDetailsUpdateLoop()
-	go clientModel.listenForSyncUpdate()
-	go clientModel.listenForAsyncUpdate()
+	cm.remoteMatchModel.endRemoteGameChan = make(chan bool, 0)
+	cm.viewSetMatchControls()
+	go cm.matchDetailsUpdateLoop()
+	go cm.listenForSyncUpdate()
+	go cm.listenForAsyncUpdate()
 }
 
-func (clientModel *ClientModel) matchDetailsUpdateLoop() {
+func (cm *ClientModel) matchDetailsUpdateLoop() {
 	for true {
-		clientModel.viewSetMatchDetails()
+		cm.viewSetMatchDetails()
 		time.Sleep(1000 * time.Millisecond)
 		select {
-		case <-clientModel.remoteMatchModel.endRemoteGameChan:
+		case <-cm.remoteMatchModel.endRemoteGameChan:
 			return
 		default:
 		}
-		turn := clientModel.game.Turn()
-		clientModel.AddPlayerElapsedMs(turn, 1000)
+		turn := cm.game.Turn()
+		cm.AddPlayerElapsedMs(turn, 1000)
 	}
 }
 
-func (clientModel *ClientModel) getEventMousePosition(event js.Value) (
+func (cm *ClientModel) getEventMousePosition(event js.Value) (
 	int, int, int, int, int, int) {
-	rect := clientModel.board.Call("getBoundingClientRect")
+	rect := cm.board.Call("getBoundingClientRect")
 	width := rect.Get("right").Int() - rect.Get("left").Int()
 	height := rect.Get("bottom").Int() - rect.Get("top").Int()
 	squareWidth := width / 8
@@ -516,9 +529,43 @@ func preventDefault(this js.Value, i []js.Value) interface{} {
 	return 0
 }
 
-func (clientModel *ClientModel) resetGame() {
+func (cm *ClientModel) resetGame() {
 	game := model.NewGame()
-	clientModel.SetGame(&game)
-	clientModel.viewClearBoard()
-	clientModel.viewInitBoard(clientModel.playerColor)
+	cm.SetGame(&game)
+	cm.viewClearBoard()
+	cm.viewInitBoard(cm.playerColor)
+}
+
+func retryWrapper(f func() (*http.Response, error), uri string,
+	onMaxRetries func()) (*http.Response, error) {
+	retries := 0
+	maxRetries := 5
+	for true {
+		resp, err := f()
+		if err != nil {
+			log.Println(err)
+			time.Sleep(500 * time.Millisecond)
+			retries++
+			if retries >= maxRetries {
+				log.Printf("Reached maxRetries on uri=%s retries=%d",
+					uri, maxRetries)
+				onMaxRetries()
+				return nil, err
+			}
+		} else {
+			return resp, nil
+		}
+	}
+	return nil, nil
+}
+
+func (cm *ClientModel) remoteGameEnd() {
+	select {
+	case <-cm.remoteMatchModel.endRemoteGameChan:
+		return
+	default:
+		log.Println("Remote game end")
+		close(cm.remoteMatchModel.endRemoteGameChan)
+		cm.viewSetGameOver("", "error")
+	}
 }

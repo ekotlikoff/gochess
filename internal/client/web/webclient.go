@@ -9,36 +9,40 @@ import (
 	"syscall/js"
 )
 
-type GameType uint8
-
 const (
-	Local  = GameType(iota)
-	Remote = GameType(iota)
-	quiet  = false
+	HttpBackend      = BackendType("http")
+	WebsocketBackend = BackendType("websocket")
+	Local            = GameType(iota)
+	Remote           = GameType(iota)
 )
 
-type ClientModel struct {
-	cmMutex                  sync.RWMutex
-	gameType                 GameType
-	playerColor              model.Color
-	elDragging               js.Value
-	pieceDragging            *model.Piece
-	draggingOrigTransform    js.Value
-	isMouseDownLock          sync.Mutex
-	isMouseDown              bool
-	positionOriginal         model.Position
-	isMatchmaking, isMatched bool
-	playerName               string
-	hasSession               bool
-	gameMutex                sync.RWMutex
-	game                     *model.Game
-	remoteMatchModel         RemoteMatchModel
-	// Unchanging elements
-	document          js.Value
-	board             js.Value
-	matchingServerURI string
-	client            *http.Client
-}
+type (
+	GameType    uint8
+	BackendType string
+	ClientModel struct {
+		cmMutex                  sync.RWMutex
+		gameType                 GameType
+		playerColor              model.Color
+		elDragging               js.Value
+		pieceDragging            *model.Piece
+		draggingOrigTransform    js.Value
+		isMouseDownLock          sync.Mutex
+		isMouseDown              bool
+		positionOriginal         model.Position
+		isMatchmaking, isMatched bool
+		playerName               string
+		hasSession               bool
+		gameMutex                sync.RWMutex
+		game                     *model.Game
+		remoteMatchModel         RemoteMatchModel
+		// Unchanging elements
+		document          js.Value
+		board             js.Value
+		matchingServerURI string
+		client            *http.Client
+		backendType       BackendType
+	}
+)
 
 type RemoteMatchModel struct {
 	opponentName          string

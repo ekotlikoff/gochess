@@ -7,17 +7,19 @@ import (
 	"time"
 )
 
-type Match struct {
-	black         *Player
-	white         *Player
-	game          *model.Game
-	gameOver      chan struct{}
-	maxTimeMs     int64
-	requestedDraw *Player
-	mutex         sync.RWMutex
-}
+type (
+	Match struct {
+		black         *Player
+		white         *Player
+		game          *model.Game
+		gameOver      chan struct{}
+		maxTimeMs     int64
+		requestedDraw *Player
+		mutex         sync.RWMutex
+	}
 
-type MatchGenerator func(black *Player, white *Player) Match
+	MatchGenerator func(black *Player, white *Player) Match
+)
 
 func NewMatch(black *Player, white *Player, maxTimeMs int64) Match {
 	black.color = model.Black
@@ -145,6 +147,14 @@ func (match *Match) handleAsyncRequests() {
 			} else if match.GetRequestedDraw() == player {
 				// Consider the second requestToDraw a toggle.
 				match.SetRequestedDraw(nil)
+				go func() {
+					select {
+					case opponent.responseChanAsync <- ResponseAsync{
+						false, true, false, false, false, "",
+					}:
+					case <-time.After(10 * time.Second):
+					}
+				}()
 			} else {
 				match.SetRequestedDraw(player)
 				go func() {
