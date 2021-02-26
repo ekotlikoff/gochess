@@ -95,9 +95,6 @@ func writeLoop(c *websocket.Conn, player *matchserver.Player) {
 	}
 	c.WriteJSON(&matchedResponse)
 	for {
-		if player.GetGameover() {
-			return
-		}
 		if message := player.GetWebsocketMessageToWrite(); message != nil {
 			err := c.WriteJSON(message)
 			if err != nil {
@@ -116,12 +113,11 @@ func readLoop(c *websocket.Conn, player *matchserver.Player) {
 			log.Println("Read error:", err)
 			return
 		}
-		// TODO When match is over then return?
 		switch message.WebsocketRequestType {
 		case matchserver.RequestSyncT:
 			player.MakeMoveWS(message.RequestSync)
 		case matchserver.RequestAsyncT:
-			//TODO
+			player.RequestAsync(message.RequestAsync)
 		}
 	}
 }

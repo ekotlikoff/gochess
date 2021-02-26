@@ -81,17 +81,6 @@ func (player *Player) SetSearchingForMatch(searchingForMatch bool) {
 	player.searchingForMatch = searchingForMatch
 }
 
-func (player *Player) GetGameover() bool {
-	player.matchMutex.RLock()
-	defer player.matchMutex.RUnlock()
-	select {
-	case <-player.match.gameOver:
-		return true
-	default:
-		return false
-	}
-}
-
 func (player *Player) GetMatch() *Match {
 	player.matchMutex.RLock()
 	defer player.matchMutex.RUnlock()
@@ -138,8 +127,6 @@ func (player *Player) GetWebsocketMessageToWrite() *WebsocketResponse {
 			WebsocketResponseType: OpponentPlayedMoveT,
 			OpponentPlayedMove:    opponentMove,
 		}
-	default:
-		return nil
 	}
 	return &response
 }
