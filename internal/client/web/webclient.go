@@ -4,6 +4,7 @@ package main
 
 import (
 	"github.com/Ekotlikoff/gochess/internal/model"
+	"github.com/gorilla/websocket"
 	"net/http"
 	"sync"
 	"syscall/js"
@@ -32,6 +33,7 @@ type (
 		isMatchmaking, isMatched bool
 		playerName               string
 		hasSession               bool
+		wsConn                   *websocket.Conn
 		gameMutex                sync.RWMutex
 		game                     *model.Game
 		remoteMatchModel         RemoteMatchModel
@@ -39,7 +41,9 @@ type (
 		document          js.Value
 		board             js.Value
 		matchingServerURI string
+		origin            string
 		client            *http.Client
+		wsDialer          *websocket.Dialer
 		backendType       BackendType
 	}
 )
@@ -314,4 +318,16 @@ func (cm *ClientModel) SetHasSession(hasSession bool) {
 	cm.cmMutex.Lock()
 	defer cm.cmMutex.Unlock()
 	cm.hasSession = hasSession
+}
+
+func (cm *ClientModel) GetWSConn() *websocket.Conn {
+	cm.cmMutex.RLock()
+	defer cm.cmMutex.RUnlock()
+	return cm.wsConn
+}
+
+func (cm *ClientModel) SetWSConn(conn *websocket.Conn) {
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
+	cm.wsConn = conn
 }

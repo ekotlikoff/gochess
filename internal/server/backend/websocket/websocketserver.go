@@ -68,6 +68,7 @@ func makeMatchAndPlayHandler(matchServer *matchserver.MatchingServer,
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println("Upgrade error:", err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 		defer c.Close()

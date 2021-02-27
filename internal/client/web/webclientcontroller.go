@@ -221,28 +221,6 @@ func (cm *ClientModel) handlePromotion() *model.PieceType {
 
 func (cm *ClientModel) takeMove(
 	moveRequest model.MoveRequest, newPos model.Position, elMoving js.Value) {
-	successfulRemoteMove := false
-	if cm.GetGameType() == Remote {
-		if cm.backendType == HttpBackend {
-			movePayloadBuf := new(bytes.Buffer)
-			json.NewEncoder(movePayloadBuf).Encode(moveRequest)
-			resp, err := cm.client.Post("http/sync", ctp, movePayloadBuf)
-			if err == nil {
-				defer resp.Body.Close()
-				if resp.StatusCode != 200 {
-					return
-				}
-				successfulRemoteMove = true
-			} else {
-				if debug {
-					log.Println(err)
-				}
-				return
-			}
-		} else if cm.backendType == WebsocketBackend {
-			// TODO handle websocket backend
-		}
-	}
 	err := cm.MakeMove(moveRequest)
 	if err == nil {
 		cm.ClearRequestedDraw()
@@ -251,10 +229,32 @@ func (cm *ClientModel) takeMove(
 		if debug {
 			log.Println(err)
 		}
-		if successfulRemoteMove {
-			// TODO handle strange case where http call was successful but local
-			// game did not accept the move.
-			log.Println("FATAL: We do not expect an unsuccessful local move when remote succeeds")
+		return
+	}
+	if cm.GetGameType() == Remote {
+		if cm.backendType == HttpBackend {
+			movePayloadBuf := new(bytes.Buffer)
+			json.NewEncoder(movePayloadBuf).Encode(moveRequest)
+			resp, err := retryWrapper(
+				func() (*http.Response, error) {
+					return cm.client.Post("http/sync", ctp, movePayloadBuf)
+				},
+				"POST http/sync", 0,
+				func() { cm.remoteGameEnd() },
+			)
+			if err != nil {
+				log.Println("FATAL: Failed to send move to server: ", err)
+				return
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != 200 {
+				// TODO handle strange case where local accepts the
+				// move but remote does not.
+				log.Println("FATAL: We do not expect a remote rejection when local move succeeds")
+				return
+			}
+		} else if cm.backendType == WebsocketBackend {
+			// TODO handle websocket backend
 		}
 	}
 }
@@ -280,7 +280,7 @@ func (cm *ClientModel) listenForSyncUpdateHttp() {
 			func() (*http.Response, error) {
 				return cm.client.Get("http/sync")
 			},
-			"http/sync",
+			"GET http/sync", 0,
 			func() { cm.remoteGameEnd() },
 		)
 		if err != nil {
@@ -331,7 +331,7 @@ func (cm *ClientModel) listenForAsyncUpdateHttp() {
 			func() (*http.Response, error) {
 				return cm.client.Get("http/async")
 			},
-			"http/async",
+			"http/async", 0,
 			func() { cm.remoteGameEnd() },
 		)
 		if err != nil {
@@ -428,31 +428,16 @@ func (cm *ClientModel) lookForMatch() {
 		cm.SetPlayerName(username)
 		cm.SetHasSession(true)
 	}
-	retries := 0
-	maxRetries := 6000
-	var resp *http.Response
-	var err error
-	for true {
-		if cm.backendType == HttpBackend {
-			resp, err = cm.client.Get("http/match")
-			if err == nil {
-				defer resp.Body.Close()
-				if resp.StatusCode == 200 {
-					break
-				}
-			}
-		} else if cm.backendType == WebsocketBackend {
-			// TODO handle websocket backend
-		}
-		time.Sleep(2000 * time.Millisecond)
-		retries++
-		if retries >= maxRetries {
-			log.Printf("Reached maxRetries on uri=%s retries=%d",
-				"match", maxRetries)
-		}
-	}
 	var matchResponse httpserver.MatchedResponse
-	json.NewDecoder(resp.Body).Decode(&matchResponse)
+	var err error
+	if cm.backendType == HttpBackend {
+		matchResponse, err = cm.httpMatch(buttonLoader)
+	} else if cm.backendType == WebsocketBackend {
+		matchResponse, err = cm.wsMatch(buttonLoader)
+	}
+	if err != nil {
+		return
+	}
 	cm.SetPlayerColor(matchResponse.Color)
 	cm.SetOpponentName(matchResponse.OpponentName)
 	cm.SetMaxTimeMs(matchResponse.MaxTimeMs)
@@ -467,6 +452,56 @@ func (cm *ClientModel) lookForMatch() {
 	go cm.matchDetailsUpdateLoop()
 	go cm.listenForSyncUpdate()
 	go cm.listenForAsyncUpdate()
+}
+
+func (cm *ClientModel) httpMatch(buttonLoader js.Value,
+) (httpserver.MatchedResponse, error) {
+	resp, err := retryWrapper(
+		func() (*http.Response, error) {
+			return cm.client.Get("http/match")
+		},
+		"http/match", 200,
+		func() {
+			cm.SetIsMatchmaking(false)
+			buttonLoader.Call("remove")
+		},
+	)
+	var matchResponse httpserver.MatchedResponse
+	if err != nil {
+		return matchResponse, err
+	}
+	defer resp.Body.Close()
+	json.NewDecoder(resp.Body).Decode(&matchResponse)
+	return matchResponse, nil
+}
+
+func (cm *ClientModel) wsMatch(buttonLoader js.Value,
+) (httpserver.MatchedResponse, error) {
+	resp, err := retryWrapper(
+		func() (*http.Response, error) {
+			u := "ws://" + cm.origin + "/ws/matchandplay"
+			println(u)
+			ws, resp, err := cm.wsDialer.Dial(u, nil)
+			if err == nil {
+				if resp.StatusCode == 200 {
+					cm.SetWSConn(ws)
+				}
+			}
+			return resp, err
+		},
+		"ws/matchandplay", 200,
+		func() {
+			cm.SetIsMatchmaking(false)
+			buttonLoader.Call("remove")
+		},
+	)
+	var matchResponse httpserver.MatchedResponse
+	if err != nil {
+		return matchResponse, err
+	}
+	defer resp.Body.Close()
+	cm.GetWSConn().ReadJSON(&matchResponse)
+	return matchResponse, nil
 }
 
 func (cm *ClientModel) matchDetailsUpdateLoop() {
@@ -536,13 +571,13 @@ func (cm *ClientModel) resetGame() {
 	cm.viewInitBoard(cm.playerColor)
 }
 
-func retryWrapper(f func() (*http.Response, error), uri string,
+func retryWrapper(f func() (*http.Response, error), uri string, successCode int,
 	onMaxRetries func()) (*http.Response, error) {
 	retries := 0
 	maxRetries := 5
 	for true {
 		resp, err := f()
-		if err != nil {
+		if err != nil || (resp.StatusCode != successCode && successCode != 0) {
 			log.Println(err)
 			time.Sleep(500 * time.Millisecond)
 			retries++
