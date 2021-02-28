@@ -505,7 +505,6 @@ func (cm *ClientModel) wsMatch(buttonLoader js.Value,
 			return matchResponse, errors.New("Error opening websocket connection")
 		}
 	}
-	println("DEBUG: Returning from wsMatch")
 	return <-matchedChan, nil
 }
 
@@ -520,6 +519,9 @@ func (cm *ClientModel) wsListener(matchedChan chan matchserver.MatchedResponse) 
 			switch message.WebsocketResponseType {
 			case matchserver.MatchStartT:
 				matchedChan <- message.MatchedResponse
+				// TODO handle sync response, async response, perhaps with a
+				// sync and async channel passed in for other goroutines to
+				// wait for the response on.
 			}
 			return nil
 		}))
