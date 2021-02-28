@@ -1,6 +1,7 @@
 package matchserver
 
 import (
+	"context"
 	"errors"
 	"github.com/Ekotlikoff/gochess/internal/model"
 	"sync"
@@ -10,6 +11,7 @@ import (
 var DefaultTimeout time.Duration = 10 * time.Second
 
 const (
+	NullT               = WebsocketResponseType(iota)
 	MatchStartT         = WebsocketResponseType(iota)
 	RequestSyncT        = WebsocketRequestType(iota)
 	RequestAsyncT       = WebsocketRequestType(iota)
@@ -140,11 +142,11 @@ func (player *Player) WaitForMatchStart() error {
 	}
 }
 
-func (player *Player) HasMatchStarted() bool {
+func (player *Player) HasMatchStarted(ctx context.Context) bool {
 	select {
 	case <-player.matchStart:
 		return true
-	case <-time.After(DefaultTimeout):
+	case <-ctx.Done():
 		return false
 	}
 }
@@ -201,7 +203,7 @@ type ResponseSync struct {
 }
 
 type RequestAsync struct {
-	RequestToDraw, Resign bool
+	Match, RequestToDraw, Resign bool
 }
 
 type ResponseAsync struct {

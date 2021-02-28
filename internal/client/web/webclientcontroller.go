@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/Ekotlikoff/gochess/internal/model"
-	"github.com/Ekotlikoff/gochess/internal/server/backend/http"
 	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
 	"github.com/Ekotlikoff/gochess/internal/server/frontend"
 	"log"
@@ -19,7 +18,7 @@ import (
 )
 
 var (
-	debug bool   = false
+	debug bool   = true
 	ctp   string = "application/json"
 )
 
@@ -290,7 +289,6 @@ func (cm *ClientModel) listenForSyncUpdateHttp() {
 		if resp.StatusCode == 200 {
 			opponentMove := model.MoveRequest{}
 			json.NewDecoder(resp.Body).Decode(&opponentMove)
-			log.Println(opponentMove)
 			err := cm.MakeMove(opponentMove)
 			if err != nil {
 				log.Println("FATAL: We do not expect an invalid move from the opponent.")
@@ -428,7 +426,7 @@ func (cm *ClientModel) lookForMatch() {
 		cm.SetPlayerName(username)
 		cm.SetHasSession(true)
 	}
-	var matchResponse httpserver.MatchedResponse
+	var matchResponse matchserver.MatchedResponse
 	var err error
 	if cm.backendType == HttpBackend {
 		matchResponse, err = cm.httpMatch(buttonLoader)
@@ -455,7 +453,7 @@ func (cm *ClientModel) lookForMatch() {
 }
 
 func (cm *ClientModel) httpMatch(buttonLoader js.Value,
-) (httpserver.MatchedResponse, error) {
+) (matchserver.MatchedResponse, error) {
 	resp, err := retryWrapper(
 		func() (*http.Response, error) {
 			return cm.client.Get("http/match")
@@ -466,42 +464,65 @@ func (cm *ClientModel) httpMatch(buttonLoader js.Value,
 			buttonLoader.Call("remove")
 		},
 	)
-	var matchResponse httpserver.MatchedResponse
+	var matchedResponse matchserver.MatchedResponse
 	if err != nil {
-		return matchResponse, err
+		return matchedResponse, err
 	}
 	defer resp.Body.Close()
-	json.NewDecoder(resp.Body).Decode(&matchResponse)
-	return matchResponse, nil
+	json.NewDecoder(resp.Body).Decode(&matchedResponse)
+	return matchedResponse, nil
 }
 
 func (cm *ClientModel) wsMatch(buttonLoader js.Value,
-) (httpserver.MatchedResponse, error) {
-	resp, err := retryWrapper(
-		func() (*http.Response, error) {
-			u := "ws://" + cm.origin + "/ws/matchandplay"
-			println(u)
-			ws, resp, err := cm.wsDialer.Dial(u, nil)
-			if err == nil {
-				if resp.StatusCode == 200 {
-					cm.SetWSConn(ws)
-				}
+) (matchserver.MatchedResponse, error) {
+	u := "ws://" + cm.origin + "/ws"
+	ws := js.Global().Get("WebSocket").New(u)
+	retries := 0
+	maxRetries := 100
+	matchedChan := make(chan matchserver.MatchedResponse)
+	var matchResponse matchserver.MatchedResponse
+	for true {
+		if ws.Get("readyState").Equal(js.Global().Get("WebSocket").Get("OPEN")) {
+			cm.SetWSConn(ws)
+			if debug {
+				log.Println("Websocket connection succesfully initiated")
 			}
-			return resp, err
-		},
-		"ws/matchandplay", 200,
-		func() {
+			message := matchserver.WebsocketRequest{
+				WebsocketRequestType: matchserver.RequestAsyncT,
+				RequestAsync:         matchserver.RequestAsync{Match: true},
+			}
+			jsonMsg, _ := json.Marshal(message)
+			ws.Call("send", string(jsonMsg))
+			go cm.wsListener(matchedChan)
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+		retries++
+		if retries > maxRetries {
 			cm.SetIsMatchmaking(false)
 			buttonLoader.Call("remove")
-		},
-	)
-	var matchResponse httpserver.MatchedResponse
-	if err != nil {
-		return matchResponse, err
+			log.Println("ERROR: Error opening websocket connection")
+			return matchResponse, errors.New("Error opening websocket connection")
+		}
 	}
-	defer resp.Body.Close()
-	cm.GetWSConn().ReadJSON(&matchResponse)
-	return matchResponse, nil
+	println("DEBUG: Returning from wsMatch")
+	return <-matchedChan, nil
+}
+
+func (cm *ClientModel) wsListener(matchedChan chan matchserver.MatchedResponse) {
+	ws := cm.GetWSConn()
+	ws.Set("onmessage",
+		js.FuncOf(func(this js.Value, args []js.Value) interface{} {
+			jsonString := args[0].Get("data").String()
+			log.Println(jsonString)
+			message := matchserver.WebsocketResponse{}
+			json.Unmarshal([]byte(jsonString), &message)
+			switch message.WebsocketResponseType {
+			case matchserver.MatchStartT:
+				matchedChan <- message.MatchedResponse
+			}
+			return nil
+		}))
 }
 
 func (cm *ClientModel) matchDetailsUpdateLoop() {
@@ -599,7 +620,6 @@ func (cm *ClientModel) remoteGameEnd() {
 	case <-cm.remoteMatchModel.endRemoteGameChan:
 		return
 	default:
-		log.Println("Remote game end")
 		close(cm.remoteMatchModel.endRemoteGameChan)
 		cm.viewSetGameOver("", "error")
 	}

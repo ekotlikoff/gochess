@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"github.com/Ekotlikoff/gochess/internal/model"
-	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -31,22 +30,17 @@ func main() {
 		log.SetOutput(ioutil.Discard)
 	}
 	config := loadConfig()
-	done := make(chan struct{}, 0)
+	done := make(chan struct{})
 	game := model.NewGame()
 	jar, _ := cookiejar.New(&cookiejar.Options{})
 	clientTimeout, _ := time.ParseDuration(config.ClientTimeout)
 	client := &http.Client{Jar: jar, Timeout: clientTimeout}
-	wsDialer := &websocket.Dialer{
-		Proxy:            http.ProxyFromEnvironment,
-		HandshakeTimeout: 10 * time.Second,
-		Jar:              client.Jar,
-	}
 	clientModel := ClientModel{
 		game: &game, playerColor: model.White,
 		document: js.Global().Get("document"),
 		board: js.Global().Get("document").Call(
 			"getElementById", "board-layout-chessboard"),
-		backendType: config.BackendType, client: client, wsDialer: wsDialer,
+		backendType: config.BackendType, client: client, gameType: Local,
 		origin: js.Global().Get("window").Get("location").Get("host").String(),
 	}
 	clientModel.initController()

@@ -1,4 +1,4 @@
 {
-    "BackendType": "http",
+    "BackendType": "websocket",
     "ClientTimeout": "15s"
 }

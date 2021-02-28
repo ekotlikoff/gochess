@@ -40,7 +40,6 @@ func main() {
 	}
 	httpserverUrl, _ := url.Parse("http://localhost:8001")
 	websocketUrl, _ := url.Parse("http://localhost:8002")
-	println("Listening on port 8000...")
 	gateway.Serve(httpserverUrl, websocketUrl, 8000, nil, false)
 }
 

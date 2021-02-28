@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/Ekotlikoff/gochess/internal/model"
 	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
@@ -11,12 +12,6 @@ import (
 	"os"
 	"strconv"
 )
-
-type MatchedResponse struct {
-	Color        model.Color
-	OpponentName string
-	MaxTimeMs    int64
-}
 
 func Serve(
 	matchServer *matchserver.MatchingServer, cache *gateway.TTLMap, port int,
@@ -36,6 +31,7 @@ func Serve(
 	mux.Handle("/http/match", makeSearchForMatchHandler(matchServer, cache))
 	mux.Handle("/http/sync", makeSyncHandler(cache))
 	mux.Handle("/http/async", makeAsyncHandler(cache))
+	log.Println("HTTP server listening on port", port, "...")
 	http.ListenAndServe(":"+strconv.Itoa(port), mux)
 }
 
@@ -56,10 +52,14 @@ func makeSearchForMatchHandler(
 			player.SetSearchingForMatch(true)
 			matchServer.MatchPlayer(player)
 		}
-		if player.HasMatchStarted() {
+		ctx, cancel :=
+			context.WithTimeout(context.Background(), matchserver.DefaultTimeout)
+		defer cancel()
+		if player.HasMatchStarted(ctx) {
 			player.SetSearchingForMatch(false)
 			matchResponse :=
-				MatchedResponse{player.Color(), player.MatchedOpponentName(),
+				matchserver.MatchedResponse{
+					player.Color(), player.MatchedOpponentName(),
 					player.MatchMaxTimeMs(),
 				}
 			json.NewEncoder(w).Encode(matchResponse)

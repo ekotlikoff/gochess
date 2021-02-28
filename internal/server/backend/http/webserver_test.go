@@ -199,7 +199,7 @@ func createMatch(testMatchServer *httptest.Server) (
 	blackName = "player1"
 	whiteName = "player2"
 	white = client2
-	var matchResponse MatchedResponse
+	var matchResponse matchserver.MatchedResponse
 	json.NewDecoder(resp.Body).Decode(&matchResponse)
 	resp.Body.Close()
 	if matchResponse.Color == model.White {

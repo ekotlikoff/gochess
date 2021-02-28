@@ -30,7 +30,7 @@ func init() {
 	close(exitChan)
 	matchingServer.StartMatchServers(10, exitChan)
 	serverSession = httptest.NewServer(http.HandlerFunc(gateway.StartSession))
-	serverMatchAndPlay = httptest.NewServer(http.Handler(makeMatchAndPlayHandler(&matchingServer, gateway.SessionCache)))
+	serverMatchAndPlay = httptest.NewServer(http.Handler(makeWebsocketHandler(&matchingServer, gateway.SessionCache)))
 	log.SetOutput(ioutil.Discard)
 }
 
@@ -62,6 +62,12 @@ func TestWSMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer ws2.Close()
+	message := matchserver.WebsocketRequest{
+		WebsocketRequestType: matchserver.RequestAsyncT,
+		RequestAsync:         matchserver.RequestAsync{Match: true},
+	}
+	ws.WriteJSON(&message)
+	ws2.WriteJSON(&message)
 	wsResponse := matchserver.WebsocketResponse{}
 	wsResponse2 := matchserver.WebsocketResponse{}
 	ws.ReadJSON(&wsResponse)
@@ -151,6 +157,14 @@ func TestWSDraw(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer ws2.Close()
+	message := matchserver.WebsocketRequest{
+		WebsocketRequestType: matchserver.RequestAsyncT,
+		RequestAsync:         matchserver.RequestAsync{Match: true},
+	}
+	log.Println("Writing MATCH message")
+	ws.WriteJSON(&message)
+	ws2.WriteJSON(&message)
+	log.Println("Wrote MATCH message")
 	wsResponse := matchserver.WebsocketResponse{}
 	wsResponse2 := matchserver.WebsocketResponse{}
 	ws.ReadJSON(&wsResponse)
@@ -237,6 +251,14 @@ func TestWSResign(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer ws2.Close()
+	message := matchserver.WebsocketRequest{
+		WebsocketRequestType: matchserver.RequestAsyncT,
+		RequestAsync:         matchserver.RequestAsync{Match: true},
+	}
+	log.Println("Writing MATCH message")
+	ws.WriteJSON(&message)
+	ws2.WriteJSON(&message)
+	log.Println("Wrote MATCH message")
 	wsResponse := matchserver.WebsocketResponse{}
 	wsResponse2 := matchserver.WebsocketResponse{}
 	ws.ReadJSON(&wsResponse)
@@ -320,6 +342,12 @@ func TestWSRematch(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer ws2.Close()
+	message := matchserver.WebsocketRequest{
+		WebsocketRequestType: matchserver.RequestAsyncT,
+		RequestAsync:         matchserver.RequestAsync{Match: true},
+	}
+	ws.WriteJSON(&message)
+	ws2.WriteJSON(&message)
 	wsResponse := matchserver.WebsocketResponse{}
 	wsResponse2 := matchserver.WebsocketResponse{}
 	ws.ReadJSON(&wsResponse)
@@ -356,6 +384,12 @@ func TestWSRematch(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer ws2.Close()
+	message = matchserver.WebsocketRequest{
+		WebsocketRequestType: matchserver.RequestAsyncT,
+		RequestAsync:         matchserver.RequestAsync{Match: true},
+	}
+	ws.WriteJSON(&message)
+	ws2.WriteJSON(&message)
 	wsResponse = matchserver.WebsocketResponse{}
 	wsResponse2 = matchserver.WebsocketResponse{}
 	ws.ReadJSON(&wsResponse)
