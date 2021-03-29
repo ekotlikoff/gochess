@@ -13,6 +13,7 @@ TODO
         of position.
         Let's do this with a map[positionId]uint8
         Just need a hash function to go from position -> positionId
+        - [] Clear the state to save memory after an irreversible move (capture, pawn move, castle)
 * Server
     - [x] http server
       - [ ] Make a websocket server/client as an alternative to polling
