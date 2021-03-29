@@ -253,7 +253,12 @@ func (cm *ClientModel) takeMove(
 				return
 			}
 		} else if cm.backendType == WebsocketBackend {
-			// TODO handle websocket backend
+			message := matchserver.WebsocketRequest{
+				WebsocketRequestType: matchserver.RequestSyncT,
+				RequestSync:          moveRequest,
+			}
+			jsonMsg, _ := json.Marshal(message)
+			cm.GetWSConn().Call("send", string(jsonMsg))
 		}
 	}
 }
@@ -262,8 +267,6 @@ func (cm *ClientModel) listenForSyncUpdate() {
 	log.SetPrefix("listenForSyncUpdate: ")
 	if cm.backendType == HttpBackend {
 		cm.listenForSyncUpdateHttp()
-	} else if cm.backendType == WebsocketBackend {
-		// TODO handle websocket backend
 	}
 }
 
@@ -289,31 +292,33 @@ func (cm *ClientModel) listenForSyncUpdateHttp() {
 		if resp.StatusCode == 200 {
 			opponentMove := model.MoveRequest{}
 			json.NewDecoder(resp.Body).Decode(&opponentMove)
-			err := cm.MakeMove(opponentMove)
-			if err != nil {
-				log.Println("FATAL: We do not expect an invalid move from the opponent.")
-			}
-			cm.ClearRequestedDraw()
-			newPos := model.Position{
-				opponentMove.Position.File + uint8(opponentMove.Move.X),
-				opponentMove.Position.Rank + uint8(opponentMove.Move.Y),
-			}
-			originalPosClass :=
-				getPositionClass(opponentMove.Position, cm.GetPlayerColor())
-			elements :=
-				cm.document.Call("getElementsByClassName", originalPosClass)
-			elMoving := elements.Index(0)
-			cm.viewHandleMove(opponentMove, newPos, elMoving)
+			cm.handleSyncUpdate(opponentMove)
 		}
 	}
+}
+
+func (cm *ClientModel) handleSyncUpdate(opponentMove model.MoveRequest) {
+	err := cm.MakeMove(opponentMove)
+	if err != nil {
+		log.Println("FATAL: We do not expect an invalid move from the opponent.")
+	}
+	cm.ClearRequestedDraw()
+	newPos := model.Position{
+		opponentMove.Position.File + uint8(opponentMove.Move.X),
+		opponentMove.Position.Rank + uint8(opponentMove.Move.Y),
+	}
+	originalPosClass :=
+		getPositionClass(opponentMove.Position, cm.GetPlayerColor())
+	elements :=
+		cm.document.Call("getElementsByClassName", originalPosClass)
+	elMoving := elements.Index(0)
+	cm.viewHandleMove(opponentMove, newPos, elMoving)
 }
 
 func (cm *ClientModel) listenForAsyncUpdate() {
 	log.SetPrefix("listenForAsyncUpdate: ")
 	if cm.backendType == HttpBackend {
 		cm.listenForAsyncUpdateHttp()
-	} else if cm.backendType == WebsocketBackend {
-		// TODO handle websocket backend
 	}
 }
 
@@ -339,28 +344,32 @@ func (cm *ClientModel) listenForAsyncUpdateHttp() {
 		if resp.StatusCode == 200 {
 			asyncResponse := matchserver.ResponseAsync{}
 			json.NewDecoder(resp.Body).Decode(&asyncResponse)
-			if asyncResponse.GameOver {
-				cm.remoteGameEnd()
-				winType := ""
-				if asyncResponse.Resignation {
-					winType = "resignation"
-				} else if asyncResponse.Draw {
-					winType = "draw"
-					cm.ClearRequestedDraw()
-				} else if asyncResponse.Timeout {
-					winType = "timeout"
-				} else {
-					winType = "mate"
-				}
-				log.Println("Winner:", asyncResponse.Winner, "by", winType)
-				cm.viewSetGameOver(asyncResponse.Winner, winType)
-				return
-			} else if asyncResponse.RequestToDraw {
-				log.Println("Requested draw")
-				cm.SetRequestedDraw(cm.GetOpponentColor(),
-					!cm.GetRequestedDraw(cm.GetOpponentColor()))
-			}
+			cm.handleResponseAsync(asyncResponse)
 		}
+	}
+}
+
+func (cm *ClientModel) handleResponseAsync(responseAsync matchserver.ResponseAsync) {
+	if responseAsync.GameOver {
+		cm.remoteGameEnd()
+		winType := ""
+		if responseAsync.Resignation {
+			winType = "resignation"
+		} else if responseAsync.Draw {
+			winType = "draw"
+			cm.ClearRequestedDraw()
+		} else if responseAsync.Timeout {
+			winType = "timeout"
+		} else {
+			winType = "mate"
+		}
+		log.Println("Winner:", responseAsync.Winner, "by", winType)
+		cm.viewSetGameOver(responseAsync.Winner, winType)
+		return
+	} else if responseAsync.RequestToDraw {
+		log.Println("Requested draw")
+		cm.SetRequestedDraw(cm.GetOpponentColor(),
+			!cm.GetRequestedDraw(cm.GetOpponentColor()))
 	}
 }
 
@@ -381,7 +390,12 @@ func (cm *ClientModel) genResign() js.Func {
 		if cm.backendType == HttpBackend {
 			go cm.client.Post("http/async", ctp, requestBuf)
 		} else if cm.backendType == WebsocketBackend {
-			// TODO handle websocket backend
+			message := matchserver.WebsocketRequest{
+				WebsocketRequestType: matchserver.RequestAsyncT,
+				RequestAsync:         request,
+			}
+			jsonMsg, _ := json.Marshal(message)
+			cm.GetWSConn().Call("send", string(jsonMsg))
 		}
 		return 0
 	})
@@ -400,13 +414,19 @@ func (cm *ClientModel) sendDraw() {
 	json.NewEncoder(requestBuf).Encode(request)
 	if cm.backendType == HttpBackend {
 		_, err := cm.client.Post("http/async", ctp, requestBuf)
-		if err == nil {
-			cm.SetRequestedDraw(cm.GetPlayerColor(),
-				!cm.GetRequestedDraw(cm.GetPlayerColor()))
+		if err != nil {
+			return
 		}
 	} else if cm.backendType == WebsocketBackend {
-		// TODO handle websocket backend
+		message := matchserver.WebsocketRequest{
+			WebsocketRequestType: matchserver.RequestAsyncT,
+			RequestAsync:         request,
+		}
+		jsonMsg, _ := json.Marshal(message)
+		cm.GetWSConn().Call("send", string(jsonMsg))
 	}
+	cm.SetRequestedDraw(cm.GetPlayerColor(),
+		!cm.GetRequestedDraw(cm.GetPlayerColor()))
 }
 
 func (cm *ClientModel) lookForMatch() {
@@ -519,9 +539,10 @@ func (cm *ClientModel) wsListener(matchedChan chan matchserver.MatchedResponse) 
 			switch message.WebsocketResponseType {
 			case matchserver.MatchStartT:
 				matchedChan <- message.MatchedResponse
-				// TODO handle sync response, async response, perhaps with a
-				// sync and async channel passed in for other goroutines to
-				// wait for the response on.
+			case matchserver.OpponentPlayedMoveT:
+				cm.handleSyncUpdate(message.OpponentPlayedMove)
+			case matchserver.ResponseAsyncT:
+				cm.handleResponseAsync(message.ResponseAsync)
 			}
 			return nil
 		}))
