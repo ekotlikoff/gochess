@@ -2,3 +2,6 @@ language: go
 
 go:
 - master
+
+install:
+- ./installprotoc.sh
