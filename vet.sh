@@ -26,7 +26,8 @@ if [[ "${TRAVIS}" = "true" ]]; then
     unzip ${PROTOC_FILENAME}
     bin/protoc --version
     popd
-    go get -u google.golang.org/protobuf
+    go get -u google.golang.org/protobuf/cmd/protoc-gen-go \
+         google.golang.org/grpc/cmd/protoc-gen-go-grpc
 fi
 
 # - gofmt, goimports, golint (with exceptions for generated code), go vet.
