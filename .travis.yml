@@ -4,4 +4,4 @@ go:
 - master
 
 install:
-- ./installprotoc.sh
+- ./vet.sh
