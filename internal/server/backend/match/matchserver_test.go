@@ -254,6 +254,15 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	}
 }
 
+func TestMatchingServerEngineTimeout(t *testing.T) {
+	matchingServer := NewMatchingServerWithEngine("localhost:50000",
+		time.Millisecond, time.Millisecond)
+	if matchingServer.botMatchingEnabled {
+		t.Error("Expected bot matching to be disabled due to failed connection",
+			"with engine..")
+	}
+}
+
 func TestMatchingServerMultiple(t *testing.T) {
 	matchingServer := NewMatchingServer()
 	players := []Player{}

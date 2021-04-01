@@ -36,6 +36,7 @@ TODO
       - [ ] user auth?
     - [x] client agnostic matching server
         - [x] testing
+    - [x] Max matching time, after which we match the player with a chess engine (if connected)
 * Client
     - [x] Golang WebAssembly web client
     - [] Ensure that webclient can enter matchmaking succesfully after a gameover

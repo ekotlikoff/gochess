@@ -93,6 +93,37 @@ func TestCheckMate(t *testing.T) {
 	}
 }
 
+func TestCheckMate2(t *testing.T) {
+	game := NewGame()
+	game.Move(MoveRequest{Position{6, 0}, Move{1, 2}, nil})
+	game.Move(MoveRequest{Position{2, 6}, Move{0, -2}, nil})
+	game.Move(MoveRequest{Position{7, 2}, Move{-1, -2}, nil})
+	game.Move(MoveRequest{Position{2, 4}, Move{0, -1}, nil})
+	game.Move(MoveRequest{Position{6, 0}, Move{1, 2}, nil})
+	game.Move(MoveRequest{Position{2, 3}, Move{0, -1}, nil})
+	game.Move(MoveRequest{Position{7, 2}, Move{-1, -2}, nil})
+	game.Move(MoveRequest{Position{2, 2}, Move{-1, -1}, nil})
+	game.Move(MoveRequest{Position{6, 0}, Move{1, 2}, nil})
+	queen := Queen
+	game.Move(MoveRequest{Position{1, 1}, Move{-1, -1}, &queen})
+	game.Move(MoveRequest{Position{7, 2}, Move{-1, -2}, nil})
+	game.Move(MoveRequest{Position{0, 0}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{6, 0}, Move{1, 2}, nil})
+	game.Move(MoveRequest{Position{3, 7}, Move{-2, -2}, nil})
+	game.Move(MoveRequest{Position{7, 2}, Move{-1, -2}, nil})
+	game.Move(MoveRequest{Position{1, 5}, Move{0, -4}, nil})
+	game.Move(MoveRequest{Position{6, 0}, Move{1, 2}, nil})
+	game.Move(MoveRequest{Position{1, 1}, Move{1, -1}, nil})
+	game.Move(MoveRequest{Position{3, 0}, Move{-1, 0}, nil})
+	game.Move(MoveRequest{Position{1, 0}, Move{1, 0}, nil})
+	if debug {
+		fmt.Println(game.board)
+	}
+	if game.gameOver == false || game.result.Winner != Black {
+		t.Error("Game should be over")
+	}
+}
+
 func TestStalemate(t *testing.T) {
 	game := NewGameNoPawns()
 	if game.gameOver != false || game.result.Draw == true {

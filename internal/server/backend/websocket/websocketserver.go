@@ -54,6 +54,9 @@ func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
 }
 
 func writeLoop(c *websocket.Conn, player *matchserver.Player) {
+	if !player.GetSearchingForMatch() {
+		player.Reset()
+	}
 	err := player.WaitForMatchStart()
 	if err != nil {
 		log.Println("FATAL: Failed to find match")

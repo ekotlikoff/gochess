@@ -219,3 +219,7 @@ func (game *Game) Result() GameResult {
 	defer game.mutex.RUnlock()
 	return game.result
 }
+
+func (mr MoveRequest) String() string {
+	return "Position: " + mr.Position.String() + ", Move: " + mr.Move.String()
+}

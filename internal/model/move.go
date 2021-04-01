@@ -256,12 +256,20 @@ func (piece *Piece) validMovesSlide(
 				board, slideMove, previousMove, previousMover, king,
 			)
 		}
-		if !piece.isMoveInBounds(slideMove) || wouldBeInCheck() {
-			continue
+		if !piece.isMoveInBounds(slideMove) {
+			break
 		}
 		newX, newY := addMoveToPosition(piece, slideMove)
 		pieceAtDest := board[newX][newY]
 		destIsValidNoCapture := pieceAtDest == nil
+		if wouldBeInCheck() {
+			// Continue only if there is no piece in the way
+			if destIsValidNoCapture {
+				continue
+			} else {
+				break
+			}
+		}
 		if destIsValidNoCapture && (piece.pieceType != Pawn || !allThreatened) {
 			validSlides = append(validSlides, slideMove)
 		} else {

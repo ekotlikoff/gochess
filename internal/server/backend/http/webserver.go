@@ -53,7 +53,7 @@ func makeSearchForMatchHandler(
 			matchServer.MatchPlayer(player)
 		}
 		ctx, cancel :=
-			context.WithTimeout(context.Background(), matchserver.DefaultTimeout)
+			context.WithTimeout(context.Background(), matchserver.PollingDefaultTimeout)
 		defer cancel()
 		if player.HasMatchStarted(ctx) {
 			player.SetSearchingForMatch(false)

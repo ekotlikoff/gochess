@@ -1,3 +1,7 @@
 {
-    "BackendType": "websocket"
+    "BackendType": "websocket",
+    "EnableBotMatching": true,
+    "EngineConnectionTimeout": "1s",
+    "EngineAddr": "localhost:50051",
+    "MaxMatchingDuration": "5s"
 }

@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+option go_package = "github.com/Ekotlikoff/gochess/api";
+
+package rustchess;
+
+service RustChess {
+  rpc Game (stream GameMessage) returns (stream GameMessage) {}
+}
+
+message GameMessage {
+  oneof Request {
+    ChessMove chess_move = 1;
+    AsyncRequest async_request = 2;
+    GameStart game_start = 3;
+  }
+}
+
+message Position {
+  uint32 file = 1;
+  uint32 rank = 2;
+}
+
+message ChessMove {
+  Position original_position = 1;
+  Position new_position = 2;
+}
+
+message AsyncRequest {
+  enum Type {
+    DRAW = 0;
+    RESIGN = 1;
+  }
+  Type type = 1;
+}
+
+message GameTime {
+  uint32 player_main_time = 1;
+  uint32 increment = 2;
+}
+
+message GameStart {
+  enum Color {
+    BLACK = 0;
+    WHITE = 1;
+  }
+  Color player_color = 1;
+  GameTime player_game_time = 2;
+}

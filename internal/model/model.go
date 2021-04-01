@@ -1,5 +1,7 @@
 package model
 
+import "strconv"
+
 const (
 	Black = Color(iota)
 	White = Color(iota)
@@ -75,4 +77,8 @@ func (board board) String() string {
 		out += "\n"
 	}
 	return out
+}
+
+func (pos Position) String() string {
+	return strconv.Itoa(int(pos.File)) + "," + strconv.Itoa(int(pos.Rank))
 }

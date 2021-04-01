@@ -9,6 +9,7 @@ import (
 	"github.com/Ekotlikoff/gochess/internal/server/backend/websocket"
 	"github.com/Ekotlikoff/gochess/internal/server/frontend"
 	"net/url"
+	"time"
 )
 
 //go:embed config.json
@@ -16,7 +17,11 @@ var config []byte
 
 type (
 	Configuration struct {
-		BackendType BackendType
+		BackendType             BackendType
+		EnableBotMatching       bool
+		EngineConnectionTimeout string
+		EngineAddr              string
+		MaxMatchingDuration     string
 	}
 	BackendType string
 )
@@ -28,7 +33,15 @@ const (
 
 func main() {
 	config := loadConfig()
-	matchingServer := matchserver.NewMatchingServer()
+	engineConnTimeout, _ := time.ParseDuration(config.EngineConnectionTimeout)
+	maxMatchingDuration, _ := time.ParseDuration(config.MaxMatchingDuration)
+	var matchingServer matchserver.MatchingServer
+	if !config.EnableBotMatching {
+		matchingServer = matchserver.NewMatchingServer()
+	} else {
+		matchingServer = matchserver.NewMatchingServerWithEngine(
+			config.EngineAddr, maxMatchingDuration, engineConnTimeout)
+	}
 	exitChan := make(chan bool, 1)
 	go matchingServer.StartMatchServers(10, exitChan)
 	if config.BackendType == HttpBackend {

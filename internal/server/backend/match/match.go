@@ -3,6 +3,7 @@ package matchserver
 import (
 	"errors"
 	"github.com/Ekotlikoff/gochess/internal/model"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -35,8 +36,13 @@ func NewMatch(black *Player, white *Player, maxTimeMs int64) Match {
 		sync.RWMutex{}}
 }
 
-func DefaultMatchGenerator(black *Player, white *Player) Match {
-	return NewMatch(black, white, 1200000)
+func DefaultMatchGenerator(p1 *Player, p2 *Player) Match {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	if r.Intn(2) > 0 {
+		return NewMatch(p1, p2, 1200000)
+	} else {
+		return NewMatch(p2, p1, 1200000)
+	}
 }
 
 func (match *Match) PlayerName(color model.Color) string {

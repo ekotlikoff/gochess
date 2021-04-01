@@ -301,6 +301,7 @@ func (cm *ClientModel) handleSyncUpdate(opponentMove model.MoveRequest) {
 	err := cm.MakeMove(opponentMove)
 	if err != nil {
 		log.Println("FATAL: We do not expect an invalid move from the opponent.")
+		return
 	}
 	cm.ClearRequestedDraw()
 	newPos := model.Position{

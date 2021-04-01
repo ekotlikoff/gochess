@@ -3,12 +3,15 @@ package matchserver
 import (
 	"context"
 	"errors"
+	pb "github.com/Ekotlikoff/gochess/api"
 	"github.com/Ekotlikoff/gochess/internal/model"
+	"google.golang.org/grpc"
+	"math/rand"
 	"sync"
 	"time"
 )
 
-var DefaultTimeout time.Duration = 10 * time.Second
+var PollingDefaultTimeout time.Duration = 10 * time.Second
 
 const (
 	NullT               = WebsocketResponseType(iota)
@@ -165,7 +168,7 @@ func (player *Player) GetSyncUpdate() *model.MoveRequest {
 	select {
 	case update := <-player.opponentPlayedMove:
 		return &update
-	case <-time.After(DefaultTimeout):
+	case <-time.After(PollingDefaultTimeout):
 		return nil
 	}
 }
@@ -178,7 +181,7 @@ func (player *Player) GetAsyncUpdate() *ResponseAsync {
 	select {
 	case update := <-player.responseChanAsync:
 		return &update
-	case <-time.After(DefaultTimeout):
+	case <-time.After(PollingDefaultTimeout):
 		return nil
 	}
 }
@@ -212,17 +215,35 @@ type ResponseAsync struct {
 }
 
 type MatchingServer struct {
-	liveMatches  []*Match
-	mutex        *sync.Mutex
-	players      chan *Player
-	pendingMatch *sync.Mutex
+	liveMatches         []*Match
+	mutex               *sync.Mutex
+	players             chan *Player
+	pendingMatch        *sync.Mutex
+	botMatchingEnabled  bool
+	engineClient        pb.RustChessClient
+	engineClientConn    *grpc.ClientConn
+	maxMatchingDuration time.Duration
 }
 
 func NewMatchingServer() MatchingServer {
-	return MatchingServer{
+	matchingServer := MatchingServer{
 		mutex: &sync.Mutex{}, players: make(chan *Player),
 		pendingMatch: &sync.Mutex{},
 	}
+	return matchingServer
+}
+
+func NewMatchingServerWithEngine(
+	engineAddr string, maxMatchingDuration time.Duration,
+	engineConnTimeout time.Duration,
+) MatchingServer {
+	matchingServer := MatchingServer{
+		mutex: &sync.Mutex{}, players: make(chan *Player),
+		pendingMatch: &sync.Mutex{},
+	}
+	matchingServer.createEngineClient(engineAddr, engineConnTimeout)
+	matchingServer.maxMatchingDuration = maxMatchingDuration
+	return matchingServer
 }
 
 func (matchingServer *MatchingServer) LiveMatches() []*Match {
@@ -237,30 +258,47 @@ func (matchingServer *MatchingServer) matchAndPlay(
 	matchGenerator MatchGenerator, playServerID int,
 ) {
 	var player1, player2 *Player
+	maxMatchingTimer := time.NewTimer(0)
+	<-maxMatchingTimer.C
 	// Lock until a full match is found and started, thus avoiding unmatched
 	// players stranded across goroutines.
 	matchingServer.pendingMatch.Lock()
-	for player := range matchingServer.players {
-		if player1 == nil {
-			player1 = player
-		} else if player2 == nil {
-			player2 = player
-			match := matchGenerator(player1, player2)
-			player1.SetMatch(&match)
-			player2.SetMatch(&match)
-			matchingServer.mutex.Lock()
-			matchingServer.liveMatches =
-				append(matchingServer.liveMatches, &match)
-			matchingServer.mutex.Unlock()
-			matchingServer.pendingMatch.Unlock()
-			close(player1.matchStart)
-			close(player2.matchStart)
-			(&match).play()
-			matchingServer.removeMatch(&match)
-			player1.SetMatch(nil)
-			player2.SetMatch(nil)
-			player1, player2 = nil, nil
-			matchingServer.pendingMatch.Lock()
+	for {
+		select {
+		case player := <-matchingServer.players:
+			if player1 == nil {
+				player1 = player
+				if matchingServer.botMatchingEnabled {
+					maxMatchingTimer.Reset(matchingServer.maxMatchingDuration)
+				}
+			} else if player2 == nil {
+				player2 = player
+				match := matchGenerator(player1, player2)
+				player1.SetMatch(&match)
+				player2.SetMatch(&match)
+				matchingServer.mutex.Lock()
+				matchingServer.liveMatches =
+					append(matchingServer.liveMatches, &match)
+				matchingServer.mutex.Unlock()
+				matchingServer.pendingMatch.Unlock()
+				close(player1.matchStart)
+				close(player2.matchStart)
+				(&match).play()
+				matchingServer.removeMatch(&match)
+				player1.SetMatch(nil)
+				player2.SetMatch(nil)
+				player1, player2 = nil, nil
+				matchingServer.pendingMatch.Lock()
+			}
+		case <-maxMatchingTimer.C:
+			// The maxMatchingTimer has fired and we should match player1 with a
+			// bot.
+			botNames := [5]string{
+				"jessica", "cherry", "gumdrop", "roland", "pumpkin",
+			}
+			botPlayer := NewPlayer(botNames[rand.Intn(len(botNames))] + "bot")
+			go matchingServer.engineSession(&botPlayer)
+			go (func() { matchingServer.players <- &botPlayer })()
 		}
 	}
 }
@@ -281,6 +319,9 @@ func (matchingServer *MatchingServer) StartCustomMatchServers(
 		go matchingServer.matchAndPlay(matchGenerator, i)
 	}
 	<-quit // Wait to be told to exit.
+	if matchingServer.engineClientConn != nil {
+		matchingServer.engineClientConn.Close()
+	}
 }
 
 func (matchingServer *MatchingServer) removeMatch(matchToRemove *Match) {
