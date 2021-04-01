@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Credit to https://github.com/grpc/grpc-go/blob/master/vet.sh
 
 set -ex  # Exit on error; debugging enabled.
 set -o pipefail  # Fail a pipe if any sub-command fails.
@@ -25,6 +26,7 @@ if [[ "${TRAVIS}" = "true" ]]; then
     unzip ${PROTOC_FILENAME}
     bin/protoc --version
     popd
+    go get -u google.golang.org/protobuf
 fi
 
 # - gofmt, goimports, golint (with exceptions for generated code), go vet.
