@@ -49,18 +49,21 @@ type (
 	}
 
 	Player struct {
-		name               string
-		color              model.Color
-		elapsedMs          int64
-		requestChanSync    chan model.MoveRequest
-		responseChanSync   chan ResponseSync
-		requestChanAsync   chan RequestAsync
-		responseChanAsync  chan ResponseAsync
-		opponentPlayedMove chan model.MoveRequest
-		matchStart         chan struct{}
-		matchMutex         sync.RWMutex
-		searchingForMatch  bool
-		match              *Match
+		name                string
+		color               model.Color
+		elapsedMs           int64
+		requestChanSync     chan model.MoveRequest
+		responseChanSync    chan ResponseSync
+		requestChanAsync    chan RequestAsync
+		responseChanAsync   chan ResponseAsync
+		opponentPlayedMove  chan model.MoveRequest
+		matchStart          chan struct{}
+		clientDoneWithMatch chan struct{}
+		channelMutex        sync.RWMutex
+		matchStartMutex     sync.RWMutex
+		matchMutex          sync.RWMutex
+		searchingForMatch   bool
+		match               *Match
 	}
 )
 
@@ -99,6 +102,8 @@ func (player *Player) SetMatch(match *Match) {
 }
 
 func (player *Player) MatchedOpponentName() string {
+	player.matchMutex.RLock()
+	defer player.matchMutex.RUnlock()
 	opponentColor := model.Black
 	if player.color == opponentColor {
 		opponentColor = model.White
@@ -115,6 +120,8 @@ func (player *Player) Color() model.Color {
 }
 
 func (player *Player) GetWebsocketMessageToWrite() *WebsocketResponse {
+	player.channelMutex.RLock()
+	defer player.channelMutex.RUnlock()
 	var response WebsocketResponse
 	select {
 	case responseSync := <-player.responseChanSync:
@@ -137,6 +144,8 @@ func (player *Player) GetWebsocketMessageToWrite() *WebsocketResponse {
 }
 
 func (player *Player) WaitForMatchStart() error {
+	player.matchStartMutex.RLock()
+	defer player.matchStartMutex.RUnlock()
 	select {
 	case <-player.matchStart:
 		return nil
@@ -146,6 +155,8 @@ func (player *Player) WaitForMatchStart() error {
 }
 
 func (player *Player) HasMatchStarted(ctx context.Context) bool {
+	player.matchStartMutex.RLock()
+	defer player.matchStartMutex.RUnlock()
 	select {
 	case <-player.matchStart:
 		return true
@@ -155,16 +166,22 @@ func (player *Player) HasMatchStarted(ctx context.Context) bool {
 }
 
 func (player *Player) MakeMoveWS(pieceMove model.MoveRequest) {
+	player.channelMutex.RLock()
+	defer player.channelMutex.RUnlock()
 	player.requestChanSync <- pieceMove
 }
 
 func (player *Player) MakeMove(pieceMove model.MoveRequest) bool {
+	player.channelMutex.RLock()
+	defer player.channelMutex.RUnlock()
 	player.requestChanSync <- pieceMove
 	response := <-player.responseChanSync
 	return response.MoveSuccess
 }
 
 func (player *Player) GetSyncUpdate() *model.MoveRequest {
+	player.channelMutex.RLock()
+	defer player.channelMutex.RUnlock()
 	select {
 	case update := <-player.opponentPlayedMove:
 		return &update
@@ -174,10 +191,14 @@ func (player *Player) GetSyncUpdate() *model.MoveRequest {
 }
 
 func (player *Player) RequestAsync(requestAsync RequestAsync) {
+	player.channelMutex.RLock()
+	defer player.channelMutex.RUnlock()
 	player.requestChanAsync <- requestAsync
 }
 
 func (player *Player) GetAsyncUpdate() *ResponseAsync {
+	player.channelMutex.RLock()
+	defer player.channelMutex.RUnlock()
 	select {
 	case update := <-player.responseChanAsync:
 		return &update
@@ -187,18 +208,44 @@ func (player *Player) GetAsyncUpdate() *ResponseAsync {
 }
 
 func (player *Player) Reset() {
+	player.channelMutex.Lock()
+	defer player.channelMutex.Unlock()
 	// If the player preexisted there may be a client waiting on the opponent's
 	// move.
 	if player.opponentPlayedMove != nil {
 		close(player.opponentPlayedMove)
 	}
 	player.elapsedMs = 0
+	player.SetMatch(nil)
 	player.requestChanSync = make(chan model.MoveRequest, 1)
 	player.responseChanSync = make(chan ResponseSync, 10)
 	player.requestChanAsync = make(chan RequestAsync, 1)
 	player.responseChanAsync = make(chan ResponseAsync, 1)
 	player.opponentPlayedMove = make(chan model.MoveRequest, 10)
+	player.matchStartMutex.Lock()
+	defer player.matchStartMutex.Unlock()
 	player.matchStart = make(chan struct{})
+}
+
+func (player *Player) startMatch() {
+	player.matchStartMutex.RLock()
+	defer player.matchStartMutex.RUnlock()
+	close(player.matchStart)
+	player.channelMutex.Lock()
+	defer player.channelMutex.Unlock()
+	player.clientDoneWithMatch = make(chan struct{})
+}
+
+func (player *Player) ClientDoneWithMatch() {
+	player.channelMutex.RLock()
+	defer player.channelMutex.RUnlock()
+	close(player.clientDoneWithMatch)
+}
+
+func (player *Player) WaitForClientToBeDoneWithMatch() {
+	player.channelMutex.RLock()
+	defer player.channelMutex.RUnlock()
+	<-player.clientDoneWithMatch
 }
 
 type ResponseSync struct {
@@ -281,12 +328,10 @@ func (matchingServer *MatchingServer) matchAndPlay(
 					append(matchingServer.liveMatches, &match)
 				matchingServer.mutex.Unlock()
 				matchingServer.pendingMatch.Unlock()
-				close(player1.matchStart)
-				close(player2.matchStart)
+				player1.startMatch()
+				player2.startMatch()
 				(&match).play()
 				matchingServer.removeMatch(&match)
-				player1.SetMatch(nil)
-				player2.SetMatch(nil)
 				player1, player2 = nil, nil
 				matchingServer.pendingMatch.Lock()
 			}

@@ -29,8 +29,6 @@ func NewMatch(black *Player, white *Player, maxTimeMs int64) Match {
 		black.name = black.name + "_black"
 		white.name = white.name + "_white"
 	}
-	black.elapsedMs = 0
-	white.elapsedMs = 0
 	game := model.NewGame()
 	return Match{black, white, &game, make(chan struct{}), maxTimeMs, nil,
 		sync.RWMutex{}}
@@ -71,10 +69,16 @@ func (match *Match) MaxTimeMs() int64 {
 }
 
 func (match *Match) play() {
-	go match.handleAsyncRequests()
+	waitc := make(chan struct{})
+	go match.handleAsyncRequests(waitc)
 	for !match.game.GameOver() {
 		match.handleTurn()
 	}
+	<-waitc
+	match.black.WaitForClientToBeDoneWithMatch()
+	match.white.WaitForClientToBeDoneWithMatch()
+	match.black.Reset()
+	match.white.Reset()
 }
 
 func (match *Match) handleTurn() {
@@ -131,7 +135,8 @@ func (match *Match) handleTimeout(opponent *Player) func() {
 	}
 }
 
-func (match *Match) handleAsyncRequests() {
+func (match *Match) handleAsyncRequests(waitc chan struct{}) {
+	defer close(waitc)
 	for !match.game.GameOver() {
 		opponent := match.white
 		player := match.black
@@ -158,7 +163,7 @@ func (match *Match) handleAsyncRequests() {
 					case opponent.responseChanAsync <- ResponseAsync{
 						false, true, false, false, false, "",
 					}:
-					case <-time.After(10 * time.Second):
+					case <-match.gameOver:
 					}
 				}()
 			} else {
@@ -168,7 +173,7 @@ func (match *Match) handleAsyncRequests() {
 					case opponent.responseChanAsync <- ResponseAsync{
 						false, true, false, false, false, "",
 					}:
-					case <-time.After(10 * time.Second):
+					case <-match.gameOver:
 					}
 				}()
 			}
@@ -186,14 +191,18 @@ func (match *Match) handleGameOver(
 	}
 	response := ResponseAsync{GameOver: true, Draw: draw,
 		Resignation: resignation, Timeout: timeout, Winner: winnerName}
+	var wg sync.WaitGroup
 	for _, player := range [2]*Player{match.black, match.white} {
 		thisPlayer := player
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			select {
 			case thisPlayer.responseChanAsync <- response:
 			case <-time.After(5 * time.Second):
 			}
 		}()
 	}
+	wg.Wait()
 	close(match.gameOver)
 }

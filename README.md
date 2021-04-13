@@ -55,3 +55,6 @@ TODO
     - [ ] Support pieceType options for pawn promotion
 * General
     - [x] Travis CI test
+    - [x] Fix race conditions
+    - [ ] Add race testing to travis CI
+    - [ ] Add vet to local build with https://github.com/grpc/grpc-go/blob/master/Makefile as inspiration

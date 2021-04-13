@@ -18,5 +18,5 @@ proto:
 testrace:
 	go test -race -cpu 1,4 -timeout 7m ./...
 
-runweb: buildweb
+runweb: web
 	go run $(run_local_package)

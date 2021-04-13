@@ -47,16 +47,16 @@ func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
 			return
 		}
 		defer c.Close()
-		go readLoop(c, matchServer, player)
+		waitc := make(chan struct{})
+		go readLoop(c, matchServer, player, waitc)
 		writeLoop(c, player)
+		<-waitc
+		player.ClientDoneWithMatch()
 	}
 	return http.HandlerFunc(handler)
 }
 
 func writeLoop(c *websocket.Conn, player *matchserver.Player) {
-	if !player.GetSearchingForMatch() {
-		player.Reset()
-	}
 	err := player.WaitForMatchStart()
 	if err != nil {
 		log.Println("FATAL: Failed to find match")
@@ -80,12 +80,14 @@ func writeLoop(c *websocket.Conn, player *matchserver.Player) {
 	}
 }
 
-func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer, player *matchserver.Player) {
+func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
+	player *matchserver.Player, waitc chan struct{}) {
 	defer c.Close()
 	for {
 		message := matchserver.WebsocketRequest{}
 		if err := c.ReadJSON(&message); err != nil {
 			log.Println("Read error:", err)
+			close(waitc)
 			return
 		}
 		switch message.WebsocketRequestType {

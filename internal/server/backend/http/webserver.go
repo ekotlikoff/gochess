@@ -123,6 +123,10 @@ func makeAsyncHandler(cache *gateway.TTLMap) http.Handler {
 			w.Header().Set("Content-Type", "application/json")
 			if err := json.NewEncoder(w).Encode(asyncUpdate); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			if asyncUpdate.GameOver {
+				player.ClientDoneWithMatch()
 			}
 		case "POST":
 			var requestAsync matchserver.RequestAsync
