@@ -5,18 +5,20 @@ import (
 	"encoding/binary"
 )
 
-type Piece struct {
-	pieceType  PieceType
-	position   Position
-	color      Color
-	movesTaken uint16
-}
+type (
+	Piece struct {
+		pieceType  PieceType
+		position   Position
+		color      Color
+		movesTaken uint16
+	}
+
+	PieceType uint8
+)
 
 func NewPiece(pieceType PieceType, position Position, color Color) *Piece {
 	return &Piece{pieceType, position, color, uint16(0)}
 }
-
-type PieceType uint8
 
 const (
 	Rook   = PieceType(iota)

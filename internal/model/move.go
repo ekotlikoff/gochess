@@ -13,29 +13,31 @@ func (move *Move) String() string {
 	return fmt.Sprintf("%d,%d", move.X, move.Y)
 }
 
-var diagonalMoves = []Move{Move{1, 1}, Move{1, -1}, Move{-1, 1}, Move{-1, -1}}
-var straightMoves = []Move{Move{0, 1}, Move{0, -1}, Move{1, 0}, Move{-1, 0}}
+var (
+	diagonalMoves = []Move{Move{1, 1}, Move{1, -1}, Move{-1, 1}, Move{-1, -1}}
+	straightMoves = []Move{Move{0, 1}, Move{0, -1}, Move{1, 0}, Move{-1, 0}}
 
-var moveMap = map[PieceType][]Move{
-	Rook: straightMoves,
-	Knight: {
-		Move{1, 2}, Move{1, -2}, Move{-1, 2}, Move{-1, -2},
-		Move{2, 1}, Move{2, -1}, Move{-2, 1}, Move{-2, -1},
-	},
-	Bishop: diagonalMoves,
-	Queen:  append(diagonalMoves, straightMoves...),
-	King:   append(diagonalMoves, straightMoves...),
-	Pawn:   {Move{0, 1}},
-}
+	moveMap = map[PieceType][]Move{
+		Rook: straightMoves,
+		Knight: {
+			Move{1, 2}, Move{1, -2}, Move{-1, 2}, Move{-1, -2},
+			Move{2, 1}, Move{2, -1}, Move{-2, 1}, Move{-2, -1},
+		},
+		Bishop: diagonalMoves,
+		Queen:  append(diagonalMoves, straightMoves...),
+		King:   append(diagonalMoves, straightMoves...),
+		Pawn:   {Move{0, 1}},
+	}
 
-var maxSlideMap = map[PieceType]uint8{
-	Rook:   7,
-	Knight: 1,
-	Bishop: 7,
-	Queen:  7,
-	King:   1,
-	Pawn:   2,
-}
+	maxSlideMap = map[PieceType]uint8{
+		Rook:   7,
+		Knight: 1,
+		Bishop: 7,
+		Queen:  7,
+		King:   1,
+		Pawn:   2,
+	}
+)
 
 func (piece *Piece) takeMoveShort(board *board, move Move) {
 	piece.takeMove(board, move, Move{}, nil, nil, nil)
@@ -254,12 +256,20 @@ func (piece *Piece) validMovesSlide(
 				board, slideMove, previousMove, previousMover, king,
 			)
 		}
-		if !piece.isMoveInBounds(slideMove) || wouldBeInCheck() {
-			continue
+		if !piece.isMoveInBounds(slideMove) {
+			break
 		}
 		newX, newY := addMoveToPosition(piece, slideMove)
 		pieceAtDest := board[newX][newY]
 		destIsValidNoCapture := pieceAtDest == nil
+		if wouldBeInCheck() {
+			// Continue only if there is no piece in the way
+			if destIsValidNoCapture {
+				continue
+			} else {
+				break
+			}
+		}
 		if destIsValidNoCapture && (piece.pieceType != Pawn || !allThreatened) {
 			validSlides = append(validSlides, slideMove)
 		} else {

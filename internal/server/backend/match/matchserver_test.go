@@ -73,6 +73,7 @@ func TestMatchingServerDraw(t *testing.T) {
 	player1.requestChanAsync <- RequestAsync{RequestToDraw: true}
 	<-player2.responseChanAsync
 	player1.requestChanAsync <- RequestAsync{RequestToDraw: true}
+	<-player2.responseChanAsync
 	tries := 0
 	for liveMatch.GetRequestedDraw() != nil && tries < 10 {
 		time.Sleep(time.Millisecond)
@@ -135,12 +136,17 @@ func TestMatchingServerPlayerSecondGame(t *testing.T) {
 	liveMatch := matchingServer.LiveMatches()[0]
 	player1.requestChanAsync <- RequestAsync{Resign: true}
 	response := <-player1.responseChanAsync
+	player1.ClientDoneWithMatch()
+	player2.ClientDoneWithMatch()
+	tries = 0
+	for len(matchingServer.LiveMatches()) == 1 && tries < 10 {
+		time.Sleep(time.Millisecond)
+		tries++
+	}
 	if !liveMatch.game.GameOver() || !response.GameOver ||
 		!response.Resignation || len(matchingServer.LiveMatches()) > 0 {
-		t.Error("Expected resignation got ", response)
+		t.Error("Expected resignation got ", response.GameOver)
 	}
-	player1.Reset()
-	player2.Reset()
 	go matchingServer.MatchPlayer(&player1)
 	go matchingServer.MatchPlayer(&player2)
 	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
@@ -250,6 +256,15 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	response := <-black.responseChanAsync
 	if !response.GameOver || !(response.Winner == white.name) {
 		t.Error("Expected checkmate got ", response)
+	}
+}
+
+func TestMatchingServerEngineTimeout(t *testing.T) {
+	matchingServer := NewMatchingServerWithEngine("localhost:50000",
+		time.Millisecond, time.Millisecond)
+	if matchingServer.botMatchingEnabled {
+		t.Error("Expected bot matching to be disabled due to failed connection",
+			"with engine..")
 	}
 }
 

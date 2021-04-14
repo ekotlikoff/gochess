@@ -7,30 +7,32 @@ import (
 	"sync"
 )
 
-type Game struct {
-	board                       *board
-	turn                        Color
-	gameOver                    bool
-	result                      GameResult
-	previousMove                Move
-	previousMover               *Piece
-	blackKing                   *Piece
-	whiteKing                   *Piece
-	positionHistory             map[string]uint8
-	turnsSinceCaptureOrPawnMove uint8
-	mutex                       sync.RWMutex
-}
+type (
+	Game struct {
+		board                       *board
+		turn                        Color
+		gameOver                    bool
+		result                      GameResult
+		previousMove                Move
+		previousMover               *Piece
+		blackKing                   *Piece
+		whiteKing                   *Piece
+		positionHistory             map[string]uint8
+		turnsSinceCaptureOrPawnMove uint8
+		mutex                       sync.RWMutex
+	}
 
-type GameResult struct {
-	Winner Color
-	Draw   bool
-}
+	GameResult struct {
+		Winner Color
+		Draw   bool
+	}
 
-type MoveRequest struct {
-	Position  Position
-	Move      Move
-	PromoteTo *PieceType
-}
+	MoveRequest struct {
+		Position  Position
+		Move      Move
+		PromoteTo *PieceType
+	}
+)
 
 func (game *Game) Move(moveRequest MoveRequest) error {
 	game.mutex.Lock()
@@ -216,4 +218,8 @@ func (game *Game) Result() GameResult {
 	game.mutex.RLock()
 	defer game.mutex.RUnlock()
 	return game.result
+}
+
+func (mr MoveRequest) String() string {
+	return "Position: " + mr.Position.String() + ", Move: " + mr.Move.String()
 }

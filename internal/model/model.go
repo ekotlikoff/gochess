@@ -1,15 +1,21 @@
 package model
 
-type Color uint8
+import "strconv"
 
 const (
 	Black = Color(iota)
 	White = Color(iota)
 )
 
-type Position struct {
-	File, Rank uint8
-}
+type (
+	Color uint8
+
+	Position struct {
+		File, Rank uint8
+	}
+
+	board [8][8]*Piece
+)
 
 func NewPosition(file, rank uint8) Position {
 	switch {
@@ -20,8 +26,6 @@ func NewPosition(file, rank uint8) Position {
 	}
 	return Position{file, rank}
 }
-
-type board [8][8]*Piece
 
 func NewFullBoard() board {
 	var board board
@@ -73,4 +77,8 @@ func (board board) String() string {
 		out += "\n"
 	}
 	return out
+}
+
+func (pos Position) String() string {
+	return strconv.Itoa(int(pos.File)) + "," + strconv.Itoa(int(pos.Rank))
 }

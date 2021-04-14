@@ -1,11 +1,12 @@
-package webserver
+package httpserver
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/Ekotlikoff/gochess/internal/model"
-	"github.com/Ekotlikoff/gochess/internal/server/match"
+	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	"github.com/Ekotlikoff/gochess/internal/server/frontend"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -26,18 +27,18 @@ var (
 )
 
 func init() {
-	serverSession = httptest.NewServer(http.HandlerFunc(StartSession))
-	serverAsync = httptest.NewServer(http.HandlerFunc(AsyncHandler))
-	serverSync = httptest.NewServer(http.HandlerFunc(SyncHandler))
+	serverSession = httptest.NewServer(http.HandlerFunc(gateway.StartSession))
+	serverAsync = httptest.NewServer(http.Handler(makeAsyncHandler(gateway.SessionCache)))
+	serverSync = httptest.NewServer(http.Handler(makeSyncHandler(gateway.SessionCache)))
 	matchingServer := matchserver.NewMatchingServer()
 	serverMatch = httptest.NewServer(
-		createSearchForMatchHandler(&matchingServer))
+		makeSearchForMatchHandler(&matchingServer, gateway.SessionCache))
 	exitChan := make(chan bool, 1)
 	close(exitChan)
 	matchingServer.StartMatchServers(10, exitChan)
 	timeoutMatchingServer := matchserver.NewMatchingServer()
 	serverMatchTimeout = httptest.NewServer(
-		createSearchForMatchHandler(&timeoutMatchingServer))
+		makeSearchForMatchHandler(&timeoutMatchingServer, gateway.SessionCache))
 	generator := func(
 		black *matchserver.Player, white *matchserver.Player,
 	) matchserver.Match {
@@ -45,65 +46,6 @@ func init() {
 	}
 	timeoutMatchingServer.StartCustomMatchServers(10, generator, exitChan)
 	SetQuiet()
-}
-
-func TestHTTPServerStartSession(t *testing.T) {
-	if debug {
-		fmt.Println("Test StartSession")
-	}
-	credentialsBuf := new(bytes.Buffer)
-	credentials := Credentials{"my_username"}
-	json.NewEncoder(credentialsBuf).Encode(credentials)
-	resp, err := http.Post(serverSession.URL, ctp, credentialsBuf)
-	if err != nil {
-		t.Error(err)
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if debug {
-		fmt.Println(body)
-		fmt.Println(resp.Cookies())
-		fmt.Println(err)
-	}
-	if resp.StatusCode != 200 || err != nil || len(resp.Cookies()) == 0 {
-		t.Error("Expected cookies")
-	}
-}
-
-func TestHTTPServerStartSessionError(t *testing.T) {
-	if debug {
-		fmt.Println("Test StartSessionError")
-	}
-	resp, _ := http.Post(serverSession.URL, "application/json", bytes.NewBuffer([]byte("error")))
-	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	if debug {
-		fmt.Println(string(body))
-		fmt.Println(resp.Cookies())
-	}
-	if resp.StatusCode == 200 || len(resp.Cookies()) == 1 {
-		t.Error("Expected failure")
-	}
-}
-
-func TestHTTPServerStartSessionNoUsername(t *testing.T) {
-	if debug {
-		fmt.Println("Test StartSessionNoUsername")
-	}
-	requestBody, _ := json.Marshal(map[string]string{
-		"not_username": "my_username",
-	})
-	resp, _ := http.Post(serverSession.URL, "application/json", bytes.NewBuffer(requestBody))
-	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	if debug {
-		fmt.Println(string(body))
-		fmt.Println(resp.Cookies())
-	}
-	if resp.StatusCode == 200 || len(resp.Cookies()) == 1 ||
-		!strings.HasPrefix(string(body), "Missing username") {
-		t.Error("Expected failure")
-	}
 }
 
 func TestHTTPServerMatch(t *testing.T) {
@@ -257,7 +199,7 @@ func createMatch(testMatchServer *httptest.Server) (
 	blackName = "player1"
 	whiteName = "player2"
 	white = client2
-	var matchResponse MatchedResponse
+	var matchResponse matchserver.MatchedResponse
 	json.NewDecoder(resp.Body).Decode(&matchResponse)
 	resp.Body.Close()
 	if matchResponse.Color == model.White {
@@ -283,7 +225,7 @@ func sendMove(client *http.Client, serverSync *httptest.Server, x, y,
 
 func startSession(client *http.Client, username string) {
 	credentialsBuf := new(bytes.Buffer)
-	credentials := Credentials{username}
+	credentials := gateway.Credentials{username}
 	json.NewEncoder(credentialsBuf).Encode(credentials)
 	resp, err := client.Post(serverSession.URL, "application/json", credentialsBuf)
 	serverSessionURL, _ := url.Parse(serverSession.URL)

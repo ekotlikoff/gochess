@@ -1,15 +1,22 @@
-all: buildweb
+all: proto web
 	go install ./...
 	go test ./...
 
-server := http://192.168.1.166:8000/
-webclient_package := github.com/Ekotlikoff/gochess/internal/server/http/webclient
-webserver_cmd_package := github.com/Ekotlikoff/gochess/cmd/webserver
+webclient_package := github.com/Ekotlikoff/gochess/internal/client/web
+run_local_package := github.com/Ekotlikoff/gochess/cmd/webserver
 
-buildweb:
+web:
 	GOARCH=wasm GOOS=js go build \
-		   -o $(GOPATH)/src/gochess/internal/server/http/webserver/static/lib.wasm \
+		   -o $(GOPATH)/src/gochess/internal/server/frontend/static/lib.wasm \
 		   -tags webclient $(webclient_package)
 
-runweb: buildweb
-	go run $(webserver_cmd_package)
+proto:
+	protoc --go_out=. --go_opt=paths=source_relative \
+    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+    api/chessengine.proto
+
+testrace:
+	go test -race -cpu 1,4 -timeout 7m ./...
+
+runweb: web
+	go run $(run_local_package)
