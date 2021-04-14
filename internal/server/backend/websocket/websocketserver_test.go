@@ -3,6 +3,7 @@ package websocketserver
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/Ekotlikoff/gochess/internal/model"
 	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
 	"github.com/Ekotlikoff/gochess/internal/server/frontend"
@@ -114,7 +115,8 @@ func TestWSMatch(t *testing.T) {
 		t.Error("Expected valid move response")
 	}
 	if enemyResp.OpponentPlayedMove.Move.Y != 2 {
-		t.Error("Expected opponent's move")
+		t.Error("Expected opponent's move, got " +
+			fmt.Sprint(enemyResp.OpponentPlayedMove.Move.Y))
 	}
 	black.ReadJSON(&playerResp)
 	white.ReadJSON(&enemyResp)
