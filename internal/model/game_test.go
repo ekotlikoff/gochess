@@ -213,7 +213,7 @@ func TestPositionEncoding(t *testing.T) {
 	game.Move(MoveRequest{Position{4, 5}, Move{1, 1}, nil})
 	game.Move(MoveRequest{Position{4, 7}, Move{-1, -1}, nil})
 	bytes2, _ := game.MarshalBinary()
-	if bytes.Compare(bytes1, bytes2) == 0 {
+	if bytes.Equal(bytes1, bytes2) {
 		t.Error("Positions should not be equivalent")
 	}
 	if debug {
@@ -228,7 +228,7 @@ func TestPositionEncoding(t *testing.T) {
 	game.Move(MoveRequest{Position{4, 1}, Move{-1, -1}, nil})
 	game.Move(MoveRequest{Position{2, 5}, Move{1, 1}, nil})
 	bytes3, _ := game.MarshalBinary()
-	if bytes.Compare(bytes2, bytes3) != 0 {
+	if !bytes.Equal(bytes2, bytes3) {
 		t.Error("Positions should be equivalent")
 	}
 }
@@ -253,7 +253,7 @@ func TestPositionEncodingCastle(t *testing.T) {
 	game.Move(MoveRequest{Position{4, 1}, Move{0, -1}, nil})
 	game.Move(MoveRequest{Position{4, 6}, Move{0, 1}, nil})
 	positionWithoutCastle, _ := game.MarshalBinary()
-	if bytes.Compare(positionWithCastle, positionWithoutCastle) == 0 {
+	if bytes.Equal(positionWithCastle, positionWithoutCastle) {
 		t.Error("Positions should not be equivalent")
 	}
 }
@@ -280,7 +280,7 @@ func TestPositionEncodingEnPassant(t *testing.T) {
 		t.Error("En passant should no longer be an option")
 	}
 	positionWithoutEnPassant, _ := game.MarshalBinary()
-	if bytes.Compare(positionWithEnPassant, positionWithoutEnPassant) == 0 {
+	if bytes.Equal(positionWithEnPassant, positionWithoutEnPassant) {
 		t.Error("Positions should not be equivalent")
 	}
 }

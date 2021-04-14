@@ -20,7 +20,6 @@ import (
 )
 
 var (
-	debug              bool = false
 	serverSession      *httptest.Server
 	serverMatchAndPlay *httptest.Server
 )

@@ -79,11 +79,11 @@ func (game *Game) Move(moveRequest MoveRequest) error {
 
 func (game *Game) isMoveRequestValid(piece *Piece) error {
 	if game.gameOver {
-		return errors.New("The game is over")
+		return errors.New("the game is over")
 	} else if piece == nil {
-		return errors.New("Cannot move nil piece")
+		return errors.New("cannot move nil piece")
 	} else if piece.color != game.turn {
-		return errors.New("It's not your turn")
+		return errors.New("it's not your turn")
 	}
 	return nil
 }

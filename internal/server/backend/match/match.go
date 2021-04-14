@@ -126,7 +126,7 @@ func (match *Match) handleTurn() {
 		}
 		match.handleGameOver(result.Draw, false, false, winner)
 	}
-	player.elapsedMs += time.Now().Sub(turnStart).Milliseconds()
+	player.elapsedMs += time.Since(turnStart).Milliseconds()
 }
 
 func (match *Match) handleTimeout(opponent *Player) func() {

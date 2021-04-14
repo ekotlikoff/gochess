@@ -294,9 +294,8 @@ func NewMatchingServerWithEngine(
 }
 
 func (matchingServer *MatchingServer) LiveMatches() []*Match {
-	liveMatches := []*Match{}
 	matchingServer.mutex.Lock()
-	liveMatches = matchingServer.liveMatches
+	liveMatches := matchingServer.liveMatches
 	matchingServer.mutex.Unlock()
 	return liveMatches
 }
@@ -379,7 +378,7 @@ func (matchingServer *MatchingServer) removeMatch(matchToRemove *Match) {
 				matchingServer.liveMatches = nil
 			} else {
 				liveMatches[i] = liveMatches[len(liveMatches)-1]
-				liveMatches = liveMatches[:len(liveMatches)-1]
+				matchingServer.liveMatches = liveMatches[:len(liveMatches)-1]
 				return
 			}
 		}

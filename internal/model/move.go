@@ -49,7 +49,7 @@ func (piece *Piece) takeMove(
 ) (bool, error) {
 	if !piece.IsMoveValid(board, move, previousMove, previousMover, king,
 		promoteTo) {
-		return false, errors.New("Piece attempted invalid move.")
+		return false, errors.New("piece attempted invalid move")
 	}
 	_, capturedPiece, _, _ :=
 		piece.takeMoveUnsafe(
@@ -73,7 +73,7 @@ func (piece *Piece) takeMoveUnsafe(
 	newX, newY := addMoveToPosition(piece, move)
 	enPassantTargetY := uint8(int8(newY) + int8(-1*yDirection))
 	enPassantTarget := &Piece{}
-	if newX >= 0 && newX <= 7 && enPassantTargetY >= 0 && enPassantTargetY <= 7 {
+	if newX <= 7 && enPassantTargetY <= 7 {
 		enPassantTarget = board[newX][enPassantTargetY]
 	}
 	isEnPassant := (piece.pieceType == Pawn && newX != piece.File() &&
@@ -183,8 +183,8 @@ func addMoveToPosition(piece *Piece, move Move) (uint8, uint8) {
 
 func (piece *Piece) isMoveInBounds(move Move) bool {
 	newX, newY := addMoveToPosition(piece, move)
-	xInBounds := newX >= 0 && newX < 8
-	yInBounds := newY >= 0 && newY < 8
+	xInBounds := newX < 8
+	yInBounds := newY < 8
 	return xInBounds && yInBounds
 }
 
