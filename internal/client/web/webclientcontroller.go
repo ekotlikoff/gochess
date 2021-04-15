@@ -612,7 +612,7 @@ func preventDefault(this js.Value, i []js.Value) interface{} {
 
 func (cm *ClientModel) resetGame() {
 	game := model.NewGame()
-	cm.SetGame(&game)
+	cm.SetGame(game)
 	cm.viewClearBoard()
 	cm.viewInitBoard(cm.playerColor)
 }

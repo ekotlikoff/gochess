@@ -143,7 +143,7 @@ func (clientModel *ClientModel) viewClearBoard() {
 }
 
 func (clientModel *ClientModel) viewInitBoard(playerColor model.Color) {
-	for _, file := range clientModel.game.Board() {
+	for _, file := range clientModel.game.GetBoard() {
 		for _, piece := range file {
 			if piece != nil {
 				div := clientModel.document.Call("createElement", "div")
@@ -185,7 +185,7 @@ func (cm *ClientModel) viewHandleMove(
 
 func (cm *ClientModel) viewHandleEnPassant(
 	move model.Move, newPos model.Position, targetEmpty bool) {
-	pawn := cm.game.Board().Piece(newPos)
+	pawn := cm.game.GetBoard().Piece(newPos)
 	if pawn.PieceType() == model.Pawn && move.X != 0 && targetEmpty {
 		capturedY := pawn.Rank() + 1
 		if move.Y > 0 {
@@ -203,7 +203,7 @@ func (cm *ClientModel) viewHandleEnPassant(
 
 func (cm *ClientModel) viewHandleCastle(
 	move model.Move, newPos model.Position) {
-	king := cm.game.Board().Piece(newPos)
+	king := cm.game.GetBoard().Piece(newPos)
 	if king.PieceType() == model.King &&
 		(move.X < -1 || move.X > 1) {
 		var rookPosition model.Position

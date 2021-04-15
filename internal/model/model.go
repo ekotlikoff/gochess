@@ -18,7 +18,8 @@ type (
 		File, Rank uint8
 	}
 
-	board [8][8]*Piece
+	// Board is a chess board of pieces
+	Board [8][8]*Piece
 )
 
 // NewPosition creates a new position
@@ -32,8 +33,8 @@ func NewPosition(file, rank uint8) Position {
 	return Position{file, rank}
 }
 
-func newFullBoard() board {
-	var board board
+func newFullBoard() Board {
+	var board Board
 	// Create the pawns.
 	for i := uint8(0); i < 16; i++ {
 		color := Black
@@ -50,13 +51,13 @@ func newFullBoard() board {
 	return board
 }
 
-func newBoardNoPawns() board {
-	var board board
+func newBoardNoPawns() Board {
+	var board Board
 	createTheBackLine(&board)
 	return board
 }
 
-func createTheBackLine(board *board) {
+func createTheBackLine(board *Board) {
 	for i := uint8(0); i < 4; i++ {
 		board[i][7] = NewPiece(PieceType(i), NewPosition(uint8(i), 7), Black)
 		board[i][0] = NewPiece(PieceType(i), NewPosition(uint8(i), 0), White)
@@ -69,11 +70,12 @@ func createTheBackLine(board *board) {
 	}
 }
 
-func (board board) Piece(pos Position) *Piece {
+// Piece get a piece from the board
+func (board Board) Piece(pos Position) *Piece {
 	return board[pos.File][pos.Rank]
 }
 
-func (board board) String() string {
+func (board Board) String() string {
 	out := ""
 	for rank := 7; rank >= 0; rank-- {
 		for file := 0; file < 8; file++ {

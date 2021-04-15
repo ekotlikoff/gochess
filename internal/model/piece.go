@@ -127,7 +127,7 @@ func (piece *Piece) Value() int8 {
 
 // MarshalBinary return the piece's representation as a byte array
 func (piece *Piece) MarshalBinary(
-	board *board, previousMove Move, previousMover *Piece, king *Piece,
+	board *Board, previousMove Move, previousMover *Piece, king *Piece,
 ) (data []byte, err error) {
 	// Ensure temporary options (castle/en passant) are taken into account
 	// for draw by repetition.

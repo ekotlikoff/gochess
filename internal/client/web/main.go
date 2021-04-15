@@ -37,7 +37,7 @@ func main() {
 	clientTimeout, _ := time.ParseDuration(config.ClientTimeout)
 	client := &http.Client{Jar: jar, Timeout: clientTimeout}
 	clientModel := ClientModel{
-		game: &game, playerColor: model.White,
+		game: game, playerColor: model.White,
 		document: js.Global().Get("document"),
 		board: js.Global().Get("document").Call(
 			"getElementById", "board-layout-chessboard"),

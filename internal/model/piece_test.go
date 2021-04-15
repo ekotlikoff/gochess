@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func movePiece(board *board, oldX uint8, oldY uint8, newX uint8, newY uint8) {
+func movePiece(board *Board, oldX uint8, oldY uint8, newX uint8, newY uint8) {
 	board[newX][newY] = board[oldX][oldY]
 	board[oldX][oldY] = nil
 	board[newX][newY].position.File = newX

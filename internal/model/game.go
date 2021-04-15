@@ -10,7 +10,7 @@ import (
 type (
 	// Game is a struct representing a chess game
 	Game struct {
-		board                       *board
+		board                       *Board
 		turn                        Color
 		gameOver                    bool
 		result                      GameResult
@@ -161,7 +161,7 @@ func NewGameNoPawns() *Game {
 	return createGame(board)
 }
 
-func createGame(board board) *Game {
+func createGame(board Board) *Game {
 	game := Game{
 		board: &board, blackKing: board[4][7], whiteKing: board[4][0],
 		positionHistory: make(map[string]uint8),
@@ -176,6 +176,13 @@ func (game *Game) BoardString() string {
 	game.mutex.RLock()
 	defer game.mutex.RUnlock()
 	return game.board.String()
+}
+
+// GetBoard get the game's board
+func (game *Game) GetBoard() *Board {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.board
 }
 
 // PointAdvantage get the color's point advantage
