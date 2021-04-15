@@ -14,8 +14,8 @@ func (move *Move) String() string {
 }
 
 var (
-	diagonalMoves = []Move{Move{1, 1}, Move{1, -1}, Move{-1, 1}, Move{-1, -1}}
-	straightMoves = []Move{Move{0, 1}, Move{0, -1}, Move{1, 0}, Move{-1, 0}}
+	diagonalMoves = []Move{{1, 1}, {1, -1}, {-1, 1}, {-1, -1}}
+	straightMoves = []Move{{0, 1}, {0, -1}, {1, 0}, {-1, 0}}
 
 	moveMap = map[PieceType][]Move{
 		Rook: straightMoves,
@@ -147,8 +147,8 @@ func (piece *Piece) ValidMoves(
 
 func (piece *Piece) promotionValid(move Move, promoteTo *PieceType) bool {
 	validPromoteTypes := map[PieceType]struct{}{
-		Bishop: struct{}{}, Knight: struct{}{},
-		Rook: struct{}{}, Queen: struct{}{},
+		Bishop: {}, Knight: {},
+		Rook: {}, Queen: {},
 	}
 	_, newY := addMoveToPosition(piece, move)
 	if piece.PieceType() == Pawn {
