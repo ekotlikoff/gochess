@@ -49,7 +49,10 @@ func TestHTTPServerStartSessionError(t *testing.T) {
 	if debug {
 		fmt.Println("Test StartSessionError")
 	}
-	resp, _ := http.Post(serverSession.URL, "application/json", bytes.NewBuffer([]byte("error")))
+	resp, err := http.Post(serverSession.URL, "application/json", bytes.NewBuffer([]byte("error")))
+	if err != nil {
+		t.Error("Did not expect an error")
+	}
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	if debug {
@@ -68,7 +71,10 @@ func TestHTTPServerStartSessionNoUsername(t *testing.T) {
 	requestBody, _ := json.Marshal(map[string]string{
 		"not_username": "my_username",
 	})
-	resp, _ := http.Post(serverSession.URL, "application/json", bytes.NewBuffer(requestBody))
+	resp, err := http.Post(serverSession.URL, "application/json", bytes.NewBuffer(requestBody))
+	if err != nil {
+		t.Error("Did not expect an error")
+	}
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	if debug {

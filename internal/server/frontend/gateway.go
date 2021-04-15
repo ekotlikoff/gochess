@@ -90,7 +90,7 @@ func StartSession(w http.ResponseWriter, r *http.Request) {
 	}
 	sessionTokenStr := sessionToken.String()
 	player := matchserver.NewPlayer(creds.Username)
-	SessionCache.Put(sessionTokenStr, &player)
+	SessionCache.Put(sessionTokenStr, player)
 	http.SetCookie(w, &http.Cookie{
 		Name:    "session_token",
 		Value:   sessionTokenStr,

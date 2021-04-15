@@ -30,7 +30,7 @@ func NewMatch(black *Player, white *Player, maxTimeMs int64) Match {
 		white.name = white.name + "_white"
 	}
 	game := model.NewGame()
-	return Match{black, white, &game, make(chan struct{}), maxTimeMs, nil,
+	return Match{black, white, game, make(chan struct{}), maxTimeMs, nil,
 		sync.RWMutex{}}
 }
 

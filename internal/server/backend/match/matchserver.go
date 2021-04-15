@@ -67,10 +67,10 @@ type (
 	}
 )
 
-func NewPlayer(name string) Player {
+func NewPlayer(name string) *Player {
 	player := Player{name: name, color: model.Black}
 	player.Reset()
-	return player
+	return &player
 }
 
 func (player *Player) Name() string {
@@ -341,8 +341,8 @@ func (matchingServer *MatchingServer) matchAndPlay(
 				"jessica", "cherry", "gumdrop", "roland", "pumpkin",
 			}
 			botPlayer := NewPlayer(botNames[rand.Intn(len(botNames))] + "bot")
-			go matchingServer.engineSession(&botPlayer)
-			go (func() { matchingServer.players <- &botPlayer })()
+			go matchingServer.engineSession(botPlayer)
+			go (func() { matchingServer.players <- botPlayer })()
 		}
 	}
 }

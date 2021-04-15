@@ -59,8 +59,9 @@ func makeSearchForMatchHandler(
 			player.SetSearchingForMatch(false)
 			matchResponse :=
 				matchserver.MatchedResponse{
-					player.Color(), player.MatchedOpponentName(),
-					player.MatchMaxTimeMs(),
+					Color:        player.Color(),
+					OpponentName: player.MatchedOpponentName(),
+					MaxTimeMs:    player.MatchMaxTimeMs(),
 				}
 			json.NewEncoder(w).Encode(matchResponse)
 		} else {

@@ -16,7 +16,8 @@ func (matchingServer *MatchingServer) createEngineClient(
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
 	opts = append(opts, grpc.WithBlock())
-	ctx, _ := context.WithTimeout(context.Background(), engineConnTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), engineConnTimeout)
+	defer cancel()
 	conn, err := grpc.DialContext(ctx, engineAddr, opts...)
 	if err != nil {
 		log.Println("ERROR: Failed to connect to chess engine at addr: " +

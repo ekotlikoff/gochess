@@ -64,8 +64,8 @@ func writeLoop(c *websocket.Conn, player *matchserver.Player) {
 	matchedResponse := matchserver.WebsocketResponse{
 		WebsocketResponseType: matchserver.MatchStartT,
 		MatchedResponse: matchserver.MatchedResponse{
-			player.Color(), player.MatchedOpponentName(),
-			player.MatchMaxTimeMs(),
+			Color: player.Color(), OpponentName: player.MatchedOpponentName(),
+			MaxTimeMs: player.MatchMaxTimeMs(),
 		},
 	}
 	c.WriteJSON(&matchedResponse)

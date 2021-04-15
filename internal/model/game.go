@@ -144,24 +144,24 @@ func getOppositeColor(color Color) (opposite Color) {
 	return opposite
 }
 
-func NewGame() Game {
+func NewGame() *Game {
 	board := NewFullBoard()
 	return createGame(board)
 }
 
-func NewGameNoPawns() Game {
+func NewGameNoPawns() *Game {
 	board := NewBoardNoPawns()
 	return createGame(board)
 }
 
-func createGame(board board) Game {
+func createGame(board board) *Game {
 	game := Game{
 		board: &board, blackKing: board[4][7], whiteKing: board[4][0],
 		positionHistory: make(map[string]uint8),
 	}
 	game.updatePositionHistory()
 	game.turn = White
-	return game
+	return &game
 }
 
 func (game *Game) BoardString() string {
