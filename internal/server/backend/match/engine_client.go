@@ -2,10 +2,11 @@ package matchserver
 
 import (
 	"context"
-	"github.com/Ekotlikoff/gochess/internal/model"
 	"io"
 	"log"
 	"time"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
 
 	pb "github.com/Ekotlikoff/gochess/api"
 	"google.golang.org/grpc"

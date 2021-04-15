@@ -2,15 +2,16 @@ package websocketserver
 
 import (
 	"context"
-	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
-	"github.com/Ekotlikoff/gochess/internal/server/frontend"
-	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
+	"github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{} // use default options

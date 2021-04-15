@@ -1,10 +1,11 @@
 package matchserver
 
 import (
-	"github.com/Ekotlikoff/gochess/internal/model"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
 )
 
 func TestMatchingServer(t *testing.T) {

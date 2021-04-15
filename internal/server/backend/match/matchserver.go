@@ -3,12 +3,13 @@ package matchserver
 import (
 	"context"
 	"errors"
-	pb "github.com/Ekotlikoff/gochess/api"
-	"github.com/Ekotlikoff/gochess/internal/model"
-	"google.golang.org/grpc"
 	"math/rand"
 	"sync"
 	"time"
+
+	pb "github.com/Ekotlikoff/gochess/api"
+	"github.com/Ekotlikoff/gochess/internal/model"
+	"google.golang.org/grpc"
 )
 
 var PollingDefaultTimeout time.Duration = 10 * time.Second

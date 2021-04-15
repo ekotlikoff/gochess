@@ -2,10 +2,11 @@ package matchserver
 
 import (
 	"errors"
-	"github.com/Ekotlikoff/gochess/internal/model"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
 )
 
 type (

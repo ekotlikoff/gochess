@@ -3,14 +3,15 @@ package httpserver
 import (
 	"context"
 	"encoding/json"
-	"github.com/Ekotlikoff/gochess/internal/model"
-	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
-	"github.com/Ekotlikoff/gochess/internal/server/frontend"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
+	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
 )
 
 func Serve(

@@ -4,10 +4,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/Ekotlikoff/gochess/internal/model"
 	"strconv"
 	"syscall/js"
 	"time"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
 )
 
 func (clientModel *ClientModel) initStyle() {

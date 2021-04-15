@@ -3,8 +3,6 @@ package gateway
 import (
 	"embed"
 	"encoding/json"
-	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
-	"github.com/gofrs/uuid"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,6 +11,9 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	"github.com/gofrs/uuid"
 )
 
 var (

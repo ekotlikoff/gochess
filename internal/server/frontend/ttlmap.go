@@ -4,9 +4,10 @@ package gateway
 
 import (
 	"errors"
-	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
 	"sync"
 	"time"
+
+	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
 )
 
 type item struct {

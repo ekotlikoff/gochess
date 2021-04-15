@@ -5,13 +5,14 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
-	"github.com/Ekotlikoff/gochess/internal/model"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"syscall/js"
 	"time"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
 )
 
 var (

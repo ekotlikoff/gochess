@@ -3,10 +3,11 @@
 package main
 
 import (
-	"github.com/Ekotlikoff/gochess/internal/model"
 	"net/http"
 	"sync"
 	"syscall/js"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
 )
 
 const (

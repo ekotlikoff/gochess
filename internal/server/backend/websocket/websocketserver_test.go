@@ -4,10 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/Ekotlikoff/gochess/internal/model"
-	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
-	"github.com/Ekotlikoff/gochess/internal/server/frontend"
-	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -17,6 +13,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
+	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
+	"github.com/gorilla/websocket"
 )
 
 var (
