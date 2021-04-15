@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+// Move is a struct that represents a chess move
 type Move struct {
 	X, Y int8
 }
@@ -55,7 +56,7 @@ func (piece *Piece) takeMove(
 		piece.takeMoveUnsafe(
 			board, move, previousMove, previousMover, promoteTo,
 		)
-	piece.movesTaken += 1
+	piece.movesTaken++
 	return capturedPiece != nil, nil
 }
 
@@ -102,6 +103,7 @@ func (piece *Piece) takeMoveUnsafe(
 	return newPosition, capturedPiece, newCastledPosition, castledRook
 }
 
+// IsMoveValid determines whether a move is valid
 func (piece *Piece) IsMoveValid(
 	board *board, move Move, previousMove Move, previousMover *Piece,
 	king *Piece, promoteTo *PieceType,
@@ -120,6 +122,7 @@ func (piece *Piece) validMoves(board *board) []Move {
 	return piece.ValidMoves(board, Move{}, nil, false, nil)
 }
 
+// ValidMoves get all the valid moves for a piece or all threatening moves
 func (piece *Piece) ValidMoves(
 	board *board, previousMove Move, previousMover *Piece,
 	allThreatened bool, king *Piece,
@@ -284,6 +287,7 @@ func (piece *Piece) validMovesSlide(
 	return validSlides
 }
 
+// AllMoves get all moves for a player or all threatening moves for a player
 func AllMoves(
 	board *board, color Color, previousMove Move, previousMover *Piece,
 	allThreatened bool, king *Piece,
@@ -304,6 +308,7 @@ func AllMoves(
 	return out
 }
 
+// Moves get all the valid moves or all the threatening moves for a piece
 func (piece *Piece) Moves(
 	board *board, previousMove Move, previousMover *Piece, allThreatened bool,
 	king *Piece,

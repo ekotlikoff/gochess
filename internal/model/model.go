@@ -3,13 +3,17 @@ package model
 import "strconv"
 
 const (
+	// Black is one of the two chess colors
 	Black = Color(iota)
+	// White is one of the two chess colors
 	White = Color(iota)
 )
 
 type (
+	// Color of a piece or player
 	Color uint8
 
+	// Position is a struct representing a chess piece's position
 	Position struct {
 		File, Rank uint8
 	}
@@ -17,6 +21,7 @@ type (
 	board [8][8]*Piece
 )
 
+// NewPosition creates a new position
 func NewPosition(file, rank uint8) Position {
 	switch {
 	case file >= 8:
@@ -27,7 +32,7 @@ func NewPosition(file, rank uint8) Position {
 	return Position{file, rank}
 }
 
-func NewFullBoard() board {
+func newFullBoard() board {
 	var board board
 	// Create the pawns.
 	for i := uint8(0); i < 16; i++ {
@@ -45,7 +50,7 @@ func NewFullBoard() board {
 	return board
 }
 
-func NewBoardNoPawns() board {
+func newBoardNoPawns() board {
 	var board board
 	createTheBackLine(&board)
 	return board

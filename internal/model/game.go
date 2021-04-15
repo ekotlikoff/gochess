@@ -8,6 +8,7 @@ import (
 )
 
 type (
+	// Game is a struct representing a chess game
 	Game struct {
 		board                       *board
 		turn                        Color
@@ -22,11 +23,13 @@ type (
 		mutex                       sync.RWMutex
 	}
 
+	// GameResult is a struct representing the result of a game
 	GameResult struct {
 		Winner Color
 		Draw   bool
 	}
 
+	// MoveRequest is a move request that can be applied to a game
 	MoveRequest struct {
 		Position  Position
 		Move      Move
@@ -34,6 +37,7 @@ type (
 	}
 )
 
+// Move make a move
 func (game *Game) Move(moveRequest MoveRequest) error {
 	game.mutex.Lock()
 	defer game.mutex.Unlock()
@@ -103,10 +107,11 @@ func (game *Game) updatePositionHistory() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	game.positionHistory[string(position)] += 1
+	game.positionHistory[string(position)]++
 	return game.positionHistory[string(position)] > 2, nil
 }
 
+// MarshalBinary represent the game as a byte array
 func (game *Game) MarshalBinary() (data []byte, err error) {
 	buf := new(bytes.Buffer)
 	err = binary.Write(buf, binary.BigEndian, game.turn)
@@ -144,13 +149,15 @@ func getOppositeColor(color Color) (opposite Color) {
 	return opposite
 }
 
+// NewGame create a new game
 func NewGame() *Game {
-	board := NewFullBoard()
+	board := newFullBoard()
 	return createGame(board)
 }
 
+// NewGameNoPawns create a new game with no pawns
 func NewGameNoPawns() *Game {
-	board := NewBoardNoPawns()
+	board := newBoardNoPawns()
 	return createGame(board)
 }
 
@@ -164,18 +171,14 @@ func createGame(board board) *Game {
 	return &game
 }
 
+// BoardString get the board's string
 func (game *Game) BoardString() string {
 	game.mutex.RLock()
 	defer game.mutex.RUnlock()
 	return game.board.String()
 }
 
-func (game *Game) Board() *board {
-	game.mutex.RLock()
-	defer game.mutex.RUnlock()
-	return game.board
-}
-
+// PointAdvantage get the color's point advantage
 func (game *Game) PointAdvantage(color Color) int8 {
 	game.mutex.RLock()
 	defer game.mutex.RUnlock()
@@ -194,18 +197,21 @@ func (game *Game) PointAdvantage(color Color) int8 {
 	return points
 }
 
+// Turn get the current turn
 func (game *Game) Turn() Color {
 	game.mutex.RLock()
 	defer game.mutex.RUnlock()
 	return game.turn
 }
 
+// GameOver get whether the game is over
 func (game *Game) GameOver() bool {
 	game.mutex.RLock()
 	defer game.mutex.RUnlock()
 	return game.gameOver
 }
 
+// SetGameResult set the game's result
 func (game *Game) SetGameResult(winner Color, draw bool) {
 	game.mutex.Lock()
 	defer game.mutex.Unlock()
@@ -214,6 +220,7 @@ func (game *Game) SetGameResult(winner Color, draw bool) {
 	game.result.Draw = draw
 }
 
+// Result get the game's result
 func (game *Game) Result() GameResult {
 	game.mutex.RLock()
 	defer game.mutex.RUnlock()

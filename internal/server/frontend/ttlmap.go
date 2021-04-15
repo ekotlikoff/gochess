@@ -15,11 +15,13 @@ type item struct {
 	lastAccess int64
 }
 
+// TTLMap is a map with a TTL
 type TTLMap struct {
 	m map[string]*item
 	l sync.Mutex
 }
 
+// NewTTLMap creates a new map
 func NewTTLMap(ln int, maxTTL int, gcFrequencySecs int) (m *TTLMap) {
 	m = &TTLMap{m: make(map[string]*item, ln)}
 	go func() {
@@ -37,10 +39,12 @@ func NewTTLMap(ln int, maxTTL int, gcFrequencySecs int) (m *TTLMap) {
 	return
 }
 
+// Len returns the length of the map
 func (m *TTLMap) Len() int {
 	return len(m.m)
 }
 
+// Put puts key k and value v
 func (m *TTLMap) Put(k string, v *matchserver.Player) error {
 	m.l.Lock()
 	_, ok := m.m[k]
@@ -56,6 +60,7 @@ func (m *TTLMap) Put(k string, v *matchserver.Player) error {
 	return nil
 }
 
+// Get gets value for key k
 func (m *TTLMap) Get(k string) (v *matchserver.Player, err error) {
 	m.l.Lock()
 	if it, ok := m.m[k]; ok {
@@ -69,6 +74,7 @@ func (m *TTLMap) Get(k string) (v *matchserver.Player, err error) {
 
 }
 
+// Refresh updates the key k to newk
 func (m *TTLMap) Refresh(k, newk string) error {
 	m.l.Lock()
 	it, ok := m.m[k]

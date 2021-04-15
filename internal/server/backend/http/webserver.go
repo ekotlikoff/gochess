@@ -14,6 +14,7 @@ import (
 	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
 )
 
+// Serve the http server
 func Serve(
 	matchServer *matchserver.MatchingServer, cache *gateway.TTLMap, port int,
 	logFile *string, quiet bool,
@@ -36,6 +37,7 @@ func Serve(
 	http.ListenAndServe(":"+strconv.Itoa(port), mux)
 }
 
+// SetQuiet logging
 func SetQuiet() {
 	log.SetOutput(ioutil.Discard)
 }

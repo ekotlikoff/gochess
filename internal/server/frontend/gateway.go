@@ -17,6 +17,7 @@ import (
 )
 
 var (
+	// SessionCache is the cache of all user sessions
 	SessionCache *TTLMap
 	// Our static web server content.
 	//go:embed static
@@ -27,10 +28,12 @@ func init() {
 	SessionCache = NewTTLMap(50, 1800, 10)
 }
 
+// Credentials are the credentialss for authentication
 type Credentials struct {
 	Username string
 }
 
+// Serve static files and proxy to the different backends
 func Serve(
 	httpBackend *url.URL, websocketBackend *url.URL, port int, logFile *string,
 	quiet bool,
@@ -46,7 +49,7 @@ func Serve(
 		log.SetOutput(ioutil.Discard)
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", HandleWebRoot)
+	mux.HandleFunc("/", handleWebRoot)
 	mux.HandleFunc("/session", StartSession)
 	// HTTP backend proxying
 	mux.Handle("/http/match", httputil.NewSingleHostReverseProxy(httpBackend))
@@ -58,16 +61,17 @@ func Serve(
 	http.ListenAndServe(":"+strconv.Itoa(port), mux)
 }
 
+// SetQuiet logging
 func SetQuiet() {
 	log.SetOutput(ioutil.Discard)
 }
 
-func HandleWebRoot(w http.ResponseWriter, r *http.Request) {
+func handleWebRoot(w http.ResponseWriter, r *http.Request) {
 	r.URL.Path = "/static" + r.URL.Path // This is a hack to get the embedded path
 	http.FileServer(http.FS(webStaticFS)).ServeHTTP(w, r)
 }
 
-// Credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
+// StartSession credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
 func StartSession(w http.ResponseWriter, r *http.Request) {
 	log.SetPrefix("StartSession: ")
 	var creds Credentials

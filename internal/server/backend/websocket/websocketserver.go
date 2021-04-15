@@ -16,6 +16,7 @@ import (
 
 var upgrader = websocket.Upgrader{} // use default options
 
+// Serve the websocket server
 func Serve(
 	matchServer *matchserver.MatchingServer, cache *gateway.TTLMap, port int,
 	logFile *string, quiet bool,

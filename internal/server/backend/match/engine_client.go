@@ -92,11 +92,10 @@ func engineReceiveLoop(
 			// TODO resign in this case?
 			close(waitc)
 			return
-		} else {
-			botMove := pbToMove(in.GetChessMove())
-			botPlayer.requestChanSync <- botMove
-			<-botPlayer.responseChanSync
 		}
+		botMove := pbToMove(in.GetChessMove())
+		botPlayer.requestChanSync <- botMove
+		<-botPlayer.responseChanSync
 	}
 }
 

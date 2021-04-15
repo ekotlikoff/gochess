@@ -6,6 +6,7 @@ import (
 )
 
 type (
+	// Piece a chess piece
 	Piece struct {
 		pieceType  PieceType
 		position   Position
@@ -13,22 +14,31 @@ type (
 		movesTaken uint16
 	}
 
+	// PieceType the various piece types
 	PieceType uint8
 )
 
+// NewPiece return a new piece
 func NewPiece(pieceType PieceType, position Position, color Color) *Piece {
 	return &Piece{pieceType, position, color, uint16(0)}
 }
 
 const (
-	Rook   = PieceType(iota)
+	// Rook piece type
+	Rook = PieceType(iota)
+	// Knight piece type
 	Knight = PieceType(iota)
+	// Bishop piece type
 	Bishop = PieceType(iota)
-	Queen  = PieceType(iota)
-	King   = PieceType(iota)
-	Pawn   = PieceType(iota)
+	// Queen piece type
+	Queen = PieceType(iota)
+	// King piece type
+	King = PieceType(iota)
+	// Pawn piece type
+	Pawn = PieceType(iota)
 )
 
+// String return the piece's string
 func (piece *Piece) String() string {
 	if piece == nil {
 		return "-"
@@ -37,44 +47,39 @@ func (piece *Piece) String() string {
 	case Rook:
 		if piece.Color() == White {
 			return "\u2656"
-		} else {
-			return "\u265C"
 		}
+		return "\u265C"
 	case Knight:
 		if piece.Color() == White {
 			return "\u2658"
-		} else {
-			return "\u265E"
 		}
+		return "\u265E"
 	case Bishop:
 		if piece.Color() == White {
 			return "\u2657"
-		} else {
-			return "\u265D"
 		}
+		return "\u265D"
 	case Queen:
 		if piece.Color() == White {
 			return "\u2655"
-		} else {
-			return "\u265B"
 		}
+		return "\u265B"
 	case King:
 		if piece.Color() == White {
 			return "\u2654"
-		} else {
-			return "\u265A"
 		}
+		return "\u265A"
 	case Pawn:
 		if piece.Color() == White {
 			return "\u2659"
-		} else {
-			return "\u265F"
 		}
+		return "\u265F"
 	default:
 		return "-"
 	}
 }
 
+// ClientString return the piece's client string
 func (piece *Piece) ClientString() string {
 	if piece == nil {
 		return ""
@@ -102,6 +107,7 @@ func (piece *Piece) ClientString() string {
 	return out
 }
 
+// Value return the piece's point value
 func (piece *Piece) Value() int8 {
 	if piece == nil {
 		return 0
@@ -119,6 +125,7 @@ func (piece *Piece) Value() int8 {
 	return 0
 }
 
+// MarshalBinary return the piece's representation as a byte array
 func (piece *Piece) MarshalBinary(
 	board *board, previousMove Move, previousMover *Piece, king *Piece,
 ) (data []byte, err error) {
@@ -132,10 +139,10 @@ func (piece *Piece) MarshalBinary(
 	} else if piece.pieceType == King {
 		castleLeft, castleRight := piece.hasCastleRights(board)
 		if castleLeft {
-			temporaryMoveRights += 1
+			temporaryMoveRights++
 		}
 		if castleRight {
-			temporaryMoveRights += 1
+			temporaryMoveRights++
 		}
 	}
 	buf := new(bytes.Buffer)
@@ -149,6 +156,7 @@ func (piece *Piece) MarshalBinary(
 	return buf.Bytes(), err
 }
 
+// StringSimple return the piece's simple string representation
 func (piece *Piece) StringSimple() string {
 	if piece == nil {
 		return "-"
@@ -177,22 +185,27 @@ func (piece *Piece) StringSimple() string {
 	return out + colorReset
 }
 
+// Position return the piece's position
 func (piece *Piece) Position() Position {
 	return piece.position
 }
 
+// File return the piece's file
 func (piece *Piece) File() uint8 {
 	return piece.position.File
 }
 
+// Rank return the piece's rank
 func (piece *Piece) Rank() uint8 {
 	return piece.position.Rank
 }
 
+// PieceType return the piece's type
 func (piece *Piece) PieceType() PieceType {
 	return piece.pieceType
 }
 
+// Color return the piece's color
 func (piece *Piece) Color() Color {
 	return piece.color
 }
