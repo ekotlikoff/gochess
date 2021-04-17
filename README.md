@@ -39,7 +39,7 @@ TODO
     - [x] Max matching time, after which we match the player with a chess engine (if connected)
 * Client
     - [x] Golang WebAssembly web client
-    - [] Ensure that webclient can enter matchmaking succesfully after a gameover
+    - [] Ensure that webclient can enter matchmaking successfully after a gameover
     - [x] Show "pending draw" when requesting a draw
     - [x] Handle 202 responses from GET match while still pending
     - [x] Handle 200 response from GET sync/async with no update
