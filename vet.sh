@@ -11,31 +11,75 @@ not() {
     ! "$@"
 }
 
+die() {
+  echo "$@" >&2
+  exit 1
+}
+
 fail_on_output() {
     tee /dev/stderr | not read
 }
 
+# Check to make sure it's safe to modify the user's git repo.
+git status --porcelain | fail_on_output
+
+# Undo any edits made by this script.
+cleanup() {
+  git reset --hard HEAD
+}
+trap cleanup EXIT
+
 PATH="${HOME}/go/bin:${GOROOT}/bin:${PATH}"
 go version
 
-if [[ "${TRAVIS}" = "true" ]]; then
-    PROTOBUF_VERSION=3.14.0
-    PROTOC_FILENAME=protoc-${PROTOBUF_VERSION}-linux-x86_64.zip
-    pushd /home/travis
-    wget https://github.com/google/protobuf/releases/download/v${PROTOBUF_VERSION}/${PROTOC_FILENAME}
-    unzip ${PROTOC_FILENAME}
-    bin/protoc --version
+if [[ "$1" = "-install" ]]; then
+     # Install the pinned versions as defined in module tools.
+    pushd ./test/tools
+    go install \
+      golang.org/x/lint/golint \
+      golang.org/x/tools/cmd/goimports \
+      honnef.co/go/tools/cmd/staticcheck \
+      github.com/client9/misspell/cmd/misspell
     popd
-    go get -u google.golang.org/protobuf/cmd/protoc-gen-go \
-         google.golang.org/grpc/cmd/protoc-gen-go-grpc
+
+    if [[ "${TRAVIS}" = "true" ]]; then
+        PROTOBUF_VERSION=3.14.0
+        PROTOC_FILENAME=protoc-${PROTOBUF_VERSION}-linux-x86_64.zip
+        pushd /home/travis
+        wget https://github.com/google/protobuf/releases/download/v${PROTOBUF_VERSION}/${PROTOC_FILENAME}
+        unzip ${PROTOC_FILENAME}
+        bin/protoc --version
+        popd
+        go install google.golang.org/protobuf/cmd/protoc-gen-go@latest \
+            google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+    fi
+    exit 0
+elif [[ "$#" -ne 0 ]]; then
+  die "Unknown argument(s): $*"
 fi
 
-# - gofmt, goimports, golint (with exceptions for generated code), go vet.
-#gofmt -s -d -l . 2>&1 | fail_on_output
-#goimports -l . 2>&1 | not grep -vE "\.pb\.go"
-#golint ./... 2>&1 | not grep -vE "/testv3\.pb\.go:"
-#go vet -all ./...
+misspell -error .
 
 PATH="/home/travis/bin:${PATH}" make proto && \
     git status --porcelain 2>&1 | fail_on_output || \
     (git status; git --no-pager diff; exit 1)
+
+# Perform these checks on each module.
+for MOD_FILE in $(find . -name 'go.mod'); do
+  MOD_DIR=$(dirname ${MOD_FILE})
+  pushd ${MOD_DIR}
+  go vet -all ./... | fail_on_output
+  gofmt -s -d -l . 2>&1 | fail_on_output
+  goimports -l . 2>&1 | not grep -vE "\.pb\.go"
+  golint ./... 2>&1 | fail_on_output
+
+  go mod tidy
+  git status --porcelain 2>&1 | fail_on_output || \
+    (git status; git --no-pager diff; exit 1)
+  popd
+done
+
+SC_OUT="$(mktemp)"
+staticcheck -go 1.9 -checks 'inherit,-ST1015' ./... > "${SC_OUT}" || true
+# Error if anything other than deprecation warnings are printed.
+not grep -v "is deprecated:.*SA1019" "${SC_OUT}"

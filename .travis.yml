@@ -1,7 +1,18 @@
 language: go
 
 go:
-- master
+    - master
+
+env:
+  global:
+    - VET=1 RACE=1
 
 install:
-- ./vet.sh
+    - if [[ -n "${VET}" ]]; then ./vet.sh -install; fi
+
+script:
+    - set -e
+    - if [[ -n "${VET}" ]]; then ./vet.sh; fi
+    - if [[ -n "${RACE}" ]]; then make testrace; exit 0; fi
+    - make test
+    - make web
