@@ -3,29 +3,41 @@ package matchserver
 import (
 	"context"
 	"errors"
-	pb "github.com/Ekotlikoff/gochess/api"
-	"github.com/Ekotlikoff/gochess/internal/model"
-	"google.golang.org/grpc"
 	"math/rand"
 	"sync"
 	"time"
+
+	pb "github.com/Ekotlikoff/gochess/api"
+	"github.com/Ekotlikoff/gochess/internal/model"
+	"google.golang.org/grpc"
 )
 
+// PollingDefaultTimeout is the default timeout for http requests
 var PollingDefaultTimeout time.Duration = 10 * time.Second
 
 const (
-	NullT               = WebsocketResponseType(iota)
-	MatchStartT         = WebsocketResponseType(iota)
-	RequestSyncT        = WebsocketRequestType(iota)
-	RequestAsyncT       = WebsocketRequestType(iota)
-	ResponseSyncT       = WebsocketResponseType(iota)
-	ResponseAsyncT      = WebsocketResponseType(iota)
+	// NullT is the WS response type for a null response
+	NullT = WebsocketResponseType(iota)
+	// MatchStartT is the WS response type for a match response
+	MatchStartT = WebsocketResponseType(iota)
+	// RequestSyncT is the WS request type for a sync request
+	RequestSyncT = WebsocketRequestType(iota)
+	// RequestAsyncT is the WS request type for an async request
+	RequestAsyncT = WebsocketRequestType(iota)
+	// ResponseSyncT is the WS response type for a sync response
+	ResponseSyncT = WebsocketResponseType(iota)
+	// ResponseAsyncT is the WS response type for an async response
+	ResponseAsyncT = WebsocketResponseType(iota)
+	// OpponentPlayedMoveT is the WS response type for an opponent's move
 	OpponentPlayedMoveT = WebsocketResponseType(iota)
 )
 
 type (
+	// WebsocketResponseType represents the different type of responses
+	// supported over the WS conn
 	WebsocketResponseType uint8
 
+	// WebsocketResponse is a struct for a response over the WS conn
 	WebsocketResponse struct {
 		WebsocketResponseType WebsocketResponseType
 		MatchedResponse       MatchedResponse
@@ -34,20 +46,26 @@ type (
 		OpponentPlayedMove    model.MoveRequest
 	}
 
+	// WebsocketRequestType represents the different type of requests supported
+	// over the WS conn
 	WebsocketRequestType uint8
 
+	// WebsocketRequest is a struct for a request over the WS conn
 	WebsocketRequest struct {
 		WebsocketRequestType WebsocketRequestType
 		RequestSync          model.MoveRequest
 		RequestAsync         RequestAsync
 	}
 
+	// MatchedResponse is a struct for the matched response
 	MatchedResponse struct {
 		Color        model.Color
 		OpponentName string
 		MaxTimeMs    int64
 	}
 
+	// Player is a struct representing a matchserver client, containing channels
+	// for communications between the client and the the matchserver
 	Player struct {
 		name                string
 		color               model.Color
@@ -67,40 +85,47 @@ type (
 	}
 )
 
-func NewPlayer(name string) Player {
+// NewPlayer create a new player
+func NewPlayer(name string) *Player {
 	player := Player{name: name, color: model.Black}
 	player.Reset()
-	return player
+	return &player
 }
 
+// Name get the player's name
 func (player *Player) Name() string {
 	return player.name
 }
 
+// GetSearchingForMatch get searching for match
 func (player *Player) GetSearchingForMatch() bool {
 	player.matchMutex.RLock()
 	defer player.matchMutex.RUnlock()
 	return player.searchingForMatch
 }
 
+// SetSearchingForMatch set searching for match
 func (player *Player) SetSearchingForMatch(searchingForMatch bool) {
 	player.matchMutex.Lock()
 	defer player.matchMutex.Unlock()
 	player.searchingForMatch = searchingForMatch
 }
 
+// GetMatch get the player's match
 func (player *Player) GetMatch() *Match {
 	player.matchMutex.RLock()
 	defer player.matchMutex.RUnlock()
 	return player.match
 }
 
+// SetMatch set the player's match
 func (player *Player) SetMatch(match *Match) {
 	player.matchMutex.Lock()
 	defer player.matchMutex.Unlock()
 	player.match = match
 }
 
+// MatchedOpponentName returns the matched opponent name
 func (player *Player) MatchedOpponentName() string {
 	player.matchMutex.RLock()
 	defer player.matchMutex.RUnlock()
@@ -111,14 +136,21 @@ func (player *Player) MatchedOpponentName() string {
 	return player.GetMatch().PlayerName(opponentColor)
 }
 
+// MatchMaxTimeMs returns players max time in ms
 func (player *Player) MatchMaxTimeMs() int64 {
+	player.matchMutex.RLock()
+	defer player.matchMutex.RUnlock()
 	return player.GetMatch().MaxTimeMs()
 }
 
+// Color returns player color
 func (player *Player) Color() model.Color {
+	player.matchMutex.RLock()
+	defer player.matchMutex.RUnlock()
 	return player.color
 }
 
+// GetWebsocketMessageToWrite WS client waits for next msg to send to the client
 func (player *Player) GetWebsocketMessageToWrite() *WebsocketResponse {
 	player.channelMutex.RLock()
 	defer player.channelMutex.RUnlock()
@@ -143,6 +175,7 @@ func (player *Player) GetWebsocketMessageToWrite() *WebsocketResponse {
 	return &response
 }
 
+// WaitForMatchStart player waits for match start
 func (player *Player) WaitForMatchStart() error {
 	player.matchStartMutex.RLock()
 	defer player.matchStartMutex.RUnlock()
@@ -154,6 +187,7 @@ func (player *Player) WaitForMatchStart() error {
 	}
 }
 
+// HasMatchStarted player checks if their match has started
 func (player *Player) HasMatchStarted(ctx context.Context) bool {
 	player.matchStartMutex.RLock()
 	defer player.matchStartMutex.RUnlock()
@@ -165,12 +199,14 @@ func (player *Player) HasMatchStarted(ctx context.Context) bool {
 	}
 }
 
+// MakeMoveWS player (websocket client) make a move
 func (player *Player) MakeMoveWS(pieceMove model.MoveRequest) {
 	player.channelMutex.RLock()
 	defer player.channelMutex.RUnlock()
 	player.requestChanSync <- pieceMove
 }
 
+// MakeMove player makes a move
 func (player *Player) MakeMove(pieceMove model.MoveRequest) bool {
 	player.channelMutex.RLock()
 	defer player.channelMutex.RUnlock()
@@ -179,6 +215,7 @@ func (player *Player) MakeMove(pieceMove model.MoveRequest) bool {
 	return response.MoveSuccess
 }
 
+// GetSyncUpdate get the next sync update for a player
 func (player *Player) GetSyncUpdate() *model.MoveRequest {
 	player.channelMutex.RLock()
 	defer player.channelMutex.RUnlock()
@@ -190,12 +227,14 @@ func (player *Player) GetSyncUpdate() *model.MoveRequest {
 	}
 }
 
+// RequestAsync player makes an async request
 func (player *Player) RequestAsync(requestAsync RequestAsync) {
 	player.channelMutex.RLock()
 	defer player.channelMutex.RUnlock()
 	player.requestChanAsync <- requestAsync
 }
 
+// GetAsyncUpdate get the next async update for a player
 func (player *Player) GetAsyncUpdate() *ResponseAsync {
 	player.channelMutex.RLock()
 	defer player.channelMutex.RUnlock()
@@ -207,6 +246,7 @@ func (player *Player) GetAsyncUpdate() *ResponseAsync {
 	}
 }
 
+// Reset a player for their next match
 func (player *Player) Reset() {
 	player.channelMutex.Lock()
 	defer player.channelMutex.Unlock()
@@ -236,31 +276,38 @@ func (player *Player) startMatch() {
 	player.clientDoneWithMatch = make(chan struct{})
 }
 
+// ClientDoneWithMatch the client is now done with the match
 func (player *Player) ClientDoneWithMatch() {
 	player.channelMutex.RLock()
 	defer player.channelMutex.RUnlock()
 	close(player.clientDoneWithMatch)
 }
 
+// WaitForClientToBeDoneWithMatch block until the client is done with their
+// match
 func (player *Player) WaitForClientToBeDoneWithMatch() {
 	player.channelMutex.RLock()
 	defer player.channelMutex.RUnlock()
 	<-player.clientDoneWithMatch
 }
 
+// ResponseSync represents a response to the client related to a move
 type ResponseSync struct {
 	MoveSuccess bool
 }
 
+// RequestAsync represents a request from the client unrelated to a move
 type RequestAsync struct {
 	Match, RequestToDraw, Resign bool
 }
 
+// ResponseAsync represents a response to the client unrelated to a move
 type ResponseAsync struct {
 	GameOver, RequestToDraw, Draw, Resignation, Timeout bool
 	Winner                                              string
 }
 
+// MatchingServer handles matching players and carrying out the game
 type MatchingServer struct {
 	liveMatches         []*Match
 	mutex               *sync.Mutex
@@ -272,6 +319,7 @@ type MatchingServer struct {
 	maxMatchingDuration time.Duration
 }
 
+// NewMatchingServer create a matching server with no engine
 func NewMatchingServer() MatchingServer {
 	matchingServer := MatchingServer{
 		mutex: &sync.Mutex{}, players: make(chan *Player),
@@ -280,6 +328,7 @@ func NewMatchingServer() MatchingServer {
 	return matchingServer
 }
 
+// NewMatchingServerWithEngine create a matching server with an engine
 func NewMatchingServerWithEngine(
 	engineAddr string, maxMatchingDuration time.Duration,
 	engineConnTimeout time.Duration,
@@ -293,10 +342,10 @@ func NewMatchingServerWithEngine(
 	return matchingServer
 }
 
+// LiveMatches current matches being played
 func (matchingServer *MatchingServer) LiveMatches() []*Match {
-	liveMatches := []*Match{}
 	matchingServer.mutex.Lock()
-	liveMatches = matchingServer.liveMatches
+	liveMatches := matchingServer.liveMatches
 	matchingServer.mutex.Unlock()
 	return liveMatches
 }
@@ -342,12 +391,13 @@ func (matchingServer *MatchingServer) matchAndPlay(
 				"jessica", "cherry", "gumdrop", "roland", "pumpkin",
 			}
 			botPlayer := NewPlayer(botNames[rand.Intn(len(botNames))] + "bot")
-			go matchingServer.engineSession(&botPlayer)
-			go (func() { matchingServer.players <- &botPlayer })()
+			go matchingServer.engineSession(botPlayer)
+			go (func() { matchingServer.players <- botPlayer })()
 		}
 	}
 }
 
+// StartMatchServers using default match generator
 func (matchingServer *MatchingServer) StartMatchServers(
 	maxConcurrentGames int, quit chan bool,
 ) {
@@ -356,6 +406,7 @@ func (matchingServer *MatchingServer) StartMatchServers(
 	)
 }
 
+// StartCustomMatchServers using custom match generator
 func (matchingServer *MatchingServer) StartCustomMatchServers(
 	maxConcurrentGames int, matchGenerator MatchGenerator, quit chan bool,
 ) {
@@ -379,13 +430,14 @@ func (matchingServer *MatchingServer) removeMatch(matchToRemove *Match) {
 				matchingServer.liveMatches = nil
 			} else {
 				liveMatches[i] = liveMatches[len(liveMatches)-1]
-				liveMatches = liveMatches[:len(liveMatches)-1]
+				matchingServer.liveMatches = liveMatches[:len(liveMatches)-1]
 				return
 			}
 		}
 	}
 }
 
+// MatchPlayer queues the player for matching
 func (matchingServer *MatchingServer) MatchPlayer(player *Player) {
 	matchingServer.players <- player
 }

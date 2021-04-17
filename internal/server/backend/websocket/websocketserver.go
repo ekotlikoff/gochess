@@ -2,19 +2,21 @@ package websocketserver
 
 import (
 	"context"
-	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
-	"github.com/Ekotlikoff/gochess/internal/server/frontend"
-	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
+	"github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{} // use default options
 
+// Serve the websocket server
 func Serve(
 	matchServer *matchserver.MatchingServer, cache *gateway.TTLMap, port int,
 	logFile *string, quiet bool,
@@ -64,8 +66,8 @@ func writeLoop(c *websocket.Conn, player *matchserver.Player) {
 	matchedResponse := matchserver.WebsocketResponse{
 		WebsocketResponseType: matchserver.MatchStartT,
 		MatchedResponse: matchserver.MatchedResponse{
-			player.Color(), player.MatchedOpponentName(),
-			player.MatchMaxTimeMs(),
+			Color: player.Color(), OpponentName: player.MatchedOpponentName(),
+			MaxTimeMs: player.MatchMaxTimeMs(),
 		},
 	}
 	c.WriteJSON(&matchedResponse)

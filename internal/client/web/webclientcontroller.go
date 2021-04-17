@@ -6,15 +6,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/Ekotlikoff/gochess/internal/model"
-	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
-	"github.com/Ekotlikoff/gochess/internal/server/frontend"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"syscall/js"
 	"time"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
+	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
 )
 
 var (
@@ -506,7 +507,7 @@ func (cm *ClientModel) wsMatch(buttonLoader js.Value,
 		if ws.Get("readyState").Equal(js.Global().Get("WebSocket").Get("OPEN")) {
 			cm.SetWSConn(ws)
 			if debug {
-				log.Println("Websocket connection succesfully initiated")
+				log.Println("Websocket connection successfully initiated")
 			}
 			message := matchserver.WebsocketRequest{
 				WebsocketRequestType: matchserver.RequestAsyncT,
@@ -611,7 +612,7 @@ func preventDefault(this js.Value, i []js.Value) interface{} {
 
 func (cm *ClientModel) resetGame() {
 	game := model.NewGame()
-	cm.SetGame(&game)
+	cm.SetGame(game)
 	cm.viewClearBoard()
 	cm.viewInitBoard(cm.playerColor)
 }

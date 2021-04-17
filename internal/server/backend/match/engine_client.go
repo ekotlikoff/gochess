@@ -2,10 +2,11 @@ package matchserver
 
 import (
 	"context"
-	"github.com/Ekotlikoff/gochess/internal/model"
 	"io"
 	"log"
 	"time"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
 
 	pb "github.com/Ekotlikoff/gochess/api"
 	"google.golang.org/grpc"
@@ -16,13 +17,14 @@ func (matchingServer *MatchingServer) createEngineClient(
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
 	opts = append(opts, grpc.WithBlock())
-	opts = append(opts, grpc.WithTimeout(engineConnTimeout))
-	conn, err := grpc.Dial(engineAddr, opts...)
+	ctx, cancel := context.WithTimeout(context.Background(), engineConnTimeout)
+	defer cancel()
+	conn, err := grpc.DialContext(ctx, engineAddr, opts...)
 	if err != nil {
 		log.Println("ERROR: Failed to connect to chess engine at addr: " +
 			engineAddr + " with error: " + err.Error())
 	} else {
-		log.Println("Succesfully connected to chess engine")
+		log.Println("Successfully connected to chess engine")
 		matchingServer.botMatchingEnabled = true
 		matchingServer.engineClient = pb.NewRustChessClient(conn)
 		matchingServer.engineClientConn = conn
@@ -90,11 +92,10 @@ func engineReceiveLoop(
 			// TODO resign in this case?
 			close(waitc)
 			return
-		} else {
-			botMove := pbToMove(in.GetChessMove())
-			botPlayer.requestChanSync <- botMove
-			<-botPlayer.responseChanSync
 		}
+		botMove := pbToMove(in.GetChessMove())
+		botPlayer.requestChanSync <- botMove
+		<-botPlayer.responseChanSync
 	}
 }
 

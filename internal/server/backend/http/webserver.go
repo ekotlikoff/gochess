@@ -3,16 +3,18 @@ package httpserver
 import (
 	"context"
 	"encoding/json"
-	"github.com/Ekotlikoff/gochess/internal/model"
-	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
-	"github.com/Ekotlikoff/gochess/internal/server/frontend"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
+	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
 )
 
+// Serve the http server
 func Serve(
 	matchServer *matchserver.MatchingServer, cache *gateway.TTLMap, port int,
 	logFile *string, quiet bool,
@@ -35,6 +37,7 @@ func Serve(
 	http.ListenAndServe(":"+strconv.Itoa(port), mux)
 }
 
+// SetQuiet logging
 func SetQuiet() {
 	log.SetOutput(ioutil.Discard)
 }
@@ -59,8 +62,9 @@ func makeSearchForMatchHandler(
 			player.SetSearchingForMatch(false)
 			matchResponse :=
 				matchserver.MatchedResponse{
-					player.Color(), player.MatchedOpponentName(),
-					player.MatchMaxTimeMs(),
+					Color:        player.Color(),
+					OpponentName: player.MatchedOpponentName(),
+					MaxTimeMs:    player.MatchMaxTimeMs(),
 				}
 			json.NewEncoder(w).Encode(matchResponse)
 		} else {

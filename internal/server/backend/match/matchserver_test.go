@@ -1,18 +1,19 @@
 package matchserver
 
 import (
-	"github.com/Ekotlikoff/gochess/internal/model"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
 )
 
 func TestMatchingServer(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	go matchingServer.MatchPlayer(&player1)
-	go matchingServer.MatchPlayer(&player2)
+	go matchingServer.MatchPlayer(player1)
+	go matchingServer.MatchPlayer(player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.StartMatchServers(1, exitChan)
@@ -28,8 +29,8 @@ func TestMatchingServerTimeout(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	go matchingServer.MatchPlayer(&player1)
-	go matchingServer.MatchPlayer(&player2)
+	go matchingServer.MatchPlayer(player1)
+	go matchingServer.MatchPlayer(player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	generator := func(black *Player, white *Player) Match {
@@ -52,20 +53,23 @@ func TestMatchingServerDraw(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	go matchingServer.MatchPlayer(&player1)
-	go matchingServer.MatchPlayer(&player2)
+	go matchingServer.MatchPlayer(player1)
+	go matchingServer.MatchPlayer(player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.StartMatchServers(1, exitChan)
 	player1.requestChanAsync <- RequestAsync{RequestToDraw: true}
 	response := <-player2.responseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
-	if liveMatch.GetRequestedDraw() != &player1 {
+	if liveMatch.GetRequestedDraw() != player1 {
 		t.Error("expected player1 to have requested a draw",
 			liveMatch.GetRequestedDraw())
 	}
 	white := liveMatch.white
-	white.MakeMove(model.MoveRequest{model.Position{3, 1}, model.Move{0, 2}, nil})
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 3, Rank: 1},
+		Move:      model.Move{X: 0, Y: 2},
+		PromoteTo: nil})
 	if liveMatch.GetRequestedDraw() != nil {
 		t.Error("expected move to have reset the request to draw",
 			liveMatch.GetRequestedDraw())
@@ -85,7 +89,7 @@ func TestMatchingServerDraw(t *testing.T) {
 	}
 	player1.requestChanAsync <- RequestAsync{RequestToDraw: true}
 	response = <-player2.responseChanAsync
-	if response.RequestToDraw != true || liveMatch.GetRequestedDraw() != &player1 {
+	if response.RequestToDraw != true || liveMatch.GetRequestedDraw() != player1 {
 		t.Error("Expected player2 to receive a RequestToDraw",
 			response)
 	}
@@ -101,8 +105,8 @@ func TestMatchingServerResignation(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	go matchingServer.MatchPlayer(&player1)
-	go matchingServer.MatchPlayer(&player2)
+	go matchingServer.MatchPlayer(player1)
+	go matchingServer.MatchPlayer(player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.StartMatchServers(1, exitChan)
@@ -124,8 +128,8 @@ func TestMatchingServerPlayerSecondGame(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	go matchingServer.MatchPlayer(&player1)
-	go matchingServer.MatchPlayer(&player2)
+	go matchingServer.MatchPlayer(player1)
+	go matchingServer.MatchPlayer(player2)
 	exitChan := make(chan bool, 1)
 	go matchingServer.StartMatchServers(1, exitChan)
 	tries := 0
@@ -147,8 +151,8 @@ func TestMatchingServerPlayerSecondGame(t *testing.T) {
 		!response.Resignation || len(matchingServer.LiveMatches()) > 0 {
 		t.Error("Expected resignation got ", response.GameOver)
 	}
-	go matchingServer.MatchPlayer(&player1)
-	go matchingServer.MatchPlayer(&player2)
+	go matchingServer.MatchPlayer(player1)
+	go matchingServer.MatchPlayer(player2)
 	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
 		time.Sleep(time.Millisecond)
 		tries++
@@ -167,8 +171,8 @@ func TestMatchingServerValidMoves(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	go matchingServer.MatchPlayer(&player1)
-	go matchingServer.MatchPlayer(&player2)
+	go matchingServer.MatchPlayer(player1)
+	go matchingServer.MatchPlayer(player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.StartMatchServers(1, exitChan)
@@ -180,9 +184,15 @@ func TestMatchingServerValidMoves(t *testing.T) {
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
-	white.MakeMove(model.MoveRequest{model.Position{3, 1}, model.Move{0, 2}, nil})
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 3, Rank: 1},
+		Move:      model.Move{X: 0, Y: 2},
+		PromoteTo: nil})
 	response :=
-		black.MakeMove(model.MoveRequest{model.Position{3, 6}, model.Move{0, -2}, nil})
+		black.MakeMove(model.MoveRequest{
+			Position:  model.Position{File: 3, Rank: 6},
+			Move:      model.Move{X: 0, Y: -2},
+			PromoteTo: nil})
 	if !response {
 		t.Error("Expected a valid move got", response)
 	}
@@ -192,8 +202,8 @@ func TestMatchingServerInvalidMoves(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	go matchingServer.MatchPlayer(&player1)
-	go matchingServer.MatchPlayer(&player2)
+	go matchingServer.MatchPlayer(player1)
+	go matchingServer.MatchPlayer(player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.StartMatchServers(1, exitChan)
@@ -205,12 +215,21 @@ func TestMatchingServerInvalidMoves(t *testing.T) {
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
-	white.MakeMove(model.MoveRequest{model.Position{3, 1}, model.Move{0, 2}, nil})
-	response := black.MakeMove(model.MoveRequest{model.Position{3, 6}, model.Move{0, -3}, nil})
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 3, Rank: 1},
+		Move:      model.Move{X: 0, Y: 2},
+		PromoteTo: nil})
+	response := black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 3, Rank: 6},
+		Move:      model.Move{X: 0, Y: -3},
+		PromoteTo: nil})
 	if response {
 		t.Error("Expected a invalid move got", response)
 	}
-	response = black.MakeMove(model.MoveRequest{model.Position{3, 6}, model.Move{0, -1}, nil})
+	response = black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 3, Rank: 6},
+		Move:      model.Move{X: 0, Y: -1},
+		PromoteTo: nil})
 	if !response {
 		t.Error("Expected a valid move got", response)
 	}
@@ -220,8 +239,8 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")
 	matchingServer := NewMatchingServer()
-	go matchingServer.MatchPlayer(&player1)
-	go matchingServer.MatchPlayer(&player2)
+	go matchingServer.MatchPlayer(player1)
+	go matchingServer.MatchPlayer(player2)
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.StartMatchServers(1, exitChan)
@@ -233,23 +252,50 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
-	white.MakeMove(model.MoveRequest{model.Position{4, 1}, model.Move{0, 2}, nil})
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 4, Rank: 1},
+		Move:      model.Move{X: 0, Y: 2},
+		PromoteTo: nil})
 	opponentMove := black.GetSyncUpdate()
-	expectedMove := model.MoveRequest{model.Position{4, 1}, model.Move{0, 2}, nil}
+	expectedMove := model.MoveRequest{
+		Position:  model.Position{File: 4, Rank: 1},
+		Move:      model.Move{X: 0, Y: 2},
+		PromoteTo: nil}
 	if *opponentMove != expectedMove {
 		t.Error("Expected opponent's move got ", opponentMove)
 	}
-	black.MakeMove(model.MoveRequest{model.Position{0, 6}, model.Move{0, -1}, nil})
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 0, Rank: 6},
+		Move:      model.Move{X: 0, Y: -1},
+		PromoteTo: nil})
 	opponentMove = white.GetSyncUpdate()
-	expectedMove = model.MoveRequest{model.Position{0, 6}, model.Move{0, -1}, nil}
+	expectedMove = model.MoveRequest{
+		Position:  model.Position{File: 0, Rank: 6},
+		Move:      model.Move{X: 0, Y: -1},
+		PromoteTo: nil}
 	if *opponentMove != expectedMove {
 		t.Error("Expected opponent's move got ", opponentMove)
 	}
-	white.MakeMove(model.MoveRequest{model.Position{3, 0}, model.Move{4, 4}, nil})
-	black.MakeMove(model.MoveRequest{model.Position{0, 5}, model.Move{0, -1}, nil})
-	white.MakeMove(model.MoveRequest{model.Position{5, 0}, model.Move{-3, 3}, nil})
-	black.MakeMove(model.MoveRequest{model.Position{0, 4}, model.Move{0, -1}, nil})
-	white.MakeMove(model.MoveRequest{model.Position{7, 4}, model.Move{-2, 2}, nil})
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 3, Rank: 0},
+		Move:      model.Move{X: 4, Y: 4},
+		PromoteTo: nil})
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 0, Rank: 5},
+		Move:      model.Move{X: 0, Y: -1},
+		PromoteTo: nil})
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 5, Rank: 0},
+		Move:      model.Move{X: -3, Y: 3},
+		PromoteTo: nil})
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 0, Rank: 4},
+		Move:      model.Move{X: 0, Y: -1},
+		PromoteTo: nil})
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 7, Rank: 4},
+		Move:      model.Move{X: -2, Y: 2},
+		PromoteTo: nil})
 	if !liveMatch.game.GameOver() {
 		t.Error("Expected gameover got ", liveMatch)
 	}
@@ -270,10 +316,10 @@ func TestMatchingServerEngineTimeout(t *testing.T) {
 
 func TestMatchingServerMultiple(t *testing.T) {
 	matchingServer := NewMatchingServer()
-	players := []Player{}
+	players := []*Player{}
 	for i := 0; i < 7; i++ {
 		players = append(players, NewPlayer("player"+strconv.Itoa(i)))
-		go matchingServer.MatchPlayer(&players[i])
+		go matchingServer.MatchPlayer(players[i])
 	}
 	exitChan := make(chan bool, 1)
 	exitChan <- true

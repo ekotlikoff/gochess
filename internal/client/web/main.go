@@ -5,13 +5,14 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
-	"github.com/Ekotlikoff/gochess/internal/model"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"syscall/js"
 	"time"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
 )
 
 var (
@@ -36,7 +37,7 @@ func main() {
 	clientTimeout, _ := time.ParseDuration(config.ClientTimeout)
 	client := &http.Client{Jar: jar, Timeout: clientTimeout}
 	clientModel := ClientModel{
-		game: &game, playerColor: model.White,
+		game: game, playerColor: model.White,
 		document: js.Global().Get("document"),
 		board: js.Global().Get("document").Call(
 			"getElementById", "board-layout-chessboard"),

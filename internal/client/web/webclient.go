@@ -3,10 +3,11 @@
 package main
 
 import (
-	"github.com/Ekotlikoff/gochess/internal/model"
 	"net/http"
 	"sync"
 	"syscall/js"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
 )
 
 const (
@@ -147,13 +148,13 @@ func (cm *ClientModel) GetDraggingPiece() *model.Piece {
 func (cm *ClientModel) GetPiece(position model.Position) *model.Piece {
 	cm.cmMutex.RLock()
 	defer cm.cmMutex.RUnlock()
-	return cm.game.Board().Piece(position)
+	return cm.game.GetBoard().Piece(position)
 }
 
 func (cm *ClientModel) SetDraggingPiece(position model.Position) {
 	cm.cmMutex.Lock()
 	defer cm.cmMutex.Unlock()
-	cm.pieceDragging = cm.game.Board().Piece(position)
+	cm.pieceDragging = cm.game.GetBoard().Piece(position)
 }
 
 func (cm *ClientModel) GetDraggingOriginalTransform() js.Value {

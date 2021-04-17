@@ -4,10 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/Ekotlikoff/gochess/internal/model"
-	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
-	"github.com/Ekotlikoff/gochess/internal/server/frontend"
-	"github.com/gorilla/websocket"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -17,10 +13,14 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
+	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
+	"github.com/gorilla/websocket"
 )
 
 var (
-	debug              bool = false
 	serverSession      *httptest.Server
 	serverMatchAndPlay *httptest.Server
 )
@@ -425,7 +425,10 @@ func makeMove(x uint8, y uint8, moveX int8, moveY int8, player *websocket.Conn,
 	message := matchserver.WebsocketRequest{
 		WebsocketRequestType: matchserver.RequestSyncT,
 		RequestSync: model.MoveRequest{
-			model.Position{x, y}, model.Move{moveX, moveY}, nil},
+			Position:  model.Position{File: x, Rank: y},
+			Move:      model.Move{X: moveX, Y: moveY},
+			PromoteTo: nil,
+		},
 	}
 	player.WriteJSON(&message)
 	playerResponse := matchserver.WebsocketResponse{}
@@ -439,7 +442,7 @@ func makeMove(x uint8, y uint8, moveX int8, moveY int8, player *websocket.Conn,
 
 func startSession(client *http.Client, username string) {
 	credentialsBuf := new(bytes.Buffer)
-	credentials := gateway.Credentials{username}
+	credentials := gateway.Credentials{Username: username}
 	json.NewEncoder(credentialsBuf).Encode(credentials)
 	resp, err := client.Post(serverSession.URL, "application/json", credentialsBuf)
 	serverSessionURL, _ := url.Parse(serverSession.URL)

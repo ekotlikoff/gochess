@@ -2,13 +2,15 @@ package matchserver
 
 import (
 	"errors"
-	"github.com/Ekotlikoff/gochess/internal/model"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
 )
 
 type (
+	// Match is a struct representing a game between two players
 	Match struct {
 		black         *Player
 		white         *Player
@@ -19,9 +21,11 @@ type (
 		mutex         sync.RWMutex
 	}
 
+	// MatchGenerator takes two players and creates a match
 	MatchGenerator func(black *Player, white *Player) Match
 )
 
+// NewMatch create a new match between two players
 func NewMatch(black *Player, white *Player, maxTimeMs int64) Match {
 	black.color = model.Black
 	white.color = model.White
@@ -30,19 +34,20 @@ func NewMatch(black *Player, white *Player, maxTimeMs int64) Match {
 		white.name = white.name + "_white"
 	}
 	game := model.NewGame()
-	return Match{black, white, &game, make(chan struct{}), maxTimeMs, nil,
+	return Match{black, white, game, make(chan struct{}), maxTimeMs, nil,
 		sync.RWMutex{}}
 }
 
+// DefaultMatchGenerator default match generator
 func DefaultMatchGenerator(p1 *Player, p2 *Player) Match {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	if r.Intn(2) > 0 {
 		return NewMatch(p1, p2, 1200000)
-	} else {
-		return NewMatch(p2, p1, 1200000)
 	}
+	return NewMatch(p2, p1, 1200000)
 }
 
+// PlayerName get the player name corresponding to the input color
 func (match *Match) PlayerName(color model.Color) string {
 	match.mutex.RLock()
 	defer match.mutex.RUnlock()
@@ -52,18 +57,21 @@ func (match *Match) PlayerName(color model.Color) string {
 	return match.white.Name()
 }
 
+// GetRequestedDraw get the current player who has requested a draw
 func (match *Match) GetRequestedDraw() *Player {
 	match.mutex.RLock()
 	defer match.mutex.RUnlock()
 	return match.requestedDraw
 }
 
+// SetRequestedDraw store the fact that the player has requested a draw
 func (match *Match) SetRequestedDraw(player *Player) {
 	match.mutex.Lock()
 	defer match.mutex.Unlock()
 	match.requestedDraw = player
 }
 
+// MaxTimeMs return the match's max time
 func (match *Match) MaxTimeMs() int64 {
 	return match.maxTimeMs
 }
@@ -115,6 +123,9 @@ func (match *Match) handleTurn() {
 			}
 		}
 	}
+	if !timer.Stop() {
+		return
+	}
 	match.SetRequestedDraw(nil)
 	player.responseChanSync <- ResponseSync{MoveSuccess: true}
 	opponent.opponentPlayedMove <- request
@@ -126,7 +137,7 @@ func (match *Match) handleTurn() {
 		}
 		match.handleGameOver(result.Draw, false, false, winner)
 	}
-	player.elapsedMs += time.Now().Sub(turnStart).Milliseconds()
+	player.elapsedMs += time.Since(turnStart).Milliseconds()
 }
 
 func (match *Match) handleTimeout(opponent *Player) func() {

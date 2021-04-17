@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func movePiece(board *board, oldX uint8, oldY uint8, newX uint8, newY uint8) {
+func movePiece(board *Board, oldX uint8, oldY uint8, newX uint8, newY uint8) {
 	board[newX][newY] = board[oldX][oldY]
 	board[oldX][oldY] = nil
 	board[newX][newY].position.File = newX
@@ -13,7 +13,7 @@ func movePiece(board *board, oldX uint8, oldY uint8, newX uint8, newY uint8) {
 }
 
 func TestValidMovesPawnUnmoved(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	if debug {
 		fmt.Println(board)
 	}
@@ -33,7 +33,7 @@ func TestValidMovesPawnUnmoved(t *testing.T) {
 }
 
 func TestValidMovesPawnCapture(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 1, 1, 1, 5)
 	if debug {
 		fmt.Println(board)
@@ -46,7 +46,7 @@ func TestValidMovesPawnCapture(t *testing.T) {
 }
 
 func TestValidMovesPawnEnPassant(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 4, 6, 4, 3)
 	board[3][1].takeMoveShort(&board, Move{0, 2})
 	if debug {
@@ -67,7 +67,7 @@ func TestValidMovesPawnEnPassant(t *testing.T) {
 }
 
 func TestValidMovesPawnNoEnPassant(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 4, 6, 4, 3)
 	board[3][1].takeMoveShort(&board, Move{0, 1})
 	board[3][2].takeMoveShort(&board, Move{0, 1})
@@ -82,7 +82,7 @@ func TestValidMovesPawnNoEnPassant(t *testing.T) {
 }
 
 func TestValidMovesPawnMoved(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	board[0][1].takeMoveShort(&board, Move{0, 1})
 	if debug {
 		fmt.Println(board)
@@ -94,7 +94,7 @@ func TestValidMovesPawnMoved(t *testing.T) {
 }
 
 func TestThreatenedPositionsPawn(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	if debug {
 		fmt.Println(board)
 	}
@@ -110,7 +110,7 @@ func TestThreatenedPositionsPawn(t *testing.T) {
 }
 
 func TestValidMovesRook(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 0, 1, 0, 5)
 	if debug {
 		fmt.Println(board)
@@ -122,7 +122,7 @@ func TestValidMovesRook(t *testing.T) {
 }
 
 func TestValidMovesRookCapture(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 0, 1, 1, 3)
 	if debug {
 		fmt.Println(board)
@@ -134,7 +134,7 @@ func TestValidMovesRookCapture(t *testing.T) {
 }
 
 func TestValidMovesRookMultiple(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 0, 0, 4, 4)
 	if debug {
 		fmt.Println(board)
@@ -146,7 +146,7 @@ func TestValidMovesRookMultiple(t *testing.T) {
 }
 
 func TestThreatenedPositionsRook(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	if debug {
 		fmt.Println(board)
 	}
@@ -158,7 +158,7 @@ func TestThreatenedPositionsRook(t *testing.T) {
 }
 
 func TestValidMovesKnight(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	if debug {
 		fmt.Println(board)
 	}
@@ -169,7 +169,7 @@ func TestValidMovesKnight(t *testing.T) {
 }
 
 func TestValidMovesKnightMultple(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 6, 7, 3, 3)
 	if debug {
 		fmt.Println(board)
@@ -181,7 +181,7 @@ func TestValidMovesKnightMultple(t *testing.T) {
 }
 
 func TestThreatenedPositionsKnight(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	if debug {
 		fmt.Println(board)
 	}
@@ -193,7 +193,7 @@ func TestThreatenedPositionsKnight(t *testing.T) {
 }
 
 func TestValidMovesBishop(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 1, 1, 1, 2)
 	movePiece(&board, 3, 1, 3, 2)
 	if debug {
@@ -206,7 +206,7 @@ func TestValidMovesBishop(t *testing.T) {
 }
 
 func TestValidMovesBishopMultiple(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 2, 0, 4, 4)
 	if debug {
 		fmt.Println(board)
@@ -218,7 +218,7 @@ func TestValidMovesBishopMultiple(t *testing.T) {
 }
 
 func TestValidMovesQueenMultiple(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 3, 0, 4, 4)
 	if debug {
 		fmt.Println(board)
@@ -230,7 +230,7 @@ func TestValidMovesQueenMultiple(t *testing.T) {
 }
 
 func TestValidMovesKing(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 4, 7, 4, 5)
 	if debug {
 		fmt.Println(board)
@@ -242,7 +242,7 @@ func TestValidMovesKing(t *testing.T) {
 }
 
 func TestValidMovesKingMultiple(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 4, 7, 1, 2)
 	if debug {
 		fmt.Println(board)
@@ -254,7 +254,7 @@ func TestValidMovesKingMultiple(t *testing.T) {
 }
 
 func TestValidMovesKingCastle(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 6, 0, 4, 5)
 	movePiece(&board, 5, 0, 4, 6)
 	movePiece(&board, 1, 0, 4, 6)
@@ -270,7 +270,7 @@ func TestValidMovesKingCastle(t *testing.T) {
 }
 
 func TestValidMovesKingCheck(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 4, 0, 0, 4)
 	if debug {
 		fmt.Println(board)
@@ -282,7 +282,7 @@ func TestValidMovesKingCheck(t *testing.T) {
 }
 
 func TestValidMovesPawnCheck(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 4, 0, 0, 4)
 	movePiece(&board, 1, 1, 1, 5)
 	movePiece(&board, 2, 6, 6, 6)
@@ -296,7 +296,7 @@ func TestValidMovesPawnCheck(t *testing.T) {
 }
 
 func TestValidMovesPawnCaptureCheck(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 4, 1, 0, 4)
 	movePiece(&board, 3, 7, 4, 4)
 	movePiece(&board, 1, 1, 3, 3)
@@ -310,7 +310,7 @@ func TestValidMovesPawnCaptureCheck(t *testing.T) {
 }
 
 func TestAllThreatenedPositions(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	threatenedPositions := AllMoves(
 		&board, White, Move{}, nil, true, nil,
 	)
@@ -320,7 +320,7 @@ func TestAllThreatenedPositions(t *testing.T) {
 }
 
 func TestNoPiecesBlockingCastle(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 1, 7, 0, 4)
 	movePiece(&board, 2, 7, 1, 5)
 	movePiece(&board, 3, 7, 6, 6)
@@ -333,7 +333,7 @@ func TestNoPiecesBlockingCastle(t *testing.T) {
 	}
 }
 func TestAllMoves(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	if debug {
 		fmt.Println(board)
 	}
@@ -346,7 +346,7 @@ func TestAllMoves(t *testing.T) {
 }
 
 func TestAllMovesMore(t *testing.T) {
-	board := NewFullBoard()
+	board := newFullBoard()
 	movePiece(&board, 1, 6, 0, 6)
 	movePiece(&board, 2, 6, 1, 6)
 	movePiece(&board, 3, 6, 6, 6)

@@ -4,9 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/Ekotlikoff/gochess/internal/model"
-	"github.com/Ekotlikoff/gochess/internal/server/backend/match"
-	"github.com/Ekotlikoff/gochess/internal/server/frontend"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -14,6 +11,10 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/Ekotlikoff/gochess/internal/model"
+	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
 )
 
 var (
@@ -214,8 +215,11 @@ func createMatch(testMatchServer *httptest.Server) (
 func sendMove(client *http.Client, serverSync *httptest.Server, x, y,
 	moveX, moveY int) {
 	movePayloadBuf := new(bytes.Buffer)
-	moveRequest := model.MoveRequest{model.Position{uint8(x), uint8(y)},
-		model.Move{int8(moveX), int8(moveY)}, nil}
+	moveRequest := model.MoveRequest{
+		Position:  model.Position{File: uint8(x), Rank: uint8(y)},
+		Move:      model.Move{X: int8(moveX), Y: int8(moveY)},
+		PromoteTo: nil,
+	}
 	json.NewEncoder(movePayloadBuf).Encode(moveRequest)
 	resp, err := client.Post(serverSync.URL, "application/json", movePayloadBuf)
 	if err == nil {
@@ -225,7 +229,7 @@ func sendMove(client *http.Client, serverSync *httptest.Server, x, y,
 
 func startSession(client *http.Client, username string) {
 	credentialsBuf := new(bytes.Buffer)
-	credentials := gateway.Credentials{username}
+	credentials := gateway.Credentials{Username: username}
 	json.NewEncoder(credentialsBuf).Encode(credentials)
 	resp, err := client.Post(serverSession.URL, "application/json", credentialsBuf)
 	serverSessionURL, _ := url.Parse(serverSession.URL)
