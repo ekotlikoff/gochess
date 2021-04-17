@@ -123,6 +123,9 @@ func (match *Match) handleTurn() {
 			}
 		}
 	}
+	if !timer.Stop() {
+		return
+	}
 	match.SetRequestedDraw(nil)
 	player.responseChanSync <- ResponseSync{MoveSuccess: true}
 	opponent.opponentPlayedMove <- request
