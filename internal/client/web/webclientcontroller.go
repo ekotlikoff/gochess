@@ -507,7 +507,7 @@ func (cm *ClientModel) wsMatch(buttonLoader js.Value,
 		if ws.Get("readyState").Equal(js.Global().Get("WebSocket").Get("OPEN")) {
 			cm.SetWSConn(ws)
 			if debug {
-				log.Println("Websocket connection succesfully initiated")
+				log.Println("Websocket connection successfully initiated")
 			}
 			message := matchserver.WebsocketRequest{
 				WebsocketRequestType: matchserver.RequestAsyncT,

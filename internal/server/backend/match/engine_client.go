@@ -24,7 +24,7 @@ func (matchingServer *MatchingServer) createEngineClient(
 		log.Println("ERROR: Failed to connect to chess engine at addr: " +
 			engineAddr + " with error: " + err.Error())
 	} else {
-		log.Println("Succesfully connected to chess engine")
+		log.Println("Successfully connected to chess engine")
 		matchingServer.botMatchingEnabled = true
 		matchingServer.engineClient = pb.NewRustChessClient(conn)
 		matchingServer.engineClientConn = conn
