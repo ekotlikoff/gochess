@@ -268,12 +268,12 @@ func (player *Player) Reset() {
 }
 
 func (player *Player) startMatch() {
-	player.matchStartMutex.RLock()
-	defer player.matchStartMutex.RUnlock()
-	close(player.matchStart)
 	player.channelMutex.Lock()
 	defer player.channelMutex.Unlock()
 	player.clientDoneWithMatch = make(chan struct{})
+	player.matchStartMutex.RLock()
+	defer player.matchStartMutex.RUnlock()
+	close(player.matchStart)
 }
 
 // ClientDoneWithMatch the client is now done with the match
