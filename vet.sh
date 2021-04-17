@@ -39,7 +39,9 @@ if [[ "$1" = "-install" ]]; then
       golang.org/x/lint/golint \
       golang.org/x/tools/cmd/goimports \
       honnef.co/go/tools/cmd/staticcheck \
-      github.com/client9/misspell/cmd/misspell
+      github.com/client9/misspell/cmd/misspell \
+      google.golang.org/protobuf/cmd/protoc-gen-go \
+      google.golang.org/grpc/cmd/protoc-gen-go-grpc
     popd
 
     if [[ "${TRAVIS}" = "true" ]]; then
@@ -50,8 +52,6 @@ if [[ "$1" = "-install" ]]; then
         unzip ${PROTOC_FILENAME}
         bin/protoc --version
         popd
-        go install google.golang.org/protobuf/cmd/protoc-gen-go@latest \
-            google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
     fi
     exit 0
 elif [[ "$#" -ne 0 ]]; then
