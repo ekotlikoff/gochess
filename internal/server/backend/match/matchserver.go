@@ -138,11 +138,15 @@ func (player *Player) MatchedOpponentName() string {
 
 // MatchMaxTimeMs returns players max time in ms
 func (player *Player) MatchMaxTimeMs() int64 {
+	player.matchMutex.RLock()
+	defer player.matchMutex.RUnlock()
 	return player.GetMatch().MaxTimeMs()
 }
 
 // Color returns player color
 func (player *Player) Color() model.Color {
+	player.matchMutex.RLock()
+	defer player.matchMutex.RUnlock()
 	return player.color
 }
 
