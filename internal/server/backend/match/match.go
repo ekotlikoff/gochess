@@ -195,6 +195,14 @@ func (match *Match) handleAsyncRequests(waitc chan struct{}) {
 func (match *Match) handleGameOver(
 	draw, resignation, timeout bool, winner *Player,
 ) {
+	match.mutex.Lock()
+	defer match.mutex.Unlock()
+	select {
+	case <-match.gameOver:
+		return
+	default:
+		break
+	}
 	match.game.SetGameResult(winner.color, draw)
 	winnerName := winner.name
 	if draw {
