@@ -1,3 +1,8 @@
+Build Requirements
+* Install protoc https://grpc.io/docs/protoc-installation/
+* Install golang
+* Run make
+
 TODO
 * Detect all game end scenarios
     * https://www.chess.com/article/view/how-chess-games-can-end-8-ways-explained#:~:text=Agreement-,Win%2FLose%3A,%3A%20checkmate%2C%20resignation%20and%20timeout.
