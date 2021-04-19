@@ -295,7 +295,7 @@ type MatchingServer struct {
 	liveMatchesMetric         prometheus.Gauge
 	matchingQueueLengthMetric prometheus.Gauge
 	mutex                     *sync.Mutex
-	matchingPlayers          chan *Player
+	matchingPlayers           chan *Player
 	pendingMatch              *sync.Mutex
 	botMatchingEnabled        bool
 	engineClient              pb.RustChessClient
