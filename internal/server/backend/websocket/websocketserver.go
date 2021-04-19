@@ -16,6 +16,17 @@ import (
 
 var upgrader = websocket.Upgrader{} // use default options
 
+const (
+	// Time allowed to write a message to the peer. TODO use this for write deadline as per gorilla ws examples.
+	writeWait = 10 * time.Second
+
+	// Time allowed to read the next pong message from the peer.
+	pongWait = 5 * time.Second
+
+	// Send pings to peer with this period. Must be less than pongWait.
+	pingPeriod = (pongWait * 9) / 10
+)
+
 // Serve the websocket server
 func Serve(
 	matchServer *matchserver.MatchingServer, cache *gateway.TTLMap, port int,
@@ -71,13 +82,42 @@ func writeLoop(c *websocket.Conn, player *matchserver.Player) {
 		},
 	}
 	c.WriteJSON(&matchedResponse)
+	ticker := time.NewTicker(pingPeriod)
+	defer ticker.Stop()
 	for {
-		if message := player.GetWebsocketMessageToWrite(); message != nil {
-			err := c.WriteJSON(message)
-			if err != nil {
-				log.Println("Write error:", err)
+		var response matchserver.WebsocketResponse
+		//player.ChannelMutex.RLock()
+		select {
+		case ResponseSync := <-player.ResponseChanSync:
+			response = matchserver.WebsocketResponse{
+				WebsocketResponseType: matchserver.ResponseSyncT,
+				ResponseSync:          ResponseSync,
+			}
+		case ResponseAsync := <-player.ResponseChanAsync:
+			response = matchserver.WebsocketResponse{
+				WebsocketResponseType: matchserver.ResponseAsyncT,
+				ResponseAsync:         ResponseAsync,
+			}
+		case OpponentMove := <-player.OpponentPlayedMove:
+			response = matchserver.WebsocketResponse{
+				WebsocketResponseType: matchserver.OpponentPlayedMoveT,
+				OpponentPlayedMove:    OpponentMove,
+			}
+		case <-ticker.C:
+			if err := c.WriteMessage(websocket.PingMessage, nil); err != nil {
+				//player.ChannelMutex.RUnlock()
 				return
 			}
+			continue
+		}
+		//player.ChannelMutex.RUnlock()
+		err := c.WriteJSON(response)
+		if err != nil {
+			log.Println("Write error:", err)
+			return
+		} else if response.WebsocketResponseType == matchserver.ResponseAsyncT &&
+			response.ResponseAsync.GameOver {
+			return
 		}
 	}
 }
@@ -87,8 +127,13 @@ func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
 	defer c.Close()
 	for {
 		message := matchserver.WebsocketRequest{}
+		if player.GetMatch() != nil && player.GetMatch().GameOver() {
+			return
+		}
 		if err := c.ReadJSON(&message); err != nil {
-			log.Println("Read error:", err)
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("Websocketserver read error: %v", err)
+			}
 			close(waitc)
 			return
 		}
@@ -107,6 +152,11 @@ func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
 					err := player.WaitForMatchStart()
 					if err == nil {
 						player.SetSearchingForMatch(false)
+						c.SetReadDeadline(time.Now().Add(pongWait))
+						c.SetPongHandler(func(string) error {
+							c.SetReadDeadline(time.Now().Add(pongWait))
+							return nil
+						})
 					} else {
 						log.Println("FATAL: Failed to find match")
 					}

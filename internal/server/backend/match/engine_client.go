@@ -66,7 +66,7 @@ func (matchingServer *MatchingServer) engineSession(botPlayer *Player) {
 	go engineReceiveLoop(botPlayer, stream, waitc)
 	for {
 		select {
-		case move := <-botPlayer.opponentPlayedMove:
+		case move := <-botPlayer.OpponentPlayedMove:
 			moveMsg := moveToPB(move)
 			stream.Send(&moveMsg)
 		case <-gameOver:
@@ -95,7 +95,7 @@ func engineReceiveLoop(
 		}
 		botMove := pbToMove(in.GetChessMove())
 		botPlayer.requestChanSync <- botMove
-		<-botPlayer.responseChanSync
+		<-botPlayer.ResponseChanSync
 	}
 }
 

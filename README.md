@@ -4,6 +4,15 @@ Build Requirements
 * Run make
 
 TODO
+* Observability
+    - [ ] Prometheus metrics
+        - [x] gauge for number of live games
+        - [x] gauge for number of players matching
+        - [ ] counter for request count split by status
+        - [ ] histogram for latency split by status
+    - [ ] Support log to syslog
+    - [ ] Improve logging
+    - [ ] Tracing
 * Detect all game end scenarios
     * https://www.chess.com/article/view/how-chess-games-can-end-8-ways-explained#:~:text=Agreement-,Win%2FLose%3A,%3A%20checkmate%2C%20resignation%20and%20timeout.
     - [x] Detect stalemate
@@ -21,6 +30,7 @@ TODO
         - [] Clear the state to save memory after an irreversible move (capture, pawn move, castle)
 * Server
     - [x] http server
+      - [x] Websocket ping + pong messages at certain interval (if no other message written), this lets us have a read and write deadline enabling us to close out the read loops cleanly
       - [x] Make a websocket server/client as an alternative to polling
       - [x] Move ttlmap out to a separate package that can be shared by http and websocket
       - [x] Move web client out of server directory to client directory as it will use both HTTP and websocket server depending on compile flags (or whatever)

@@ -14,6 +14,7 @@ import (
 
 	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
 	"github.com/gofrs/uuid"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -57,6 +58,8 @@ func Serve(
 	mux.Handle("/http/async", httputil.NewSingleHostReverseProxy(httpBackend))
 	// Websocket backend proxying
 	mux.Handle("/ws", httputil.NewSingleHostReverseProxy(websocketBackend))
+	// Prometheus metrics endpoint
+	mux.Handle("/metrics", promhttp.Handler())
 	log.Println("Gateway server listening on port", port, "...")
 	http.ListenAndServe(":"+strconv.Itoa(port), mux)
 }
