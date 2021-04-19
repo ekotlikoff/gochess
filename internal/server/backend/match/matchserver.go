@@ -295,7 +295,7 @@ type MatchingServer struct {
 	liveMatchesMetric         prometheus.Gauge
 	matchingQueueLengthMetric prometheus.Gauge
 	mutex                     *sync.Mutex
-	matching_players          chan *Player
+	matchingPlayers          chan *Player
 	pendingMatch              *sync.Mutex
 	botMatchingEnabled        bool
 	engineClient              pb.RustChessClient
@@ -307,7 +307,7 @@ type MatchingServer struct {
 func NewMatchingServer() MatchingServer {
 	matchingServer := MatchingServer{
 		id: matchingServerID, mutex: &sync.Mutex{},
-		matching_players: make(chan *Player), pendingMatch: &sync.Mutex{},
+		matchingPlayers: make(chan *Player), pendingMatch: &sync.Mutex{},
 	}
 	matchingServerID++
 	matchingQueueLengthMetric := prometheus.NewGauge(prometheus.GaugeOpts{
@@ -354,7 +354,7 @@ func (matchingServer *MatchingServer) matchAndPlay(
 	matchingServer.pendingMatch.Lock()
 	for {
 		select {
-		case player := <-matchingServer.matching_players:
+		case player := <-matchingServer.matchingPlayers:
 			if player1 == nil {
 				player1 = player
 				if matchingServer.botMatchingEnabled {
@@ -389,7 +389,7 @@ func (matchingServer *MatchingServer) matchAndPlay(
 			botPlayer := NewPlayer(botNames[rand.Intn(len(botNames))] + "bot")
 			go matchingServer.engineSession(botPlayer)
 			matchingServer.matchingQueueLengthMetric.Inc()
-			go (func() { matchingServer.matching_players <- botPlayer })()
+			go (func() { matchingServer.matchingPlayers <- botPlayer })()
 		}
 	}
 }
@@ -446,6 +446,6 @@ func (matchingServer *MatchingServer) removeMatch(matchToRemove *Match) {
 
 // MatchPlayer queues the player for matching
 func (matchingServer *MatchingServer) MatchPlayer(player *Player) {
-	matchingServer.matching_players <- player
+	matchingServer.matchingPlayers <- player
 	matchingServer.matchingQueueLengthMetric.Inc()
 }
