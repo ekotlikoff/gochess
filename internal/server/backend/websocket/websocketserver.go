@@ -131,8 +131,14 @@ func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
 			return
 		}
 		if err := c.ReadJSON(&message); err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+			if websocket.IsUnexpectedCloseError(err,
+				websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("Websocketserver read error: %v", err)
+			}
+			if player.GetMatch() != nil && !player.GetMatch().GameOver() {
+				player.RequestChanAsync <- matchserver.RequestAsync{
+					Resign: true,
+				}
 			}
 			close(waitc)
 			return

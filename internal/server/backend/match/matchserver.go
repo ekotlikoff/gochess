@@ -78,7 +78,7 @@ type (
 		elapsedMs           int64
 		requestChanSync     chan model.MoveRequest
 		ResponseChanSync    chan ResponseSync
-		requestChanAsync    chan RequestAsync
+		RequestChanAsync    chan RequestAsync
 		ResponseChanAsync   chan ResponseAsync
 		OpponentPlayedMove  chan model.MoveRequest
 		matchStart          chan struct{}
@@ -212,7 +212,7 @@ func (player *Player) GetSyncUpdate() *model.MoveRequest {
 func (player *Player) RequestAsync(requestAsync RequestAsync) {
 	player.ChannelMutex.RLock()
 	defer player.ChannelMutex.RUnlock()
-	player.requestChanAsync <- requestAsync
+	player.RequestChanAsync <- requestAsync
 }
 
 // GetAsyncUpdate get the next async update for a player
@@ -240,7 +240,7 @@ func (player *Player) Reset() {
 	player.SetMatch(nil)
 	player.requestChanSync = make(chan model.MoveRequest, 1)
 	player.ResponseChanSync = make(chan ResponseSync, 10)
-	player.requestChanAsync = make(chan RequestAsync, 1)
+	player.RequestChanAsync = make(chan RequestAsync, 1)
 	player.ResponseChanAsync = make(chan ResponseAsync, 1)
 	player.OpponentPlayedMove = make(chan model.MoveRequest, 10)
 	player.matchStartMutex.Lock()

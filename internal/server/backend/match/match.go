@@ -160,8 +160,8 @@ func (match *Match) handleAsyncRequests(waitc chan struct{}) {
 		player := match.black
 		request := RequestAsync{}
 		select {
-		case request = <-match.black.requestChanAsync:
-		case request = <-match.white.requestChanAsync:
+		case request = <-match.black.RequestChanAsync:
+		case request = <-match.white.RequestChanAsync:
 			opponent = match.black
 			player = match.white
 		case <-match.gameOver:

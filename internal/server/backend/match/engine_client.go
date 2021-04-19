@@ -63,7 +63,7 @@ func (matchingServer *MatchingServer) engineSession(botPlayer *Player) {
 	}
 	gameOver := botPlayer.match.gameOver
 	waitc := make(chan struct{})
-	go engineReceiveLoop(botPlayer, stream, waitc)
+	go engineReceiveLoop(matchingServer, botPlayer, stream, waitc)
 	for {
 		select {
 		case move := <-botPlayer.OpponentPlayedMove:
@@ -79,7 +79,8 @@ func (matchingServer *MatchingServer) engineSession(botPlayer *Player) {
 }
 
 func engineReceiveLoop(
-	botPlayer *Player, stream pb.RustChess_GameClient, waitc chan struct{}) {
+	matchingServer *MatchingServer, botPlayer *Player,
+	stream pb.RustChess_GameClient, waitc chan struct{}) {
 	for {
 		in, err := stream.Recv()
 		if err == io.EOF {
@@ -88,8 +89,13 @@ func engineReceiveLoop(
 			return
 		}
 		if err != nil {
-			log.Printf("Failed to receive a msg : %v", err)
-			// TODO resign in this case?
+			log.Printf("Failed to receive a msg, closing engine conn: %v", err)
+			if botPlayer.GetMatch() != nil && !botPlayer.GetMatch().GameOver() {
+				botPlayer.RequestChanAsync <- RequestAsync{
+					Resign: true,
+				}
+			}
+			matchingServer.botMatchingEnabled = false
 			close(waitc)
 			return
 		}
