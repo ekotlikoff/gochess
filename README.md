@@ -10,9 +10,7 @@ TODO
         - [x] gauge for number of players matching
         - [x] counter for request count split by status
         - [x] histogram for latency split by status
-    - [ ] Support log to syslog
-        - [ ] Add log config to cmd
-        - [ ] Support systemctl
+    - [x] Centralize logging config into cmd/webserver/main
     - [ ] Improve logging
     - [ ] Tracing
 * Detect all game end scenarios

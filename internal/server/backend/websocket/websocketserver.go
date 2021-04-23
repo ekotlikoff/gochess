@@ -2,10 +2,8 @@ package websocketserver
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
@@ -30,18 +28,7 @@ const (
 // Serve the websocket server
 func Serve(
 	matchServer *matchserver.MatchingServer, cache *gateway.TTLMap, port int,
-	logFile *string, quiet bool,
 ) {
-	if logFile != nil {
-		file, err := os.OpenFile(*logFile, os.O_CREATE|os.O_APPEND, 0644)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.SetOutput(file)
-	}
-	if quiet {
-		log.SetOutput(ioutil.Discard)
-	}
 	mux := http.NewServeMux()
 	mux.Handle("/ws", makeWebsocketHandler(matchServer, cache))
 	log.Println("WebsocketServer listening on port", port, "...")

@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
 	"strconv"
 	"time"
 
@@ -61,20 +60,7 @@ type Credentials struct {
 }
 
 // Serve static files and proxy to the different backends
-func Serve(
-	httpBackend *url.URL, websocketBackend *url.URL, port int, logFile *string,
-	quiet bool,
-) {
-	if logFile != nil {
-		file, err := os.OpenFile(*logFile, os.O_CREATE|os.O_APPEND, 0644)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.SetOutput(file)
-	}
-	if quiet {
-		log.SetOutput(ioutil.Discard)
-	}
+func Serve(httpBackend *url.URL, websocketBackend *url.URL, port int) {
 	httpBackendProxy := httputil.NewSingleHostReverseProxy(httpBackend)
 	wsBackendProxy := httputil.NewSingleHostReverseProxy(websocketBackend)
 	wsBackendProxy.ModifyResponse = func(res *http.Response) error {

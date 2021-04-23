@@ -4,7 +4,11 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/url"
+	"os"
+	"strconv"
 	"time"
 
 	httpserver "github.com/Ekotlikoff/gochess/internal/server/backend/http"
@@ -23,7 +27,12 @@ type (
 		EnableBotMatching       bool
 		EngineConnectionTimeout string
 		EngineAddr              string
+		GatewayPort             int
+		HTTPPort                int
+		WSPort                  int
 		MaxMatchingDuration     string
+		LogFile                 string
+		Quiet                   bool
 	}
 	// BackendType represents different types of backends
 	BackendType string
@@ -38,6 +47,16 @@ const (
 
 func main() {
 	config := loadConfig()
+	if config.LogFile != "" {
+		file, err := os.OpenFile(config.LogFile, os.O_CREATE|os.O_APPEND, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.SetOutput(file)
+	}
+	if config.Quiet {
+		log.SetOutput(ioutil.Discard)
+	}
 	engineConnTimeout, _ := time.ParseDuration(config.EngineConnectionTimeout)
 	maxMatchingDuration, _ := time.ParseDuration(config.MaxMatchingDuration)
 	var matchingServer matchserver.MatchingServer
@@ -50,15 +69,17 @@ func main() {
 	exitChan := make(chan bool, 1)
 	go matchingServer.StartMatchServers(10, exitChan)
 	if config.BackendType == HTTPBackend {
-		go httpserver.Serve(&matchingServer, gateway.SessionCache, 8001, nil,
-			false)
+		go httpserver.Serve(&matchingServer, gateway.SessionCache,
+			config.HTTPPort)
 	} else if config.BackendType == WebsocketBackend {
-		go websocketserver.Serve(&matchingServer, gateway.SessionCache, 8002,
-			nil, false)
+		go websocketserver.Serve(&matchingServer, gateway.SessionCache,
+			config.WSPort)
 	}
-	httpserverURL, _ := url.Parse("http://localhost:8001")
-	websocketURL, _ := url.Parse("http://localhost:8002")
-	gateway.Serve(httpserverURL, websocketURL, 8000, nil, false)
+	httpserverURL, _ := url.Parse("http://localhost:" +
+		strconv.Itoa(config.HTTPPort))
+	websocketURL, _ := url.Parse("http://localhost:" +
+		strconv.Itoa(config.WSPort))
+	gateway.Serve(httpserverURL, websocketURL, config.GatewayPort)
 }
 
 func loadConfig() Configuration {

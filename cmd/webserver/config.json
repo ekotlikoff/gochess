@@ -3,5 +3,10 @@
     "EnableBotMatching": true,
     "EngineConnectionTimeout": "1s",
     "EngineAddr": "localhost:50051",
-    "MaxMatchingDuration": "5s"
+    "GatewayPort": 8000,
+    "HTTPPort": 8001,
+    "WSPort": 8002,
+    "MaxMatchingDuration": "5s",
+    "logFile": "",
+    "quiet": false
 }
