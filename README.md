@@ -8,9 +8,11 @@ TODO
     - [ ] Prometheus metrics
         - [x] gauge for number of live games
         - [x] gauge for number of players matching
-        - [ ] counter for request count split by status
-        - [ ] histogram for latency split by status
+        - [x] counter for request count split by status
+        - [x] histogram for latency split by status
     - [ ] Support log to syslog
+        - [ ] Add log config to cmd
+        - [ ] Support systemctl
     - [ ] Improve logging
     - [ ] Tracing
 * Detect all game end scenarios
@@ -51,7 +53,9 @@ TODO
       - [ ] user auth?
     - [x] client agnostic matching server
         - [x] testing
-        - [ ] if client abandoned set the opponent as the winner
+        - [x] if client abandoned set the opponent as the winner
+          - [x] websocket
+          - [x] engine
     - [x] Max matching time, after which we match the player with a chess engine (if connected)
 * Client
     - [x] Golang WebAssembly web client

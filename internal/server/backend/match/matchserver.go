@@ -314,7 +314,7 @@ func NewMatchingServer() MatchingServer {
 		Namespace: "gochess",
 		Subsystem: "matchserver",
 		Name:      "matching_queue_length",
-		Help:      "The number of players in the matching queue",
+		Help:      "The number of players in the matching queue.",
 		ConstLabels: prometheus.Labels{
 			"matching_server_id": strconv.Itoa(matchingServer.id),
 		},
