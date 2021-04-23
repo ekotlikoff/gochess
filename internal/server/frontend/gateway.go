@@ -154,7 +154,7 @@ func prometheusMiddleware(handler http.Handler) http.HandlerFunc {
 		start := time.Now()
 		sw := statusWriter{ResponseWriter: w}
 		handler.ServeHTTP(&sw, r)
-		duration := time.Now().Sub(start)
+		duration := time.Since(start)
 		gatewayResponseMetric.WithLabelValues(
 			r.URL.Path, r.Method, fmt.Sprintf("%d", sw.status)).Inc()
 		gatewayResponseDurationMetric.WithLabelValues(r.URL.Path, r.Method,
