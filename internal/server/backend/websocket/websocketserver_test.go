@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -32,7 +30,6 @@ func init() {
 	matchingServer.StartMatchServers(10, exitChan)
 	serverSession = httptest.NewServer(http.HandlerFunc(gateway.StartSession))
 	serverMatchAndPlay = httptest.NewServer(http.Handler(makeWebsocketHandler(&matchingServer, gateway.SessionCache)))
-	log.SetOutput(ioutil.Discard)
 }
 
 func TestWSMatch(t *testing.T) {
@@ -163,10 +160,8 @@ func TestWSDraw(t *testing.T) {
 		WebsocketRequestType: matchserver.RequestAsyncT,
 		RequestAsync:         matchserver.RequestAsync{Match: true},
 	}
-	log.Println("Writing MATCH message")
 	ws.WriteJSON(&message)
 	ws2.WriteJSON(&message)
-	log.Println("Wrote MATCH message")
 	wsResponse := matchserver.WebsocketResponse{}
 	wsResponse2 := matchserver.WebsocketResponse{}
 	ws.ReadJSON(&wsResponse)
@@ -257,10 +252,8 @@ func TestWSResign(t *testing.T) {
 		WebsocketRequestType: matchserver.RequestAsyncT,
 		RequestAsync:         matchserver.RequestAsync{Match: true},
 	}
-	log.Println("Writing MATCH message")
 	ws.WriteJSON(&message)
 	ws2.WriteJSON(&message)
-	log.Println("Wrote MATCH message")
 	wsResponse := matchserver.WebsocketResponse{}
 	wsResponse2 := matchserver.WebsocketResponse{}
 	ws.ReadJSON(&wsResponse)

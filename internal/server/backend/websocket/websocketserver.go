@@ -38,7 +38,6 @@ func Serve(
 func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
 	cache *gateway.TTLMap) http.Handler {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		log.SetPrefix("WS Handler: ")
 		player := getSession(w, r, cache)
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {

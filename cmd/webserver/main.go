@@ -47,16 +47,7 @@ const (
 
 func main() {
 	config := loadConfig()
-	if config.LogFile != "" {
-		file, err := os.OpenFile(config.LogFile, os.O_CREATE|os.O_APPEND, 0644)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.SetOutput(file)
-	}
-	if config.Quiet {
-		log.SetOutput(ioutil.Discard)
-	}
+	configureLogging(config)
 	engineConnTimeout, _ := time.ParseDuration(config.EngineConnectionTimeout)
 	maxMatchingDuration, _ := time.ParseDuration(config.MaxMatchingDuration)
 	var matchingServer matchserver.MatchingServer
@@ -80,6 +71,19 @@ func main() {
 	websocketURL, _ := url.Parse("http://localhost:" +
 		strconv.Itoa(config.WSPort))
 	gateway.Serve(httpserverURL, websocketURL, config.GatewayPort)
+}
+
+func configureLogging(config Configuration) {
+	if config.LogFile != "" {
+		file, err := os.OpenFile(config.LogFile, os.O_CREATE|os.O_APPEND, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.SetOutput(file)
+	}
+	if config.Quiet {
+		log.SetOutput(ioutil.Discard)
+	}
 }
 
 func loadConfig() Configuration {

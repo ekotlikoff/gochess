@@ -34,7 +34,6 @@ func makeSearchForMatchHandler(
 	matchServer *matchserver.MatchingServer, cache *gateway.TTLMap,
 ) http.Handler {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		log.SetPrefix("SearchForMatch: ")
 		player := getSession(w, r, cache)
 		if player == nil {
 			return
@@ -65,7 +64,6 @@ func makeSearchForMatchHandler(
 
 func makeSyncHandler(cache *gateway.TTLMap) http.Handler {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		log.SetPrefix("SyncHandler: ")
 		player := getSession(w, r, cache)
 		if player == nil {
 			return
@@ -99,7 +97,6 @@ func makeSyncHandler(cache *gateway.TTLMap) http.Handler {
 
 func makeAsyncHandler(cache *gateway.TTLMap) http.Handler {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		log.SetPrefix("AsyncHandler: ")
 		player := getSession(w, r, cache)
 		if player == nil {
 			return

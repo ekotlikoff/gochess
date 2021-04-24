@@ -91,7 +91,6 @@ func handleWebRoot(w http.ResponseWriter, r *http.Request) {
 
 // StartSession credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
 func StartSession(w http.ResponseWriter, r *http.Request) {
-	log.SetPrefix("StartSession: ")
 	var creds Credentials
 	err := json.NewDecoder(r.Body).Decode(&creds)
 	if err != nil {

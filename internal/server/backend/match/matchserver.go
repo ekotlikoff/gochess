@@ -3,6 +3,7 @@ package matchserver
 import (
 	"context"
 	"errors"
+	"log"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -415,7 +416,7 @@ func (matchingServer *MatchingServer) StartCustomMatchServers(
 		},
 	})
 	prometheus.MustRegister(matchingServer.liveMatchesMetric)
-	// Start handlers
+	log.Printf("Starting %d matchAndPlay threads ...", maxConcurrentGames)
 	for i := 0; i < maxConcurrentGames; i++ {
 		go matchingServer.matchAndPlay(matchGenerator, i)
 	}
