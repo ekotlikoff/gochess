@@ -1,7 +1,11 @@
 Build Requirements
 * Install protoc https://grpc.io/docs/protoc-installation/
 * Install golang
-* Run make
+* Run `make`
+
+Observability
+* Run jaeger all-in-one to collect traces
+* Run prometheus and scrape /metrics to collect metrics
 
 TODO
 * Observability
