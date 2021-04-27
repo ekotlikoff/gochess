@@ -102,11 +102,11 @@ func writeLoop(c *websocket.Conn, player *matchserver.Player,
 				OpponentPlayedMove:    OpponentMove,
 			}
 		case <-ticker.C:
-			resType = "ping"
+			getResSpan.LogFields(opentracinglog.String("resType", "ping"))
 			if err := c.WriteMessage(websocket.PingMessage, nil); err != nil {
+				getResSpan.Finish()
 				return
 			}
-			getResSpan.LogFields(opentracinglog.String("resType", resType))
 			getResSpan.Finish()
 			continue
 		}
