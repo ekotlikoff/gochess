@@ -135,6 +135,9 @@ func StartSession(w http.ResponseWriter, r *http.Request) {
 
 // GetSession credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
 func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
+	tracer := opentracing.GlobalTracer()
+	getSessionSpan := tracer.StartSpan("GetSession")
+	defer getSessionSpan.Finish()
 	c, err := r.Cookie("session_token")
 	if err != nil {
 		if err == http.ErrNoCookie {
@@ -148,7 +151,12 @@ func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 		return nil
 	}
 	sessionToken := c.Value
+	getTokenSpan := tracer.StartSpan(
+		"GetToken",
+		opentracing.ChildOf(getSessionSpan.Context()),
+	)
 	player, err := sessionCache.Get(sessionToken)
+	getTokenSpan.Finish()
 	if err != nil {
 		log.Println("ERROR ", err)
 		w.WriteHeader(http.StatusInternalServerError)
