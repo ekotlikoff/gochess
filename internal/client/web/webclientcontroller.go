@@ -265,7 +265,6 @@ func (cm *ClientModel) takeMove(
 }
 
 func (cm *ClientModel) listenForSyncUpdate() {
-	log.SetPrefix("listenForSyncUpdate: ")
 	if cm.backendType == HttpBackend {
 		cm.listenForSyncUpdateHttp()
 	}
@@ -273,7 +272,6 @@ func (cm *ClientModel) listenForSyncUpdate() {
 
 func (cm *ClientModel) listenForSyncUpdateHttp() {
 	for true {
-		log.SetPrefix("listenForSyncUpdate: ")
 		select {
 		case <-cm.remoteMatchModel.endRemoteGameChan:
 			return
@@ -318,7 +316,6 @@ func (cm *ClientModel) handleSyncUpdate(opponentMove model.MoveRequest) {
 }
 
 func (cm *ClientModel) listenForAsyncUpdate() {
-	log.SetPrefix("listenForAsyncUpdate: ")
 	if cm.backendType == HttpBackend {
 		cm.listenForAsyncUpdateHttp()
 	}
@@ -326,7 +323,6 @@ func (cm *ClientModel) listenForAsyncUpdate() {
 
 func (cm *ClientModel) listenForAsyncUpdateHttp() {
 	for true {
-		log.SetPrefix("listenForAsyncUpdate: ")
 		select {
 		case <-cm.remoteMatchModel.endRemoteGameChan:
 			return

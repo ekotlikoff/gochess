@@ -57,6 +57,13 @@ func (match *Match) PlayerName(color model.Color) string {
 	return match.white.Name()
 }
 
+// GameOver check if the game is over
+func (match *Match) GameOver() bool {
+	match.mutex.RLock()
+	defer match.mutex.RUnlock()
+	return match.game.GameOver()
+}
+
 // GetRequestedDraw get the current player who has requested a draw
 func (match *Match) GetRequestedDraw() *Player {
 	match.mutex.RLock()
@@ -112,7 +119,7 @@ func (match *Match) handleTurn() {
 		err = match.game.Move(request)
 		if err != nil {
 			select {
-			case player.responseChanSync <- ResponseSync{MoveSuccess: false}:
+			case player.ResponseChanSync <- ResponseSync{MoveSuccess: false}:
 			case <-match.gameOver:
 				return
 			}
@@ -127,8 +134,8 @@ func (match *Match) handleTurn() {
 		return
 	}
 	match.SetRequestedDraw(nil)
-	player.responseChanSync <- ResponseSync{MoveSuccess: true}
-	opponent.opponentPlayedMove <- request
+	player.ResponseChanSync <- ResponseSync{MoveSuccess: true}
+	opponent.OpponentPlayedMove <- request
 	if match.game.GameOver() {
 		result := match.game.Result()
 		winner := match.black
@@ -153,8 +160,8 @@ func (match *Match) handleAsyncRequests(waitc chan struct{}) {
 		player := match.black
 		request := RequestAsync{}
 		select {
-		case request = <-match.black.requestChanAsync:
-		case request = <-match.white.requestChanAsync:
+		case request = <-match.black.RequestChanAsync:
+		case request = <-match.white.RequestChanAsync:
 			opponent = match.black
 			player = match.white
 		case <-match.gameOver:
@@ -171,7 +178,7 @@ func (match *Match) handleAsyncRequests(waitc chan struct{}) {
 				match.SetRequestedDraw(nil)
 				go func() {
 					select {
-					case opponent.responseChanAsync <- ResponseAsync{
+					case opponent.ResponseChanAsync <- ResponseAsync{
 						false, true, false, false, false, "",
 					}:
 					case <-match.gameOver:
@@ -181,7 +188,7 @@ func (match *Match) handleAsyncRequests(waitc chan struct{}) {
 				match.SetRequestedDraw(player)
 				go func() {
 					select {
-					case opponent.responseChanAsync <- ResponseAsync{
+					case opponent.ResponseChanAsync <- ResponseAsync{
 						false, true, false, false, false, "",
 					}:
 					case <-match.gameOver:
@@ -217,7 +224,7 @@ func (match *Match) handleGameOver(
 		go func() {
 			defer wg.Done()
 			select {
-			case thisPlayer.responseChanAsync <- response:
+			case thisPlayer.ResponseChanAsync <- response:
 			case <-time.After(5 * time.Second):
 			}
 		}()

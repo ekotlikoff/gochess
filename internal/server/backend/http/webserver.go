@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/Ekotlikoff/gochess/internal/model"
@@ -16,23 +15,12 @@ import (
 
 // Serve the http server
 func Serve(
-	matchServer *matchserver.MatchingServer, cache *gateway.TTLMap, port int,
-	logFile *string, quiet bool,
+	matchServer *matchserver.MatchingServer, port int,
 ) {
-	if logFile != nil {
-		file, err := os.OpenFile(*logFile, os.O_CREATE|os.O_APPEND, 0644)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.SetOutput(file)
-	}
-	if quiet {
-		log.SetOutput(ioutil.Discard)
-	}
 	mux := http.NewServeMux()
-	mux.Handle("/http/match", makeSearchForMatchHandler(matchServer, cache))
-	mux.Handle("/http/sync", makeSyncHandler(cache))
-	mux.Handle("/http/async", makeAsyncHandler(cache))
+	mux.Handle("/http/match", makeSearchForMatchHandler(matchServer))
+	mux.Handle("/http/sync", makeSyncHandler())
+	mux.Handle("/http/async", makeAsyncHandler())
 	log.Println("HTTP server listening on port", port, "...")
 	http.ListenAndServe(":"+strconv.Itoa(port), mux)
 }
@@ -43,11 +31,10 @@ func SetQuiet() {
 }
 
 func makeSearchForMatchHandler(
-	matchServer *matchserver.MatchingServer, cache *gateway.TTLMap,
+	matchServer *matchserver.MatchingServer,
 ) http.Handler {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		log.SetPrefix("SearchForMatch: ")
-		player := getSession(w, r, cache)
+		player := gateway.GetSession(w, r)
 		if player == nil {
 			return
 		} else if !player.GetSearchingForMatch() {
@@ -75,10 +62,9 @@ func makeSearchForMatchHandler(
 	return http.HandlerFunc(handler)
 }
 
-func makeSyncHandler(cache *gateway.TTLMap) http.Handler {
+func makeSyncHandler() http.Handler {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		log.SetPrefix("SyncHandler: ")
-		player := getSession(w, r, cache)
+		player := gateway.GetSession(w, r)
 		if player == nil {
 			return
 		}
@@ -109,10 +95,9 @@ func makeSyncHandler(cache *gateway.TTLMap) http.Handler {
 	return http.HandlerFunc(handler)
 }
 
-func makeAsyncHandler(cache *gateway.TTLMap) http.Handler {
+func makeAsyncHandler() http.Handler {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		log.SetPrefix("AsyncHandler: ")
-		player := getSession(w, r, cache)
+		player := gateway.GetSession(w, r)
 		if player == nil {
 			return
 		}
@@ -144,32 +129,4 @@ func makeAsyncHandler(cache *gateway.TTLMap) http.Handler {
 		}
 	}
 	return http.HandlerFunc(handler)
-}
-
-func getSession(w http.ResponseWriter, r *http.Request, cache *gateway.TTLMap,
-) *matchserver.Player {
-	c, err := r.Cookie("session_token")
-	if err != nil {
-		if err == http.ErrNoCookie {
-			log.Println("session_token is not set")
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Missing session_token"))
-			return nil
-		}
-		log.Println("ERROR ", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return nil
-	}
-	sessionToken := c.Value
-	player, err := cache.Get(sessionToken)
-	if err != nil {
-		log.Println("ERROR ", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return nil
-	} else if player == nil {
-		log.Println("No player found for token ", sessionToken)
-		w.WriteHeader(http.StatusUnauthorized)
-		return nil
-	}
-	return player
 }

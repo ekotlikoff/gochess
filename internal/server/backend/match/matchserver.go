@@ -3,17 +3,24 @@ package matchserver
 import (
 	"context"
 	"errors"
+	"log"
 	"math/rand"
+	"strconv"
 	"sync"
 	"time"
 
 	pb "github.com/Ekotlikoff/gochess/api"
 	"github.com/Ekotlikoff/gochess/internal/model"
+	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 )
 
-// PollingDefaultTimeout is the default timeout for http requests
-var PollingDefaultTimeout time.Duration = 10 * time.Second
+var (
+	// PollingDefaultTimeout is the default timeout for http requests
+	PollingDefaultTimeout time.Duration = 10 * time.Second
+
+	matchingServerID = 0
+)
 
 const (
 	// NullT is the WS response type for a null response
@@ -71,13 +78,13 @@ type (
 		color               model.Color
 		elapsedMs           int64
 		requestChanSync     chan model.MoveRequest
-		responseChanSync    chan ResponseSync
-		requestChanAsync    chan RequestAsync
-		responseChanAsync   chan ResponseAsync
-		opponentPlayedMove  chan model.MoveRequest
+		ResponseChanSync    chan ResponseSync
+		RequestChanAsync    chan RequestAsync
+		ResponseChanAsync   chan ResponseAsync
+		OpponentPlayedMove  chan model.MoveRequest
 		matchStart          chan struct{}
 		clientDoneWithMatch chan struct{}
-		channelMutex        sync.RWMutex
+		ChannelMutex        sync.RWMutex
 		matchStartMutex     sync.RWMutex
 		matchMutex          sync.RWMutex
 		searchingForMatch   bool
@@ -138,8 +145,6 @@ func (player *Player) MatchedOpponentName() string {
 
 // MatchMaxTimeMs returns players max time in ms
 func (player *Player) MatchMaxTimeMs() int64 {
-	player.matchMutex.RLock()
-	defer player.matchMutex.RUnlock()
 	return player.GetMatch().MaxTimeMs()
 }
 
@@ -148,31 +153,6 @@ func (player *Player) Color() model.Color {
 	player.matchMutex.RLock()
 	defer player.matchMutex.RUnlock()
 	return player.color
-}
-
-// GetWebsocketMessageToWrite WS client waits for next msg to send to the client
-func (player *Player) GetWebsocketMessageToWrite() *WebsocketResponse {
-	player.channelMutex.RLock()
-	defer player.channelMutex.RUnlock()
-	var response WebsocketResponse
-	select {
-	case responseSync := <-player.responseChanSync:
-		response = WebsocketResponse{
-			WebsocketResponseType: ResponseSyncT,
-			ResponseSync:          responseSync,
-		}
-	case responseAsync := <-player.responseChanAsync:
-		response = WebsocketResponse{
-			WebsocketResponseType: ResponseAsyncT,
-			ResponseAsync:         responseAsync,
-		}
-	case opponentMove := <-player.opponentPlayedMove:
-		response = WebsocketResponse{
-			WebsocketResponseType: OpponentPlayedMoveT,
-			OpponentPlayedMove:    opponentMove,
-		}
-	}
-	return &response
 }
 
 // WaitForMatchStart player waits for match start
@@ -201,26 +181,26 @@ func (player *Player) HasMatchStarted(ctx context.Context) bool {
 
 // MakeMoveWS player (websocket client) make a move
 func (player *Player) MakeMoveWS(pieceMove model.MoveRequest) {
-	player.channelMutex.RLock()
-	defer player.channelMutex.RUnlock()
+	player.ChannelMutex.RLock()
+	defer player.ChannelMutex.RUnlock()
 	player.requestChanSync <- pieceMove
 }
 
 // MakeMove player makes a move
 func (player *Player) MakeMove(pieceMove model.MoveRequest) bool {
-	player.channelMutex.RLock()
-	defer player.channelMutex.RUnlock()
+	player.ChannelMutex.RLock()
+	defer player.ChannelMutex.RUnlock()
 	player.requestChanSync <- pieceMove
-	response := <-player.responseChanSync
+	response := <-player.ResponseChanSync
 	return response.MoveSuccess
 }
 
 // GetSyncUpdate get the next sync update for a player
 func (player *Player) GetSyncUpdate() *model.MoveRequest {
-	player.channelMutex.RLock()
-	defer player.channelMutex.RUnlock()
+	player.ChannelMutex.RLock()
+	defer player.ChannelMutex.RUnlock()
 	select {
-	case update := <-player.opponentPlayedMove:
+	case update := <-player.OpponentPlayedMove:
 		return &update
 	case <-time.After(PollingDefaultTimeout):
 		return nil
@@ -229,17 +209,17 @@ func (player *Player) GetSyncUpdate() *model.MoveRequest {
 
 // RequestAsync player makes an async request
 func (player *Player) RequestAsync(requestAsync RequestAsync) {
-	player.channelMutex.RLock()
-	defer player.channelMutex.RUnlock()
-	player.requestChanAsync <- requestAsync
+	player.ChannelMutex.RLock()
+	defer player.ChannelMutex.RUnlock()
+	player.RequestChanAsync <- requestAsync
 }
 
 // GetAsyncUpdate get the next async update for a player
 func (player *Player) GetAsyncUpdate() *ResponseAsync {
-	player.channelMutex.RLock()
-	defer player.channelMutex.RUnlock()
+	player.ChannelMutex.RLock()
+	defer player.ChannelMutex.RUnlock()
 	select {
-	case update := <-player.responseChanAsync:
+	case update := <-player.ResponseChanAsync:
 		return &update
 	case <-time.After(PollingDefaultTimeout):
 		return nil
@@ -248,28 +228,28 @@ func (player *Player) GetAsyncUpdate() *ResponseAsync {
 
 // Reset a player for their next match
 func (player *Player) Reset() {
-	player.channelMutex.Lock()
-	defer player.channelMutex.Unlock()
+	player.ChannelMutex.Lock()
+	defer player.ChannelMutex.Unlock()
 	// If the player preexisted there may be a client waiting on the opponent's
 	// move.
-	if player.opponentPlayedMove != nil {
-		close(player.opponentPlayedMove)
+	if player.OpponentPlayedMove != nil {
+		close(player.OpponentPlayedMove)
 	}
 	player.elapsedMs = 0
 	player.SetMatch(nil)
 	player.requestChanSync = make(chan model.MoveRequest, 1)
-	player.responseChanSync = make(chan ResponseSync, 10)
-	player.requestChanAsync = make(chan RequestAsync, 1)
-	player.responseChanAsync = make(chan ResponseAsync, 1)
-	player.opponentPlayedMove = make(chan model.MoveRequest, 10)
+	player.ResponseChanSync = make(chan ResponseSync, 10)
+	player.RequestChanAsync = make(chan RequestAsync, 1)
+	player.ResponseChanAsync = make(chan ResponseAsync, 1)
+	player.OpponentPlayedMove = make(chan model.MoveRequest, 10)
 	player.matchStartMutex.Lock()
 	defer player.matchStartMutex.Unlock()
 	player.matchStart = make(chan struct{})
 }
 
 func (player *Player) startMatch() {
-	player.channelMutex.Lock()
-	defer player.channelMutex.Unlock()
+	player.ChannelMutex.Lock()
+	defer player.ChannelMutex.Unlock()
 	player.clientDoneWithMatch = make(chan struct{})
 	player.matchStartMutex.RLock()
 	defer player.matchStartMutex.RUnlock()
@@ -278,16 +258,16 @@ func (player *Player) startMatch() {
 
 // ClientDoneWithMatch the client is now done with the match
 func (player *Player) ClientDoneWithMatch() {
-	player.channelMutex.RLock()
-	defer player.channelMutex.RUnlock()
+	player.ChannelMutex.RLock()
+	defer player.ChannelMutex.RUnlock()
 	close(player.clientDoneWithMatch)
 }
 
 // WaitForClientToBeDoneWithMatch block until the client is done with their
 // match
 func (player *Player) WaitForClientToBeDoneWithMatch() {
-	player.channelMutex.RLock()
-	defer player.channelMutex.RUnlock()
+	player.ChannelMutex.RLock()
+	defer player.ChannelMutex.RUnlock()
 	<-player.clientDoneWithMatch
 }
 
@@ -309,22 +289,37 @@ type ResponseAsync struct {
 
 // MatchingServer handles matching players and carrying out the game
 type MatchingServer struct {
-	liveMatches         []*Match
-	mutex               *sync.Mutex
-	players             chan *Player
-	pendingMatch        *sync.Mutex
-	botMatchingEnabled  bool
-	engineClient        pb.RustChessClient
-	engineClientConn    *grpc.ClientConn
-	maxMatchingDuration time.Duration
+	id                        int
+	liveMatches               []*Match
+	liveMatchesMetric         prometheus.Gauge
+	matchingQueueLengthMetric prometheus.Gauge
+	mutex                     *sync.Mutex
+	matchingPlayers           chan *Player
+	pendingMatch              *sync.Mutex
+	botMatchingEnabled        bool
+	engineClient              pb.RustChessClient
+	engineClientConn          *grpc.ClientConn
+	maxMatchingDuration       time.Duration
 }
 
 // NewMatchingServer create a matching server with no engine
 func NewMatchingServer() MatchingServer {
 	matchingServer := MatchingServer{
-		mutex: &sync.Mutex{}, players: make(chan *Player),
-		pendingMatch: &sync.Mutex{},
+		id: matchingServerID, mutex: &sync.Mutex{},
+		matchingPlayers: make(chan *Player), pendingMatch: &sync.Mutex{},
 	}
+	matchingServerID++
+	matchingQueueLengthMetric := prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "gochess",
+		Subsystem: "matchserver",
+		Name:      "matching_queue_length",
+		Help:      "The number of players in the matching queue.",
+		ConstLabels: prometheus.Labels{
+			"matching_server_id": strconv.Itoa(matchingServer.id),
+		},
+	})
+	prometheus.MustRegister(matchingQueueLengthMetric)
+	matchingServer.matchingQueueLengthMetric = matchingQueueLengthMetric
 	return matchingServer
 }
 
@@ -333,10 +328,7 @@ func NewMatchingServerWithEngine(
 	engineAddr string, maxMatchingDuration time.Duration,
 	engineConnTimeout time.Duration,
 ) MatchingServer {
-	matchingServer := MatchingServer{
-		mutex: &sync.Mutex{}, players: make(chan *Player),
-		pendingMatch: &sync.Mutex{},
-	}
+	matchingServer := NewMatchingServer()
 	matchingServer.createEngineClient(engineAddr, engineConnTimeout)
 	matchingServer.maxMatchingDuration = maxMatchingDuration
 	return matchingServer
@@ -361,7 +353,7 @@ func (matchingServer *MatchingServer) matchAndPlay(
 	matchingServer.pendingMatch.Lock()
 	for {
 		select {
-		case player := <-matchingServer.players:
+		case player := <-matchingServer.matchingPlayers:
 			if player1 == nil {
 				player1 = player
 				if matchingServer.botMatchingEnabled {
@@ -370,6 +362,7 @@ func (matchingServer *MatchingServer) matchAndPlay(
 			} else if player2 == nil {
 				player2 = player
 				match := matchGenerator(player1, player2)
+				matchingServer.matchingQueueLengthMetric.Sub(2)
 				player1.SetMatch(&match)
 				player2.SetMatch(&match)
 				matchingServer.mutex.Lock()
@@ -379,7 +372,9 @@ func (matchingServer *MatchingServer) matchAndPlay(
 				matchingServer.pendingMatch.Unlock()
 				player1.startMatch()
 				player2.startMatch()
+				matchingServer.liveMatchesMetric.Inc()
 				(&match).play()
+				matchingServer.liveMatchesMetric.Dec()
 				matchingServer.removeMatch(&match)
 				player1, player2 = nil, nil
 				matchingServer.pendingMatch.Lock()
@@ -392,7 +387,8 @@ func (matchingServer *MatchingServer) matchAndPlay(
 			}
 			botPlayer := NewPlayer(botNames[rand.Intn(len(botNames))] + "bot")
 			go matchingServer.engineSession(botPlayer)
-			go (func() { matchingServer.players <- botPlayer })()
+			matchingServer.matchingQueueLengthMetric.Inc()
+			go (func() { matchingServer.matchingPlayers <- botPlayer })()
 		}
 	}
 }
@@ -410,7 +406,17 @@ func (matchingServer *MatchingServer) StartMatchServers(
 func (matchingServer *MatchingServer) StartCustomMatchServers(
 	maxConcurrentGames int, matchGenerator MatchGenerator, quit chan bool,
 ) {
-	// Start handlers
+	matchingServer.liveMatchesMetric = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "gochess",
+		Subsystem: "matchserver",
+		Name:      "live_matches",
+		Help:      "The number of live matches",
+		ConstLabels: prometheus.Labels{
+			"matching_server_id": strconv.Itoa(matchingServer.id),
+		},
+	})
+	prometheus.MustRegister(matchingServer.liveMatchesMetric)
+	log.Printf("Starting %d matchAndPlay threads ...", maxConcurrentGames)
 	for i := 0; i < maxConcurrentGames; i++ {
 		go matchingServer.matchAndPlay(matchGenerator, i)
 	}
@@ -439,5 +445,6 @@ func (matchingServer *MatchingServer) removeMatch(matchToRemove *Match) {
 
 // MatchPlayer queues the player for matching
 func (matchingServer *MatchingServer) MatchPlayer(player *Player) {
-	matchingServer.players <- player
+	matchingServer.matchingPlayers <- player
+	matchingServer.matchingQueueLengthMetric.Inc()
 }

@@ -1,4 +1,24 @@
+Build Requirements
+* Install protoc https://grpc.io/docs/protoc-installation/
+* Install golang
+* Run `make`
+
+Observability
+* Run jaeger all-in-one to collect traces
+* Run prometheus and scrape /metrics to collect metrics
+
 TODO
+* Observability
+    - [ ] Prometheus metrics
+        - [x] gauge for number of live games
+        - [x] gauge for number of players matching
+        - [x] counter for request count split by status
+        - [x] histogram for latency split by status
+    - [x] Centralize logging config into cmd/webserver/main
+    - [ ] Improve logging
+    - [x] Tracing
+        - [x] Example trace
+        - [x] Tracing for the websocket flow
 * Detect all game end scenarios
     * https://www.chess.com/article/view/how-chess-games-can-end-8-ways-explained#:~:text=Agreement-,Win%2FLose%3A,%3A%20checkmate%2C%20resignation%20and%20timeout.
     - [x] Detect stalemate
@@ -16,6 +36,7 @@ TODO
         - [] Clear the state to save memory after an irreversible move (capture, pawn move, castle)
 * Server
     - [x] http server
+      - [x] Websocket ping + pong messages at certain interval (if no other message written), this lets us have a read and write deadline enabling us to close out the read loops cleanly
       - [x] Make a websocket server/client as an alternative to polling
       - [x] Move ttlmap out to a separate package that can be shared by http and websocket
       - [x] Move web client out of server directory to client directory as it will use both HTTP and websocket server depending on compile flags (or whatever)
@@ -36,10 +57,13 @@ TODO
       - [ ] user auth?
     - [x] client agnostic matching server
         - [x] testing
+        - [x] if client abandoned set the opponent as the winner
+          - [x] websocket
+          - [x] engine
     - [x] Max matching time, after which we match the player with a chess engine (if connected)
 * Client
     - [x] Golang WebAssembly web client
-    - [] Ensure that webclient can enter matchmaking successfully after a gameover
+    - [x] Ensure that webclient can enter matchmaking successfully after a gameover
     - [x] Show "pending draw" when requesting a draw
     - [x] Handle 202 responses from GET match while still pending
     - [x] Handle 200 response from GET sync/async with no update
