@@ -14,6 +14,7 @@ import (
 
 	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
 	"github.com/gofrs/uuid"
+	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -91,6 +92,9 @@ func handleWebRoot(w http.ResponseWriter, r *http.Request) {
 
 // StartSession credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
 func StartSession(w http.ResponseWriter, r *http.Request) {
+	tracer := opentracing.GlobalTracer()
+	startSessionSpan := tracer.StartSpan("StartSession")
+	defer startSessionSpan.Finish()
 	var creds Credentials
 	err := json.NewDecoder(r.Body).Decode(&creds)
 	if err != nil {
@@ -103,15 +107,24 @@ func StartSession(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Missing username"))
 		return
 	}
-	// Create a new random session token
+	newTokenSpan := tracer.StartSpan(
+		"NewToken",
+		opentracing.ChildOf(startSessionSpan.Context()),
+	)
 	sessionToken, err := uuid.NewV4()
+	newTokenSpan.Finish()
 	if err != nil {
 		log.Println("Failed to generate session token")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	sessionTokenStr := sessionToken.String()
+	newPlayerSpan := tracer.StartSpan(
+		"NewPlayer",
+		opentracing.ChildOf(startSessionSpan.Context()),
+	)
 	player := matchserver.NewPlayer(creds.Username)
+	newPlayerSpan.Finish()
 	SessionCache.Put(sessionTokenStr, player)
 	http.SetCookie(w, &http.Cookie{
 		Name:    "session_token",

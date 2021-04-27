@@ -1,4 +1,6 @@
 {
+    "ServiceName": "gochess",
+    "Environment": "local",
     "BackendType": "websocket",
     "EnableBotMatching": true,
     "EngineConnectionTimeout": "1s",
@@ -8,5 +10,6 @@
     "WSPort": 8002,
     "MaxMatchingDuration": "5s",
     "logFile": "",
+    "EnableTracing": true,
     "quiet": false
 }
