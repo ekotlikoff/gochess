@@ -29,7 +29,7 @@ func init() {
 	close(exitChan)
 	matchingServer.StartMatchServers(10, exitChan)
 	serverSession = httptest.NewServer(http.HandlerFunc(gateway.StartSession))
-	serverMatchAndPlay = httptest.NewServer(http.Handler(makeWebsocketHandler(&matchingServer, gateway.SessionCache)))
+	serverMatchAndPlay = httptest.NewServer(http.Handler(makeWebsocketHandler(&matchingServer)))
 }
 
 func TestWSMatch(t *testing.T) {

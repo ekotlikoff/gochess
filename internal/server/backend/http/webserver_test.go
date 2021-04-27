@@ -29,17 +29,17 @@ var (
 
 func init() {
 	serverSession = httptest.NewServer(http.HandlerFunc(gateway.StartSession))
-	serverAsync = httptest.NewServer(http.Handler(makeAsyncHandler(gateway.SessionCache)))
-	serverSync = httptest.NewServer(http.Handler(makeSyncHandler(gateway.SessionCache)))
+	serverAsync = httptest.NewServer(http.Handler(makeAsyncHandler()))
+	serverSync = httptest.NewServer(http.Handler(makeSyncHandler()))
 	matchingServer := matchserver.NewMatchingServer()
 	serverMatch = httptest.NewServer(
-		makeSearchForMatchHandler(&matchingServer, gateway.SessionCache))
+		makeSearchForMatchHandler(&matchingServer))
 	exitChan := make(chan bool, 1)
 	close(exitChan)
 	matchingServer.StartMatchServers(10, exitChan)
 	timeoutMatchingServer := matchserver.NewMatchingServer()
 	serverMatchTimeout = httptest.NewServer(
-		makeSearchForMatchHandler(&timeoutMatchingServer, gateway.SessionCache))
+		makeSearchForMatchHandler(&timeoutMatchingServer))
 	generator := func(
 		black *matchserver.Player, white *matchserver.Player,
 	) matchserver.Match {

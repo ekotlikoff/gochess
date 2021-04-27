@@ -78,11 +78,9 @@ func startChessServer(config Configuration) {
 	exitChan := make(chan bool, 1)
 	go matchingServer.StartMatchServers(10, exitChan)
 	if config.BackendType == HTTPBackend {
-		go httpserver.Serve(&matchingServer, gateway.SessionCache,
-			config.HTTPPort)
+		go httpserver.Serve(&matchingServer, config.HTTPPort)
 	} else if config.BackendType == WebsocketBackend {
-		go websocketserver.Serve(&matchingServer, gateway.SessionCache,
-			config.WSPort)
+		go websocketserver.Serve(&matchingServer, config.WSPort)
 	}
 	httpserverURL, _ := url.Parse("http://localhost:" +
 		strconv.Itoa(config.HTTPPort))

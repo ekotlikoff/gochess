@@ -26,19 +26,17 @@ const (
 )
 
 // Serve the websocket server
-func Serve(
-	matchServer *matchserver.MatchingServer, cache *gateway.TTLMap, port int,
-) {
+func Serve(matchServer *matchserver.MatchingServer, port int) {
 	mux := http.NewServeMux()
-	mux.Handle("/ws", makeWebsocketHandler(matchServer, cache))
+	mux.Handle("/ws", makeWebsocketHandler(matchServer))
 	log.Println("WebsocketServer listening on port", port, "...")
 	http.ListenAndServe(":"+strconv.Itoa(port), mux)
 }
 
 func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
-	cache *gateway.TTLMap) http.Handler {
+) http.Handler {
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		player := getSession(w, r, cache)
+		player := gateway.GetSession(w, r)
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println("Upgrade error:", err)
@@ -158,32 +156,4 @@ func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
 			}
 		}
 	}
-}
-
-func getSession(w http.ResponseWriter, r *http.Request, cache *gateway.TTLMap,
-) *matchserver.Player {
-	c, err := r.Cookie("session_token")
-	if err != nil {
-		if err == http.ErrNoCookie {
-			log.Println("session_token is not set")
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Missing session_token"))
-			return nil
-		}
-		log.Println("ERROR ", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return nil
-	}
-	sessionToken := c.Value
-	player, err := cache.Get(sessionToken)
-	if err != nil {
-		log.Println("ERROR ", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return nil
-	} else if player == nil {
-		log.Println("No player found for token ", sessionToken)
-		w.WriteHeader(http.StatusUnauthorized)
-		return nil
-	}
-	return player
 }

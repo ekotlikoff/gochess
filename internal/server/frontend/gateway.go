@@ -20,8 +20,7 @@ import (
 )
 
 var (
-	// SessionCache is the cache of all user sessions
-	SessionCache *TTLMap
+	sessionCache *TTLMap
 
 	//go:embed static
 	webStaticFS embed.FS
@@ -50,7 +49,7 @@ var (
 )
 
 func init() {
-	SessionCache = NewTTLMap(50, 1800, 10)
+	sessionCache = NewTTLMap(50, 1800, 10)
 	prometheus.MustRegister(gatewayResponseMetric)
 	prometheus.MustRegister(gatewayResponseDurationMetric)
 }
@@ -125,13 +124,41 @@ func StartSession(w http.ResponseWriter, r *http.Request) {
 	)
 	player := matchserver.NewPlayer(creds.Username)
 	newPlayerSpan.Finish()
-	SessionCache.Put(sessionTokenStr, player)
+	sessionCache.Put(sessionTokenStr, player)
 	http.SetCookie(w, &http.Cookie{
 		Name:    "session_token",
 		Value:   sessionTokenStr,
 		Expires: time.Now().Add(1800 * time.Second),
 	})
 	w.WriteHeader(http.StatusOK)
+}
+
+// GetSession credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
+func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
+	c, err := r.Cookie("session_token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			log.Println("session_token is not set")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte("Missing session_token"))
+			return nil
+		}
+		log.Println("ERROR ", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return nil
+	}
+	sessionToken := c.Value
+	player, err := sessionCache.Get(sessionToken)
+	if err != nil {
+		log.Println("ERROR ", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return nil
+	} else if player == nil {
+		log.Println("No player found for token ", sessionToken)
+		w.WriteHeader(http.StatusUnauthorized)
+		return nil
+	}
+	return player
 }
 
 type statusWriter struct {
