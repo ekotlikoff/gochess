@@ -104,6 +104,7 @@ func writeLoop(c *websocket.Conn, player *matchserver.Player,
 		case <-ticker.C:
 			getResSpan.LogFields(opentracinglog.String("resType", "ping"))
 			if err := c.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Println("FATAL Write PingMessage error:", err)
 				getResSpan.Finish()
 				return
 			}
