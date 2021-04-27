@@ -15,8 +15,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-// PollingDefaultTimeout is the default timeout for http requests
 var (
+	// PollingDefaultTimeout is the default timeout for http requests
 	PollingDefaultTimeout time.Duration = 10 * time.Second
 
 	matchingServerID = 0

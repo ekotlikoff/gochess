@@ -103,7 +103,6 @@ func configureLogging(config Configuration) {
 }
 
 func configureTracing(config Configuration) io.Closer {
-	// Recommended configuration for production.
 	cfg := jaegercfg.Configuration{}
 	if config.Environment == "local" {
 		cfg = jaegercfg.Configuration{
