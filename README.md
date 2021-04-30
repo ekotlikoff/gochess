@@ -1,15 +1,15 @@
-A chess server that players can play on via their web browser.
+# A chess server that players can play on with their web browser.
 
-Build Requirements
+## Build Requirements
 * Install protoc https://grpc.io/docs/protoc-installation/
-* Install golang
+* Install Golang
 * Run `make`
 
-Observability
+## Observability
 * Run jaeger all-in-one to collect traces
 * Run prometheus and scrape /metrics to collect metrics
 
-Components
+## Components
 * Web client compiled from Golang with WebAssembly
 * Frontend gateway which serves static files and proxies calls to a backend server
 * Interchangeable HTTP and WebSocket web servers communicate with the web client and forwards requests to the match server

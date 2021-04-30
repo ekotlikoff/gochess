@@ -1,4 +1,4 @@
-TODO
+### Todo
 * Observability
     - [ ] Prometheus metrics
         - [ ] more?
@@ -22,7 +22,7 @@ TODO
         - Not sure if possible, the golang cookiejar doesn't seem like it supports this.
     - [ ] Support pieceType options for pawn promotion
 
-Done
+### Done
 * Observability
     - Prometheus metrics
         - [x] gauge for number of live games
