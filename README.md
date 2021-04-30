@@ -1,4 +1,4 @@
-# A chess server that players can play on with their web browser.
+A chess server where players can match and play with others using their web browser.
 
 ## Build Requirements
 * Install protoc https://grpc.io/docs/protoc-installation/
