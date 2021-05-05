@@ -105,8 +105,17 @@ func TestWSMatch(t *testing.T) {
 		t.Error("Expected opponent's move")
 	}
 	playerResp, enemyResp = makeMove(0, 5, 0, -1, black, white)
+	if !playerResp.ResponseSync.MoveSuccess {
+		t.Error("Expected valid move response")
+	}
 	playerResp, enemyResp = makeMove(5, 0, -3, 3, white, black)
+	if !playerResp.ResponseSync.MoveSuccess {
+		t.Error("Expected valid move response")
+	}
 	playerResp, enemyResp = makeMove(0, 4, 0, -1, black, white)
+	if !playerResp.ResponseSync.MoveSuccess {
+		t.Error("Expected valid move response")
+	}
 	playerResp, enemyResp = makeMove(7, 4, -2, 2, white, black)
 	if !playerResp.ResponseSync.MoveSuccess {
 		t.Error("Expected valid move response")
