@@ -47,17 +47,17 @@ func (piece *Piece) takeMoveShort(board *Board, move Move) {
 func (piece *Piece) takeMove(
 	board *Board, move Move, previousMove Move, previousMover *Piece,
 	king *Piece, promoteTo *PieceType,
-) (bool, error) {
+) (*Piece, error) {
 	if !piece.IsMoveValid(board, move, previousMove, previousMover, king,
 		promoteTo) {
-		return false, errors.New("piece attempted invalid move")
+		return nil, errors.New("piece attempted invalid move")
 	}
 	_, capturedPiece, _, _ :=
 		piece.takeMoveUnsafe(
 			board, move, previousMove, previousMover, promoteTo,
 		)
 	piece.movesTaken++
-	return capturedPiece != nil, nil
+	return capturedPiece, nil
 }
 
 func (piece *Piece) takeMoveUnsafe(

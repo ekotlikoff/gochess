@@ -38,6 +38,19 @@ func NewMatch(black *Player, white *Player, maxTimeMs int64) Match {
 		sync.RWMutex{}}
 }
 
+// Create a new match between two players with no pawns
+func newMatchNoPawns(black *Player, white *Player, maxTimeMs int64) Match {
+	black.color = model.Black
+	white.color = model.White
+	if black.name == white.name {
+		black.name = black.name + "_black"
+		white.name = white.name + "_white"
+	}
+	game := model.NewGameNoPawns()
+	return Match{black, white, game, make(chan struct{}), maxTimeMs, nil,
+		sync.RWMutex{}}
+}
+
 // DefaultMatchGenerator default match generator
 func DefaultMatchGenerator(p1 *Player, p2 *Player) Match {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -149,7 +162,15 @@ func (match *Match) handleTurn() {
 
 func (match *Match) handleTimeout(opponent *Player) func() {
 	return func() {
-		match.handleGameOver(false, false, true, opponent)
+		onlyKing := match.game.OnlyKing(model.Black)
+		if opponent.color == model.White {
+			onlyKing = match.game.OnlyKing(model.White)
+		}
+		if onlyKing {
+			match.handleGameOver(true, false, true, opponent)
+		} else {
+			match.handleGameOver(false, false, true, opponent)
+		}
 	}
 }
 

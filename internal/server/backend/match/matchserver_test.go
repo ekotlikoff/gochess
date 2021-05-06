@@ -49,6 +49,260 @@ func TestMatchingServerTimeout(t *testing.T) {
 	}
 }
 
+func TestMatchingServerInsufficientMaterialDraw(t *testing.T) {
+	player1 := NewPlayer("player1")
+	player2 := NewPlayer("player2")
+	matchingServer := NewMatchingServer()
+	go matchingServer.MatchPlayer(player1)
+	go matchingServer.MatchPlayer(player2)
+	exitChan := make(chan bool, 1)
+	exitChan <- true
+	generator := func(black *Player, white *Player) Match {
+		return newMatchNoPawns(black, white, 50)
+	}
+	matchingServer.StartCustomMatchServers(1, generator, exitChan)
+	tries := 0
+	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
+		time.Sleep(time.Millisecond)
+		tries++
+	}
+	liveMatch := matchingServer.LiveMatches()[0]
+	black := liveMatch.black
+	white := liveMatch.white
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 0, Rank: 0},
+		Move:      model.Move{X: 0, Y: 7},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 7, Rank: 7},
+		Move:      model.Move{X: 0, Y: -7},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 0, Rank: 7},
+		Move:      model.Move{X: 1, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 7, Rank: 0},
+		Move:      model.Move{X: -1, Y: 0},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 1, Rank: 7},
+		Move:      model.Move{X: 1, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 6, Rank: 0},
+		Move:      model.Move{X: -1, Y: 0},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 4, Rank: 0},
+		Move:      model.Move{X: 0, Y: 1},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 5, Rank: 0},
+		Move:      model.Move{X: -2, Y: 0},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 2, Rank: 7},
+		Move:      model.Move{X: 1, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 4, Rank: 7},
+		Move:      model.Move{X: 0, Y: -1},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 3, Rank: 7},
+		Move:      model.Move{X: 2, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 3, Rank: 0},
+		Move:      model.Move{X: -1, Y: 0},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 5, Rank: 7},
+		Move:      model.Move{X: 1, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 2, Rank: 0},
+		Move:      model.Move{X: -1, Y: 0},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 6, Rank: 7},
+		Move:      model.Move{X: -5, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 1, Rank: 0},
+		Move:      model.Move{X: 0, Y: 7},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 4, Rank: 1},
+		Move:      model.Move{X: -1, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 1, Rank: 7},
+		Move:      model.Move{X: 0, Y: -7},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 3, Rank: 1},
+		Move:      model.Move{X: -1, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 1, Rank: 0},
+		Move:      model.Move{X: 1, Y: 0},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 2, Rank: 1},
+		Move:      model.Move{X: 0, Y: -1},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	response := <-white.ResponseChanAsync
+	if !liveMatch.game.GameOver() || !response.GameOver ||
+		!response.Draw {
+		t.Error("Expected draw got", response)
+	}
+}
+
+func TestMatchingServerInsufficientMaterialTimeoutDraw(t *testing.T) {
+	player1 := NewPlayer("player1")
+	player2 := NewPlayer("player2")
+	matchingServer := NewMatchingServer()
+	go matchingServer.MatchPlayer(player1)
+	go matchingServer.MatchPlayer(player2)
+	exitChan := make(chan bool, 1)
+	exitChan <- true
+	generator := func(black *Player, white *Player) Match {
+		return newMatchNoPawns(black, white, 50)
+	}
+	matchingServer.StartCustomMatchServers(1, generator, exitChan)
+	tries := 0
+	for len(matchingServer.LiveMatches()) == 0 && tries < 10 {
+		time.Sleep(time.Millisecond)
+		tries++
+	}
+	liveMatch := matchingServer.LiveMatches()[0]
+	black := liveMatch.black
+	white := liveMatch.white
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 0, Rank: 0},
+		Move:      model.Move{X: 0, Y: 7},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 7, Rank: 7},
+		Move:      model.Move{X: 0, Y: -7},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 0, Rank: 7},
+		Move:      model.Move{X: 1, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 7, Rank: 0},
+		Move:      model.Move{X: -1, Y: 0},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 1, Rank: 7},
+		Move:      model.Move{X: 1, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 6, Rank: 0},
+		Move:      model.Move{X: -1, Y: 0},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 4, Rank: 0},
+		Move:      model.Move{X: 0, Y: 1},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 5, Rank: 0},
+		Move:      model.Move{X: -2, Y: 0},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 2, Rank: 7},
+		Move:      model.Move{X: 1, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 4, Rank: 7},
+		Move:      model.Move{X: 0, Y: -1},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 3, Rank: 7},
+		Move:      model.Move{X: 2, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 3, Rank: 0},
+		Move:      model.Move{X: -1, Y: 0},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 5, Rank: 7},
+		Move:      model.Move{X: 1, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 2, Rank: 0},
+		Move:      model.Move{X: -1, Y: 0},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 6, Rank: 7},
+		Move:      model.Move{X: -5, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 1, Rank: 0},
+		Move:      model.Move{X: 0, Y: 7},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 4, Rank: 1},
+		Move:      model.Move{X: -1, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	black.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 1, Rank: 7},
+		Move:      model.Move{X: 0, Y: -7},
+		PromoteTo: nil})
+	white.GetSyncUpdate()
+	white.MakeMove(model.MoveRequest{
+		Position:  model.Position{File: 3, Rank: 1},
+		Move:      model.Move{X: -1, Y: 0},
+		PromoteTo: nil})
+	black.GetSyncUpdate()
+	response := <-white.ResponseChanAsync
+	if !liveMatch.game.GameOver() || !response.GameOver ||
+		!response.Draw || !response.Timeout {
+		t.Error("Expected draw got", response)
+	}
+}
+
 func TestMatchingServerDraw(t *testing.T) {
 	player1 := NewPlayer("player1")
 	player2 := NewPlayer("player2")

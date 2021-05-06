@@ -285,6 +285,77 @@ func TestPositionEncodingEnPassant(t *testing.T) {
 	}
 }
 
+func TestDrawByInsufficientMaterial(t *testing.T) {
+	game := NewGameNoPawns()
+	if game.gameOver != false || game.result.Draw == true {
+		t.Error("Game should not be over")
+	}
+	game.Move(MoveRequest{Position{0, 0}, Move{0, 7}, nil})
+	game.Move(MoveRequest{Position{7, 7}, Move{0, -7}, nil})
+	game.Move(MoveRequest{Position{0, 7}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{7, 0}, Move{-1, 0}, nil})
+	game.Move(MoveRequest{Position{1, 7}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{6, 0}, Move{-1, 0}, nil})
+	game.Move(MoveRequest{Position{4, 0}, Move{0, 1}, nil})
+	game.Move(MoveRequest{Position{5, 0}, Move{-2, 0}, nil})
+	game.Move(MoveRequest{Position{2, 7}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{4, 7}, Move{0, -1}, nil})
+	game.Move(MoveRequest{Position{3, 7}, Move{2, 0}, nil})
+	game.Move(MoveRequest{Position{3, 0}, Move{-1, 0}, nil})
+	game.Move(MoveRequest{Position{5, 7}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{2, 0}, Move{-1, 0}, nil})
+	game.Move(MoveRequest{Position{6, 7}, Move{-5, 0}, nil})
+	game.Move(MoveRequest{Position{1, 0}, Move{0, 7}, nil})
+	game.Move(MoveRequest{Position{4, 1}, Move{-1, 0}, nil})
+	game.Move(MoveRequest{Position{1, 7}, Move{0, -7}, nil})
+	game.Move(MoveRequest{Position{3, 1}, Move{-1, 0}, nil})
+	game.Move(MoveRequest{Position{1, 0}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{2, 1}, Move{0, -1}, nil})
+	if debug {
+		fmt.Println(game.board)
+	}
+	if !game.gameOver || !game.result.Draw {
+		t.Error("Game should be a draw")
+	}
+}
+
+func TestDrawByInsufficientMaterialOneMinor(t *testing.T) {
+	game := NewGameNoPawns()
+	if game.gameOver != false || game.result.Draw == true {
+		t.Error("Game should not be over")
+	}
+	game.Move(MoveRequest{Position{0, 0}, Move{0, 7}, nil})
+	game.Move(MoveRequest{Position{7, 7}, Move{0, -7}, nil})
+	game.Move(MoveRequest{Position{0, 7}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{7, 0}, Move{-1, 0}, nil})
+	game.Move(MoveRequest{Position{1, 7}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{5, 7}, Move{-5, -5}, nil})
+	game.Move(MoveRequest{Position{2, 0}, Move{5, 5}, nil})
+	game.Move(MoveRequest{Position{6, 0}, Move{-1, 0}, nil})
+	game.Move(MoveRequest{Position{4, 0}, Move{0, 1}, nil})
+	game.Move(MoveRequest{Position{5, 0}, Move{-2, 0}, nil})
+	game.Move(MoveRequest{Position{2, 7}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{4, 7}, Move{0, -1}, nil})
+	game.Move(MoveRequest{Position{3, 7}, Move{2, 0}, nil})
+	game.Move(MoveRequest{Position{3, 0}, Move{-1, 0}, nil})
+	game.Move(MoveRequest{Position{5, 7}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{2, 0}, Move{-1, 0}, nil})
+	game.Move(MoveRequest{Position{6, 7}, Move{-5, 0}, nil})
+	game.Move(MoveRequest{Position{1, 0}, Move{0, 7}, nil})
+	game.Move(MoveRequest{Position{4, 1}, Move{-1, 0}, nil})
+	game.Move(MoveRequest{Position{1, 7}, Move{0, -7}, nil})
+	game.Move(MoveRequest{Position{3, 1}, Move{-1, 0}, nil})
+	game.Move(MoveRequest{Position{1, 0}, Move{1, 0}, nil})
+	game.Move(MoveRequest{Position{7, 5}, Move{-5, -5}, nil})
+	game.Move(MoveRequest{Position{0, 2}, Move{2, -2}, nil})
+	if debug {
+		fmt.Println(game.board)
+	}
+	if !game.gameOver || !game.result.Draw {
+		t.Error("Game should be a draw")
+	}
+}
+
 func TestDrawByRepetion(t *testing.T) {
 	game := NewGame()
 	if game.gameOver != false || game.result.Draw == true {
