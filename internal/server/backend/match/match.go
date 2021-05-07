@@ -60,7 +60,7 @@ func DefaultMatchGenerator(p1 *Player, p2 *Player) Match {
 	return NewMatch(p2, p1, 1200000)
 }
 
-// CreateCustomLengthMatchGenerator create a generator that creates matches with a
+// CreateCustomMatchGenerator create a generator that creates matches with a
 // custom match length in seconds
 func CreateCustomMatchGenerator(matchPlayerTimeSeconds int) MatchGenerator {
 	return func(p1 *Player, p2 *Player) Match {
