@@ -60,6 +60,18 @@ func DefaultMatchGenerator(p1 *Player, p2 *Player) Match {
 	return NewMatch(p2, p1, 1200000)
 }
 
+// CreateCustomLengthMatchGenerator create a generator that creates matches with a
+// custom match length in seconds
+func CreateCustomMatchGenerator(matchPlayerTimeSeconds int) MatchGenerator {
+	return func(p1 *Player, p2 *Player) Match {
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		if r.Intn(2) > 0 {
+			return NewMatch(p1, p2, int64(matchPlayerTimeSeconds*1000))
+		}
+		return NewMatch(p2, p1, int64(matchPlayerTimeSeconds*1000))
+	}
+}
+
 // PlayerName get the player name corresponding to the input color
 func (match *Match) PlayerName(color model.Color) string {
 	match.mutex.RLock()

@@ -9,6 +9,7 @@
     "HTTPPort": 8001,
     "WSPort": 8002,
     "MaxMatchingDuration": "5s",
+    "MatchPlayerTimeSeconds": 1200,
     "logFile": "",
     "EnableTracing": true,
     "quiet": false
