@@ -85,6 +85,7 @@ func (game *Game) handleCapturedPiece(piece *Piece, capturedPiece *Piece) {
 	if piece.pieceType != Pawn && capturedPiece == nil {
 		game.turnsSinceCaptureOrPawnMove++
 	} else {
+		game.clearPositionHistory()
 		game.turnsSinceCaptureOrPawnMove = 0
 		if capturedPiece == nil {
 			return
@@ -151,6 +152,10 @@ func (game *Game) updatePositionHistory() (bool, error) {
 	}
 	game.positionHistory[string(position)]++
 	return game.positionHistory[string(position)] > 2, nil
+}
+
+func (game *Game) clearPositionHistory() {
+	game.positionHistory = make(map[string]uint8)
 }
 
 // MarshalBinary represent the game as a byte array
