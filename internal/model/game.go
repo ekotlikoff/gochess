@@ -18,6 +18,8 @@ type (
 		previousMover               *Piece
 		blackKing                   *Piece
 		whiteKing                   *Piece
+		whitePieces                 map[PieceType]uint8
+		blackPieces                 map[PieceType]uint8
 		positionHistory             map[string]uint8
 		turnsSinceCaptureOrPawnMove uint8
 		mutex                       sync.RWMutex
@@ -41,44 +43,81 @@ type (
 func (game *Game) Move(moveRequest MoveRequest) error {
 	game.mutex.Lock()
 	defer game.mutex.Unlock()
-	move := moveRequest.Move
 	piece := game.board[moveRequest.Position.File][moveRequest.Position.Rank]
 	err := game.isMoveRequestValid(piece)
 	if err != nil {
 		return err
 	}
 	king, enemyKing := game.getKings()
-	isCapture, err := piece.takeMove(game.board, move, game.previousMove,
-		game.previousMover, king, moveRequest.PromoteTo)
+	capturedPiece, err := piece.takeMove(game.board, moveRequest.Move,
+		game.previousMove, game.previousMover, king, moveRequest.PromoteTo)
 	if err != nil {
 		return err
 	}
+	game.handleCapturedPiece(piece, capturedPiece)
 	drawByRepetion, err := game.updatePositionHistory()
 	if err != nil {
 		return err
 	}
-	if piece.pieceType != Pawn && !isCapture {
-		game.turnsSinceCaptureOrPawnMove++
-	} else {
-		game.turnsSinceCaptureOrPawnMove = 0
-	}
-	fiftyMoveRule := game.turnsSinceCaptureOrPawnMove >= 100
-	enemyColor := getOppositeColor(piece.color)
-	possibleEnemyMoves := AllMoves(
-		game.board, enemyColor, move, piece, false, enemyKing,
-	)
+	drawByFiftyMoveRule := game.turnsSinceCaptureOrPawnMove >= 100
+	possibleEnemyMoves := AllMoves(game.board, getOppositeColor(piece.color),
+		moveRequest.Move, piece, false, enemyKing)
 	if len(possibleEnemyMoves) == 0 &&
-		enemyKing.isThreatened(game.board, move, piece) {
+		enemyKing.isThreatened(game.board, moveRequest.Move, piece) {
 		game.gameOver = true
 		game.result.Winner = game.turn
-	} else if len(possibleEnemyMoves) == 0 || drawByRepetion || fiftyMoveRule {
+	} else if len(possibleEnemyMoves) == 0 || drawByRepetion ||
+		drawByFiftyMoveRule || game.isDrawByInsufficientMaterial() {
 		game.gameOver = true
 		game.result.Draw = true
 	}
-	game.previousMove = move
+	game.previousMove = moveRequest.Move
 	game.previousMover = piece
-	game.turn = enemyColor
+	game.turn = getOppositeColor(piece.color)
 	return nil
+}
+
+func (game *Game) handleCapturedPiece(piece *Piece, capturedPiece *Piece) {
+	if piece.pieceType != Pawn && capturedPiece == nil {
+		game.turnsSinceCaptureOrPawnMove++
+	} else {
+		game.clearPositionHistory()
+		game.turnsSinceCaptureOrPawnMove = 0
+		if capturedPiece == nil {
+			return
+		}
+		if capturedPiece.color == Black {
+			game.blackPieces[capturedPiece.pieceType]--
+		} else {
+			game.whitePieces[capturedPiece.pieceType]--
+		}
+	}
+}
+
+func (game *Game) isDrawByInsufficientMaterial() bool {
+	return (game.OnlyKing(Black) && noMajorPiecesOrPawns(game.whitePieces) &&
+		maxOneMinorPiece(game.whitePieces)) ||
+		(game.OnlyKing(White) && noMajorPiecesOrPawns(game.blackPieces) &&
+			maxOneMinorPiece(game.blackPieces))
+}
+
+func noMajorPiecesOrPawns(pieces map[PieceType]uint8) bool {
+	return pieces[Queen] == 0 && pieces[Rook] == 0 && pieces[Pawn] == 0
+}
+
+func maxOneMinorPiece(pieces map[PieceType]uint8) bool {
+	return (pieces[Bishop] == 0 && pieces[Knight] <= 1) ||
+		(pieces[Bishop] <= 1 && pieces[Knight] == 0)
+}
+
+// OnlyKing returns if the player has only a king
+func (game *Game) OnlyKing(color Color) bool {
+	pieces := game.blackPieces
+	if color == White {
+		pieces = game.whitePieces
+	}
+	return noMajorPiecesOrPawns(pieces) && pieces[Bishop] == 0 &&
+		pieces[Knight] == 0
 }
 
 func (game *Game) isMoveRequestValid(piece *Piece) error {
@@ -109,6 +148,10 @@ func (game *Game) updatePositionHistory() (bool, error) {
 	}
 	game.positionHistory[string(position)]++
 	return game.positionHistory[string(position)] > 2, nil
+}
+
+func (game *Game) clearPositionHistory() {
+	game.positionHistory = make(map[string]uint8)
 }
 
 // MarshalBinary represent the game as a byte array
@@ -165,6 +208,19 @@ func createGame(board Board) *Game {
 	game := Game{
 		board: &board, blackKing: board[4][7], whiteKing: board[4][0],
 		positionHistory: make(map[string]uint8),
+		blackPieces:     make(map[PieceType]uint8),
+		whitePieces:     make(map[PieceType]uint8),
+	}
+	for _, file := range board {
+		for _, piece := range file {
+			if piece != nil {
+				if piece.color == Black {
+					game.blackPieces[piece.pieceType]++
+				} else {
+					game.whitePieces[piece.pieceType]++
+				}
+			}
+		}
 	}
 	game.updatePositionHistory()
 	game.turn = White

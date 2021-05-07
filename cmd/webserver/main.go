@@ -38,6 +38,7 @@ type (
 		HTTPPort                int
 		WSPort                  int
 		MaxMatchingDuration     string
+		MatchPlayerTimeSeconds  int
 		LogFile                 string
 		EnableTracing           bool
 		Quiet                   bool
@@ -76,7 +77,9 @@ func startChessServer(config Configuration) {
 			config.EngineAddr, maxMatchingDuration, engineConnTimeout)
 	}
 	exitChan := make(chan bool, 1)
-	go matchingServer.StartMatchServers(10, exitChan)
+	go matchingServer.StartCustomMatchServers(10,
+		matchserver.CreateCustomMatchGenerator(config.MatchPlayerTimeSeconds),
+		exitChan)
 	if config.BackendType == HTTPBackend {
 		go httpserver.Serve(&matchingServer, config.HTTPPort)
 	} else if config.BackendType == WebsocketBackend {

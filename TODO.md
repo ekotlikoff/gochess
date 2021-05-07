@@ -3,11 +3,6 @@
     - [ ] Prometheus metrics
         - [ ] more?
     - [ ] Improve logging
-* Detect all game end scenarios
-    * https://www.chess.com/article/view/how-chess-games-can-end-8-ways-explained#:~:text=Agreement-,Win%2FLose%3A,%3A%20checkmate%2C%20resignation%20and%20timeout.
-    - [ ] Insufficient material
-    - Detect draw by repetition (same position 3 times)
-        - [] Clear the state to save memory after an irreversible move (capture, pawn move, castle)
 * Server
     - http server
       - [ ] If no response from client in x seconds then call disconnect win for opponent
@@ -38,6 +33,7 @@
     - [x] Detect stalemate
     - [x] Handle pawn promotion
     - [x] 50 move rule
+    - [x] Insufficient material
     - [x] timeout
     - [x] resignation
     - [x] agreed draw
@@ -46,6 +42,7 @@
         of position.
         Let's do this with a map[positionId]uint8
         Just need a hash function to go from position -> positionId
+        - [x] Clear the state to save memory after an irreversible move (capture, pawn move, castle)
 * Server
     - [x] http server
       - [x] Websocket ping + pong messages at certain interval (if no other message written), this lets us have a read and write deadline enabling us to close out the read loops cleanly
