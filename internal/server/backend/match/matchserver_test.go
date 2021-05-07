@@ -176,7 +176,7 @@ func TestMatchingServerInsufficientMaterialDraw(t *testing.T) {
 	black.GetSyncUpdate()
 	response := <-white.ResponseChanAsync
 	if !liveMatch.game.GameOver() || !response.GameOver ||
-		!response.Draw {
+		!response.Draw || response.Timeout {
 		t.Error("Expected draw got", response)
 	}
 }

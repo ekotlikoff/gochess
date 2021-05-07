@@ -72,7 +72,6 @@ func (game *Game) Move(moveRequest MoveRequest) error {
 		game.result.Winner = game.turn
 	} else if len(possibleEnemyMoves) == 0 || drawByRepetion ||
 		drawByFiftyMoveRule || drawByInsufficientMaterial {
-		println("draw, setting gameover")
 		game.gameOver = true
 		game.result.Draw = true
 	}
