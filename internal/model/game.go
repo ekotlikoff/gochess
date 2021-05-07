@@ -43,15 +43,14 @@ type (
 func (game *Game) Move(moveRequest MoveRequest) error {
 	game.mutex.Lock()
 	defer game.mutex.Unlock()
-	move := moveRequest.Move
 	piece := game.board[moveRequest.Position.File][moveRequest.Position.Rank]
 	err := game.isMoveRequestValid(piece)
 	if err != nil {
 		return err
 	}
 	king, enemyKing := game.getKings()
-	capturedPiece, err := piece.takeMove(game.board, move, game.previousMove,
-		game.previousMover, king, moveRequest.PromoteTo)
+	capturedPiece, err := piece.takeMove(game.board, moveRequest.Move,
+		game.previousMove, game.previousMover, king, moveRequest.PromoteTo)
 	if err != nil {
 		return err
 	}
@@ -60,24 +59,21 @@ func (game *Game) Move(moveRequest MoveRequest) error {
 	if err != nil {
 		return err
 	}
-	drawByInsufficientMaterial := game.isDrawByInsufficientMaterial()
 	drawByFiftyMoveRule := game.turnsSinceCaptureOrPawnMove >= 100
-	enemyColor := getOppositeColor(piece.color)
-	possibleEnemyMoves := AllMoves(
-		game.board, enemyColor, move, piece, false, enemyKing,
-	)
+	possibleEnemyMoves := AllMoves(game.board, getOppositeColor(piece.color),
+		moveRequest.Move, piece, false, enemyKing)
 	if len(possibleEnemyMoves) == 0 &&
-		enemyKing.isThreatened(game.board, move, piece) {
+		enemyKing.isThreatened(game.board, moveRequest.Move, piece) {
 		game.gameOver = true
 		game.result.Winner = game.turn
 	} else if len(possibleEnemyMoves) == 0 || drawByRepetion ||
-		drawByFiftyMoveRule || drawByInsufficientMaterial {
+		drawByFiftyMoveRule || game.isDrawByInsufficientMaterial() {
 		game.gameOver = true
 		game.result.Draw = true
 	}
-	game.previousMove = move
+	game.previousMove = moveRequest.Move
 	game.previousMover = piece
-	game.turn = enemyColor
+	game.turn = getOppositeColor(piece.color)
 	return nil
 }
 
