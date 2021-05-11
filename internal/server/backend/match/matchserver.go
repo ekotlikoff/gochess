@@ -273,7 +273,9 @@ func (player *Player) WaitForClientToBeDoneWithMatch() {
 
 // ResponseSync represents a response to the client related to a move
 type ResponseSync struct {
-	MoveSuccess bool
+	MoveSuccess       bool
+	ElapsedMs         int
+	ElapsedMsOpponent int
 }
 
 // RequestAsync represents a request from the client unrelated to a move

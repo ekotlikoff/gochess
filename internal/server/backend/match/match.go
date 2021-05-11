@@ -159,7 +159,11 @@ func (match *Match) handleTurn() {
 		return
 	}
 	match.SetRequestedDraw(nil)
-	player.ResponseChanSync <- ResponseSync{MoveSuccess: true}
+	player.elapsedMs += time.Since(turnStart).Milliseconds()
+	player.ResponseChanSync <- ResponseSync{
+		MoveSuccess: true, ElapsedMs: int(player.elapsedMs),
+		ElapsedMsOpponent: int(opponent.elapsedMs),
+	}
 	opponent.OpponentPlayedMove <- request
 	if match.game.GameOver() {
 		result := match.game.Result()
@@ -169,7 +173,6 @@ func (match *Match) handleTurn() {
 		}
 		match.handleGameOver(result.Draw, false, false, winner)
 	}
-	player.elapsedMs += time.Since(turnStart).Milliseconds()
 }
 
 func (match *Match) handleTimeout(opponent *Player) func() {
