@@ -280,6 +280,16 @@ func (cm *ClientModel) AddPlayerElapsedMs(color model.Color, elapsedMs int64) {
 	}
 }
 
+func (cm *ClientModel) SetPlayerElapsedMs(color model.Color, elapsedMs int64) {
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
+	if color == cm.playerColor {
+		cm.remoteMatchModel.playerElapsedMs = elapsedMs
+	} else {
+		cm.remoteMatchModel.opponentElapsedMs = elapsedMs
+	}
+}
+
 func (cm *ClientModel) GetRequestedDraw(color model.Color) bool {
 	cm.cmMutex.RLock()
 	defer cm.cmMutex.RUnlock()

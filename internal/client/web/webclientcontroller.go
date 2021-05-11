@@ -371,6 +371,14 @@ func (cm *ClientModel) handleResponseAsync(responseAsync matchserver.ResponseAsy
 	}
 }
 
+func (cm *ClientModel) handleResponseSync(responseSync matchserver.ResponseSync) {
+	if responseSync.MoveSuccess {
+		cm.SetPlayerElapsedMs(cm.playerColor, int64(responseSync.ElapsedMs))
+		cm.SetPlayerElapsedMs(cm.GetOpponentColor(),
+			int64(responseSync.ElapsedMsOpponent))
+	}
+}
+
 func (cm *ClientModel) genBeginMatchmaking() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
 		if !cm.GetIsMatchmaking() && !cm.GetIsMatched() {
@@ -539,6 +547,8 @@ func (cm *ClientModel) wsListener(matchedChan chan matchserver.MatchedResponse) 
 				matchedChan <- message.MatchedResponse
 			case matchserver.OpponentPlayedMoveT:
 				cm.handleSyncUpdate(message.OpponentPlayedMove)
+			case matchserver.ResponseSyncT:
+				cm.handleResponseSync(message.ResponseSync)
 			case matchserver.ResponseAsyncT:
 				cm.handleResponseAsync(message.ResponseAsync)
 			}
@@ -549,14 +559,14 @@ func (cm *ClientModel) wsListener(matchedChan chan matchserver.MatchedResponse) 
 func (cm *ClientModel) matchDetailsUpdateLoop() {
 	for true {
 		cm.viewSetMatchDetails()
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		select {
 		case <-cm.remoteMatchModel.endRemoteGameChan:
 			return
 		default:
 		}
 		turn := cm.game.Turn()
-		cm.AddPlayerElapsedMs(turn, 1000)
+		cm.AddPlayerElapsedMs(turn, 100)
 	}
 }
 

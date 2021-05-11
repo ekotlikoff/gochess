@@ -125,7 +125,7 @@ func (cm *ClientModel) viewSetMatchDetailsPoints(
 }
 
 func (cm *ClientModel) formatTime(ms int64) string {
-	return (time.Duration(ms) * time.Millisecond).String()
+	return (time.Duration(ms) * time.Millisecond).Round(time.Second).String()
 }
 
 func (cm *ClientModel) viewSetGameOver(winner, winType string) {
