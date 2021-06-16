@@ -25,6 +25,8 @@ type (
 		gameType                 GameType
 		playerColor              model.Color
 		elDragging               js.Value
+		promotionWindow          js.Value
+		promotionMoveRequest     model.MoveRequest
 		pieceDragging            *model.Piece
 		draggingOrigTransform    js.Value
 		isMouseDownLock          sync.Mutex
@@ -99,6 +101,18 @@ func (cm *ClientModel) GetPointAdvantage(color model.Color) int8 {
 	return cm.game.PointAdvantage(color)
 }
 
+func (cm *ClientModel) GetPromotionMoveRequest() model.MoveRequest {
+	cm.gameMutex.Lock()
+	defer cm.gameMutex.Unlock()
+	return cm.promotionMoveRequest
+}
+
+func (cm *ClientModel) SetPromotionMoveRequest(moveRequest model.MoveRequest) {
+	cm.gameMutex.Lock()
+	defer cm.gameMutex.Unlock()
+	cm.promotionMoveRequest = moveRequest
+}
+
 func (cm *ClientModel) MakeMove(moveRequest model.MoveRequest) error {
 	cm.gameMutex.Lock()
 	defer cm.gameMutex.Unlock()
@@ -143,6 +157,18 @@ func (cm *ClientModel) GetDraggingPiece() *model.Piece {
 	cm.cmMutex.RLock()
 	defer cm.cmMutex.RUnlock()
 	return cm.pieceDragging
+}
+
+func (cm *ClientModel) SetPromotionWindow(el js.Value) {
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
+	cm.promotionWindow = el
+}
+
+func (cm *ClientModel) GetPromotionWindow() js.Value {
+	cm.cmMutex.RLock()
+	defer cm.cmMutex.RUnlock()
+	return cm.promotionWindow
 }
 
 func (cm *ClientModel) GetPiece(position model.Position) *model.Piece {

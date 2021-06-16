@@ -14,7 +14,6 @@
 * Client
     - [ ] Check cookies for session token instead of using hasSession bool
         - Not sure if possible, the golang cookiejar doesn't seem like it supports this.
-    - [ ] Support pieceType options for pawn promotion
 
 ### Done
 * Observability
@@ -82,3 +81,4 @@
     - [x] Fix race conditions
     - [x] Add race testing to travis CI
     - [x] Add vet to local build with https://github.com/grpc/grpc-go/blob/master/Makefile as inspiration
+    - [x] Support pieceType options for pawn promotion
