@@ -183,6 +183,70 @@ func (cm *ClientModel) viewHandleMove(
 	}
 }
 
+func (cm *ClientModel) viewCreatePromotionWindow(file, rank int) {
+	div := cm.document.Call("createElement", "div")
+	addClass(div, "promotion-window")
+	if cm.GetPlayerColor() == model.Black {
+		file = int(7 - file)
+	}
+	div.Get("style").Set("transform",
+		"translateX("+fmt.Sprintf("%f%%)", float64(file*100)))
+	if (rank == 7 && cm.GetPlayerColor() == model.White) ||
+		(rank == 0 && cm.GetPlayerColor() == model.Black) {
+		addClass(div, "top")
+	}
+	promotionPieceBishop := cm.document.Call("createElement", "div")
+	promotionPieceRook := cm.document.Call("createElement", "div")
+	promotionPieceKnight := cm.document.Call("createElement", "div")
+	promotionPieceQueen := cm.document.Call("createElement", "div")
+	closeButton := cm.document.Call("createElement", "i")
+	promotionPieces := []js.Value{promotionPieceBishop, promotionPieceRook,
+		promotionPieceKnight, promotionPieceQueen}
+	colorString := "b"
+	if cm.game.Turn() == model.White {
+		colorString = "w"
+	}
+	addClass(promotionPieceBishop, colorString+"b")
+	addClass(promotionPieceRook, colorString+"r")
+	addClass(promotionPieceKnight, colorString+"n")
+	addClass(promotionPieceQueen, colorString+"q")
+	for _, piece := range promotionPieces {
+		addClass(piece, "promotion-piece")
+		div.Call("appendChild", piece)
+		piece.Call("addEventListener", "mousedown", cm.genPromoteOnClick(), false)
+	}
+	addClass(closeButton, "close-button")
+	addClass(closeButton, "x")
+	closeButton.Set("innerText", "X")
+	div.Call("appendChild", closeButton)
+	cm.board.Call("appendChild", div)
+	cm.SetPromotionWindow(div)
+}
+
+func (cm *ClientModel) genPromoteOnClick() js.Func {
+	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
+		i[0].Call("preventDefault")
+		colorString := "b"
+		if cm.game.Turn() == model.White {
+			colorString = "w"
+		}
+		var promoteTo model.PieceType
+		if this.Get("classList").Call("contains", colorString+"b").Truthy() {
+			promoteTo = model.Bishop
+		} else if this.Get("classList").Call("contains", colorString+"r").Truthy() {
+			promoteTo = model.Rook
+		} else if this.Get("classList").Call("contains", colorString+"n").Truthy() {
+			promoteTo = model.Knight
+		} else if this.Get("classList").Call("contains", colorString+"q").Truthy() {
+			promoteTo = model.Queen
+		}
+		moveRequest := cm.GetPromotionMoveRequest()
+		moveRequest.PromoteTo = &promoteTo
+		cm.handleMove(moveRequest)
+		return 0
+	})
+}
+
 func (cm *ClientModel) viewHandleEnPassant(
 	move model.Move, newPos model.Position, targetEmpty bool) {
 	pawn := cm.game.GetBoard().Piece(newPos)

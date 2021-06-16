@@ -28,6 +28,10 @@ func (cm *ClientModel) initController() {
 	cm.document.Call("addEventListener", "touchmove", cm.genTouchMove(), false)
 	cm.document.Call("addEventListener", "mouseup", cm.genMouseUp(), false)
 	cm.document.Call("addEventListener", "touchend", cm.genTouchEnd(), false)
+	cm.document.Call("addEventListener", "mousedown",
+		cm.genGlobalOnTouchStart(), false)
+	cm.document.Call("addEventListener", "touchstart",
+		cm.genGlobalOnTouchStart(), false)
 	cm.board.Call("addEventListener", "contextmenu",
 		js.FuncOf(preventDefault), false)
 	js.Global().Set("beginMatchmaking", cm.genBeginMatchmaking())
@@ -64,6 +68,17 @@ func (cm *ClientModel) genGlobalOnclick() js.Func {
 		gameoverModal := cm.document.Call("getElementById", "gameover_modal")
 		if i[0].Get("target").Equal(gameoverModal) {
 			cm.closeGameoverModal()
+		}
+		return 0
+	})
+}
+
+func (cm *ClientModel) genGlobalOnTouchStart() js.Func {
+	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
+		promotionWindow := cm.GetPromotionWindow()
+		if promotionWindow.Truthy() {
+			promotionWindow.Call("remove")
+			cm.SetPromotionWindow(js.Undefined())
 		}
 		return 0
 	})
@@ -183,21 +198,40 @@ func (cm *ClientModel) genTouchEnd() js.Func {
 }
 
 func (cm *ClientModel) handleClickEnd(event js.Value) {
+	cm.UnlockMouseDown()
 	elDragging := cm.GetDraggingElement()
-	cm.SetDraggingElement(js.Undefined())
 	_, _, _, _, gridX, gridY := cm.getEventMousePosition(event)
 	newPosition := cm.getPositionFromGrid(uint8(gridX), uint8(gridY))
 	pieceDragging := cm.GetDraggingPiece()
 	var promoteTo *model.PieceType
-	if pieceDragging.PieceType() == model.Pawn &&
-		(newPosition.Rank == 0 || newPosition.Rank == 7) {
-		promoteTo = cm.handlePromotion()
-	}
 	moveRequest := model.MoveRequest{cm.positionOriginal, model.Move{
 		int8(newPosition.File) - int8(cm.positionOriginal.File),
 		int8(newPosition.Rank) - int8(cm.positionOriginal.Rank)},
 		promoteTo,
 	}
+	if pieceDragging.PieceType() == model.Pawn &&
+		((cm.positionOriginal.Rank == 1 && cm.game.Turn() == model.Black) ||
+			(cm.positionOriginal.Rank == 6 && cm.game.Turn() == model.White)) &&
+		(newPosition.Rank == 0 || newPosition.Rank == 7) {
+		cm.viewCreatePromotionWindow(
+			int(newPosition.File), int(newPosition.Rank))
+		elDragging.Get("style").Set("transform",
+			cm.GetDraggingOriginalTransform())
+		cm.isMouseDown = false
+		cm.SetPromotionMoveRequest(moveRequest)
+		return
+	}
+	cm.handleMove(moveRequest)
+}
+
+func (cm *ClientModel) handleMove(
+	moveRequest model.MoveRequest) {
+	newPosition := model.Position{
+		File: uint8(int8(moveRequest.Position.File) + moveRequest.Move.X),
+		Rank: uint8(int8(moveRequest.Position.Rank) + moveRequest.Move.Y),
+	}
+	elDragging := cm.GetDraggingElement()
+	cm.SetDraggingElement(js.Undefined())
 	if cm.gameType == Local || cm.playerColor == cm.game.Turn() {
 		go func() {
 			cm.takeMove(moveRequest, newPosition, elDragging)
@@ -210,13 +244,6 @@ func (cm *ClientModel) handleClickEnd(event js.Value) {
 			cm.GetDraggingOriginalTransform())
 		removeClass(elDragging, "dragging")
 	}
-	cm.UnlockMouseDown()
-}
-
-func (cm *ClientModel) handlePromotion() *model.PieceType {
-	// TODO Allow user selection of promoteTo
-	promoteTo := model.Queen
-	return &promoteTo
 }
 
 func (cm *ClientModel) takeMove(

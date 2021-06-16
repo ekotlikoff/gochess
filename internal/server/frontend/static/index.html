@@ -56,17 +56,17 @@ license that can be found in the LICENSE file.
             cursor: -webkit-grabbing;
             z-index: 2;
         }
-        .piece.wr { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wr.png'); }
-        .piece.wn { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wn.png'); }
-        .piece.wb { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wb.png'); }
+        .piece.wr, .promotion-piece.wr { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wr.png'); }
+        .piece.wn, .promotion-piece.wn { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wn.png'); }
+        .piece.wb, .promotion-piece.wb { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wb.png'); }
         .piece.wk { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wk.png'); }
-        .piece.wq { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wq.png'); }
+        .piece.wq, .promotion-piece.wq { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wq.png'); }
         .piece.wp { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/wp.png'); }
-        .piece.br { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/br.png'); }
-        .piece.bn { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bn.png'); }
-        .piece.bb { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bb.png'); }
+        .piece.br, .promotion-piece.br { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/br.png'); }
+        .piece.bn, .promotion-piece.bn { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bn.png'); }
+        .piece.bb, .promotion-piece.bb { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bb.png'); }
         .piece.bk { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bk.png'); }
-        .piece.bq { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bq.png'); }
+        .piece.bq, .promotion-piece.bq { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bq.png'); }
         .piece.bp { background-image: url('https://images.chesscomfiles.com/chess-themes/pieces/classic/150/bp.png'); }
         .loading {
             border: 3px solid #f3f3f3; /* Light grey */
@@ -118,6 +118,64 @@ license that can be found in the LICENSE file.
         }
         .hidden {
             display: none;
+        }
+        /* As per chess.com */
+        .promotion-window {
+            background-color: #fff;
+            border-radius: 3px;
+            bottom: 0;
+            box-shadow: 3px 3px 10px rgb(0 0 0 / 45%);
+            display: flex;
+            flex-direction: column-reverse;
+            height: 56.25%;
+            left: 0;
+            position: absolute;
+            top: auto;
+            width: 12.5%;
+            z-index: 2;
+        }
+        .promotion-window .promotion-piece {
+            background-position-y: bottom;
+            background-repeat: no-repeat;
+            background-size: 100%;
+            cursor: pointer;
+            padding-top: 100%;
+            position: relative;
+        }
+        .promotion-window.top .promotion-piece.bb, .promotion-window.top .promotion-piece.wb {
+            order: 1;
+        }
+        .promotion-window.top .promotion-piece.br, .promotion-window.top .promotion-piece.wr {
+            order: 2;
+        }
+        .promotion-window.top .promotion-piece.bn, .promotion-window.top .promotion-piece.wn {
+            order: 3;
+        }
+        .promotion-window.top .promotion-piece.bq, .promotion-window.top .promotion-piece.wq {
+            order: 4;
+        }
+        .promotion-window.top .close-button, .promotion-window.bottom .close-button {
+            border-radius: 0 0 3px 3px;
+            order: 0;
+        }
+        .promotion-window .close-button {
+            align-items: center;
+            background: #f1f1f1;
+            border-radius: 4px 4px 0 0;
+            color: #8c8a88;
+            cursor: pointer;
+            display: flex;
+            flex-grow: 1;
+            font-size: 150%;
+            font-style: normal;
+            justify-content: center;
+            max-height: 12.5%;
+            order: 4;
+            text-align: center;
+        }
+        .promotion-window.top {
+            bottom: auto;
+            top: 0;
         }
 
         /* As per https://www.w3schools.com/howto/howto_css_modals.asp */
