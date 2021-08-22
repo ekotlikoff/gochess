@@ -176,6 +176,7 @@ func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 	return player
 }
 
+// CurrentMatch serializable struct to bring client up to speed
 type CurrentMatch struct {
 	BlackName                   string
 	WhiteName                   string
@@ -195,6 +196,12 @@ type CurrentMatch struct {
 	TurnsSinceCaptureOrPawnMove uint8
 	RequestedDraw               bool
 	RequestedDrawName           string
+}
+
+// CurrentMatchResponse serializable struct to bring client up to speed
+type CurrentMatchResponse struct {
+	Credentials Credentials
+	Match       CurrentMatch
 }
 
 func currentMatchFromMatch(match *matchserver.Match) CurrentMatch {
@@ -223,11 +230,6 @@ func currentMatchFromMatch(match *matchserver.Match) CurrentMatch {
 		RequestedDraw:               requestedDraw,
 		RequestedDrawName:           requestedDrawName,
 	}
-}
-
-type CurrentMatchResponse struct {
-	Credentials Credentials
-	Match       CurrentMatch
 }
 
 // GetCurrentMatch returns the client's username if a valid token is supplied, it
