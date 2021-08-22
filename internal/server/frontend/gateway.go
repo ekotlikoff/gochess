@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	model "github.com/Ekotlikoff/gochess/internal/model"
 	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
 	"github.com/gofrs/uuid"
 	opentracing "github.com/opentracing/opentracing-go"
@@ -71,6 +72,8 @@ func Serve(httpBackend *url.URL, websocketBackend *url.URL, port int) {
 	mux := http.NewServeMux()
 	mux.Handle("/", prometheusMiddleware(http.HandlerFunc(handleWebRoot)))
 	mux.Handle("/session", prometheusMiddleware(http.HandlerFunc(StartSession)))
+	mux.Handle("/currentmatch", prometheusMiddleware(
+		http.HandlerFunc(GetCurrentMatch)))
 	// HTTP backend proxying
 	mux.Handle("/http/match", prometheusMiddleware(httpBackendProxy))
 	mux.Handle("/http/sync", prometheusMiddleware(httpBackendProxy))
@@ -140,6 +143,7 @@ func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 	defer getSessionSpan.Finish()
 	c, err := r.Cookie("session_token")
 	if err != nil {
+		println("GET SESSION ERROR")
 		if err == http.ErrNoCookie {
 			log.Println("session_token is not set")
 			w.WriteHeader(http.StatusUnauthorized)
@@ -151,6 +155,7 @@ func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 		return nil
 	}
 	sessionToken := c.Value
+	println("SESSION token: " + sessionToken)
 	getTokenSpan := tracer.StartSpan(
 		"GetToken",
 		opentracing.ChildOf(getSessionSpan.Context()),
@@ -158,15 +163,98 @@ func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 	player, err := sessionCache.Get(sessionToken)
 	getTokenSpan.Finish()
 	if err != nil {
+		println("SESSION CACHE ERROR")
 		log.Println("ERROR ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return nil
 	} else if player == nil {
+		println("PLAYER IS NIL")
 		log.Println("No player found for token ", sessionToken)
 		w.WriteHeader(http.StatusUnauthorized)
 		return nil
 	}
 	return player
+}
+
+type CurrentMatch struct {
+	BlackName                   string
+	WhiteName                   string
+	BlackRemainingTimeMs        int64
+	WhiteRemainingTimeMs        int64
+	Board                       model.Board
+	Turn                        model.Color
+	GameOver                    bool
+	Result                      model.GameResult
+	PreviousMove                model.Move
+	PreviousMover               model.Piece
+	BlackKing                   model.Piece
+	WhiteKing                   model.Piece
+	WhitePieces                 map[model.PieceType]uint8
+	BlackPieces                 map[model.PieceType]uint8
+	PositionHistory             map[string]uint8
+	TurnsSinceCaptureOrPawnMove uint8
+	RequestedDraw               bool
+	RequestedDrawName           string
+}
+
+func currentMatchFromMatch(match *matchserver.Match) CurrentMatch {
+	requestedDraw := match.GetRequestedDraw() != nil
+	requestedDrawName := ""
+	if requestedDraw {
+		requestedDrawName = match.GetRequestedDraw().Name()
+	}
+	return CurrentMatch{
+		BlackName:                   match.PlayerName(model.Black),
+		WhiteName:                   match.PlayerName(model.White),
+		BlackRemainingTimeMs:        match.PlayerRemainingTimeMs(model.Black),
+		WhiteRemainingTimeMs:        match.PlayerRemainingTimeMs(model.White),
+		Board:                       *match.Game.GetBoard(),
+		Turn:                        match.Game.Turn(),
+		GameOver:                    match.Game.GameOver(),
+		Result:                      match.Game.Result(),
+		PreviousMove:                match.Game.PreviousMove(),
+		PreviousMover:               *match.Game.PreviousMover(),
+		BlackKing:                   *match.Game.BlackKing(),
+		WhiteKing:                   *match.Game.WhiteKing(),
+		WhitePieces:                 match.Game.WhitePieces(),
+		BlackPieces:                 match.Game.BlackPieces(),
+		PositionHistory:             match.Game.PositionHistory(),
+		TurnsSinceCaptureOrPawnMove: match.Game.TurnsSinceCaptureOrPawnMove(),
+		RequestedDraw:               requestedDraw,
+		RequestedDrawName:           requestedDrawName,
+	}
+}
+
+type CurrentMatchResponse struct {
+	Credentials Credentials
+	Match       CurrentMatch
+}
+
+// GetCurrentMatch returns the client's username if a valid token is supplied, it
+// also checks for a match the player is playing, if one exists it is returned.
+func GetCurrentMatch(w http.ResponseWriter, r *http.Request) {
+	tracer := opentracing.GlobalTracer()
+	currentMatchSpan := tracer.StartSpan("CurrentMatch")
+	player := GetSession(w, r)
+	currentMatchResponse := CurrentMatchResponse{}
+	if player == nil {
+		return
+	} else if player.GetMatch() == nil {
+		currentMatchResponse = CurrentMatchResponse{
+			Credentials: Credentials{Username: player.Name()},
+		}
+	} else {
+		currentMatchResponse = CurrentMatchResponse{
+			Credentials: Credentials{Username: player.Name()},
+			Match:       currentMatchFromMatch(player.GetMatch()),
+		}
+	}
+	if err := json.NewEncoder(w).Encode(currentMatchResponse); err != nil {
+		fmt.Println(err)
+		log.Println(err)
+	}
+	defer currentMatchSpan.Finish()
+	w.WriteHeader(http.StatusOK)
 }
 
 type statusWriter struct {

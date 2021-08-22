@@ -22,7 +22,7 @@ func init() {
 	SetQuiet()
 }
 
-func TestHTTPServerStartSession(t *testing.T) {
+func TestStartSession(t *testing.T) {
 	if debug {
 		fmt.Println("Test StartSession")
 	}
@@ -45,7 +45,7 @@ func TestHTTPServerStartSession(t *testing.T) {
 	}
 }
 
-func TestHTTPServerStartSessionError(t *testing.T) {
+func TestStartSessionError(t *testing.T) {
 	if debug {
 		fmt.Println("Test StartSessionError")
 	}
@@ -64,7 +64,7 @@ func TestHTTPServerStartSessionError(t *testing.T) {
 	}
 }
 
-func TestHTTPServerStartSessionNoUsername(t *testing.T) {
+func TestStartSessionNoUsername(t *testing.T) {
 	if debug {
 		fmt.Println("Test StartSessionNoUsername")
 	}

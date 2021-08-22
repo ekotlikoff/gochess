@@ -290,6 +290,63 @@ func (game *Game) Result() GameResult {
 	return game.result
 }
 
+// PreviousMover get the game's previous mover
+func (game *Game) PreviousMover() *Piece {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.previousMover
+}
+
+// PreviousMove get the game's previous move
+func (game *Game) PreviousMove() Move {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.previousMove
+}
+
+// BlackKing get the game's black king
+func (game *Game) BlackKing() *Piece {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.blackKing
+}
+
+// WhiteKing get the game's white king
+func (game *Game) WhiteKing() *Piece {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.whiteKing
+}
+
+// WhitePieces get the game's white pieces
+func (game *Game) WhitePieces() map[PieceType]uint8 {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.whitePieces
+}
+
+// BlackPieces get the game's black pieces
+func (game *Game) BlackPieces() map[PieceType]uint8 {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.blackPieces
+}
+
+// PositionHistory get the game's position history
+func (game *Game) PositionHistory() map[string]uint8 {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.positionHistory
+}
+
+// TurnsSinceCaptureOrPawnMove get the game's number of turns since a capture or
+// pawn move
+func (game *Game) TurnsSinceCaptureOrPawnMove() uint8 {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.turnsSinceCaptureOrPawnMove
+}
+
 func (mr MoveRequest) String() string {
 	return "Position: " + mr.Position.String() + ", Move: " + mr.Move.String()
 }

@@ -61,7 +61,7 @@ func (matchingServer *MatchingServer) engineSession(botPlayer *Player) {
 		// TODO resign in this case?
 		return
 	}
-	gameOver := botPlayer.match.gameOver
+	gameOver := botPlayer.match.gameOverChan
 	waitc := make(chan struct{})
 	go engineReceiveLoop(matchingServer, botPlayer, stream, waitc)
 	for {

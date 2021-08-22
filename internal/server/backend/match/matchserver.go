@@ -145,7 +145,7 @@ func (player *Player) MatchedOpponentName() string {
 
 // MatchMaxTimeMs returns players max time in ms
 func (player *Player) MatchMaxTimeMs() int64 {
-	return player.GetMatch().MaxTimeMs()
+	return player.GetMatch().maxTimeMs
 }
 
 // Color returns player color

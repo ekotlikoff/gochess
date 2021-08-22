@@ -11,6 +11,6 @@
         - gameOver, requestToDraw, gameOver results
 - GET /sync
     - Get opponents move (should query this after a successful move), returns HTTP 204 if no update after server timeout
-- GET /currentgame
+- GET /currentmatch
     - Get the state of the board (call this to check if in a game and to get the state of it if so)
     - Return 404 if not in a game, 200 with state otherwise
