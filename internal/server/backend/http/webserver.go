@@ -47,13 +47,6 @@ func makeSearchForMatchHandler(
 		defer cancel()
 		if player.HasMatchStarted(ctx) {
 			player.SetSearchingForMatch(false)
-			matchResponse :=
-				matchserver.MatchedResponse{
-					Color:        player.Color(),
-					OpponentName: player.MatchedOpponentName(),
-					MaxTimeMs:    player.MatchMaxTimeMs(),
-				}
-			json.NewEncoder(w).Encode(matchResponse)
 		} else {
 			// Return HTTP 202 until match starts.
 			w.WriteHeader(http.StatusAccepted)

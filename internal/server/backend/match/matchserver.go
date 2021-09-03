@@ -25,8 +25,6 @@ var (
 const (
 	// NullT is the WS response type for a null response
 	NullT = WebsocketResponseType(iota)
-	// MatchStartT is the WS response type for a match response
-	MatchStartT = WebsocketResponseType(iota)
 	// RequestSyncT is the WS request type for a sync request
 	RequestSyncT = WebsocketRequestType(iota)
 	// RequestAsyncT is the WS request type for an async request
@@ -47,7 +45,6 @@ type (
 	// WebsocketResponse is a struct for a response over the WS conn
 	WebsocketResponse struct {
 		WebsocketResponseType WebsocketResponseType
-		MatchedResponse       MatchedResponse
 		ResponseSync          ResponseSync
 		ResponseAsync         ResponseAsync
 		OpponentPlayedMove    model.MoveRequest
@@ -64,8 +61,8 @@ type (
 		RequestAsync         RequestAsync
 	}
 
-	// MatchedResponse is a struct for the matched response
-	MatchedResponse struct {
+	// MatchDetails is a struct for the matched response
+	MatchDetails struct {
 		Color        model.Color
 		OpponentName string
 		MaxTimeMs    int64
@@ -254,6 +251,14 @@ func (player *Player) startMatch() {
 	player.matchStartMutex.RLock()
 	defer player.matchStartMutex.RUnlock()
 	close(player.matchStart)
+	player.ResponseChanAsync <- ResponseAsync{
+		Matched: true,
+		MatchDetails: MatchDetails{
+			Color:        player.Color(),
+			OpponentName: player.MatchedOpponentName(),
+			MaxTimeMs:    player.MatchMaxTimeMs(),
+		},
+	}
 }
 
 // ClientDoneWithMatch the client is now done with the match
@@ -285,8 +290,9 @@ type RequestAsync struct {
 
 // ResponseAsync represents a response to the client unrelated to a move
 type ResponseAsync struct {
-	GameOver, RequestToDraw, Draw, Resignation, Timeout bool
-	Winner                                              string
+	GameOver, RequestToDraw, Draw, Resignation, Timeout, Matched bool
+	Winner                                                       string
+	MatchDetails                                                 MatchDetails
 }
 
 // MatchingServer handles matching players and carrying out the game

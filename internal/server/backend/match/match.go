@@ -221,7 +221,7 @@ func (match *Match) handleAsyncRequests(waitc chan struct{}) {
 				go func() {
 					select {
 					case opponent.ResponseChanAsync <- ResponseAsync{
-						false, true, false, false, false, "",
+						false, true, false, false, false, false, "", MatchDetails{},
 					}:
 					case <-match.gameOverChan:
 					}
@@ -231,7 +231,7 @@ func (match *Match) handleAsyncRequests(waitc chan struct{}) {
 				go func() {
 					select {
 					case opponent.ResponseChanAsync <- ResponseAsync{
-						false, true, false, false, false, "",
+						false, true, false, false, false, false, "", MatchDetails{},
 					}:
 					case <-match.gameOverChan:
 					}

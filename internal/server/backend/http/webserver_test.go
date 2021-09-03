@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	debug              bool   = true
+	debug              bool   = false
 	ctp                string = "application/json"
 	serverMatch        *httptest.Server
 	serverSession      *httptest.Server
@@ -64,7 +64,7 @@ func TestHTTPServerMatch(t *testing.T) {
 	wait := make(chan struct{})
 	var resp *http.Response
 	go func() { resp, _ = client.Get(serverMatch.URL); close(wait) }()
-	resp2, err2 := client2.Get(serverMatch.URL)
+	resp2, _ := client2.Get(serverMatch.URL)
 	<-wait
 	defer resp.Body.Close()
 	defer resp2.Body.Close()
@@ -76,9 +76,12 @@ func TestHTTPServerMatch(t *testing.T) {
 		fmt.Println(string(body2))
 		fmt.Println(resp2.StatusCode)
 	}
-	if err2 != nil || (!strings.HasPrefix(string(body), "{\"Color\":1,\"Opp") &&
-		!strings.HasPrefix(string(body2), "{\"Color\":1,\"Opp")) {
-		t.Error("Expected match got ", string(body))
+	resp, err := client.Get(serverAsync.URL)
+	responseAsync := matchserver.ResponseAsync{}
+	json.NewDecoder(resp.Body).Decode(&responseAsync)
+	resp.Body.Close()
+	if err != nil || responseAsync.Matched != true {
+		t.Error("Expected match")
 	}
 }
 
@@ -202,10 +205,12 @@ func createMatch(testMatchServer *httptest.Server) (
 	blackName = "player1"
 	whiteName = "player2"
 	white = client2
-	var matchResponse matchserver.MatchedResponse
-	json.NewDecoder(resp.Body).Decode(&matchResponse)
+	resp, _ = white.Get(serverAsync.URL)
+	resp, _ = black.Get(serverAsync.URL)
+	responseAsync := matchserver.ResponseAsync{}
+	json.NewDecoder(resp.Body).Decode(&responseAsync)
 	resp.Body.Close()
-	if matchResponse.Color == model.White {
+	if responseAsync.MatchDetails.Color == model.White {
 		black = client2
 		blackName = "player2"
 		whiteName = "player1"
@@ -270,7 +275,6 @@ func TestCurrentMatch(t *testing.T) {
 	}
 	if resp.StatusCode != 200 || err != nil ||
 		currentMatchResponse.Credentials.Username != "Dawn" {
-		println(resp.StatusCode)
 		t.Error("Expected a username")
 	}
 }

@@ -42,8 +42,10 @@ func TestMatchingServerTimeout(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
-	liveMatch := matchingServer.LiveMatches()[0]
 	response := <-player1.ResponseChanAsync
+	response = <-player2.ResponseChanAsync
+	liveMatch := matchingServer.LiveMatches()[0]
+	response = <-player1.ResponseChanAsync
 	if !liveMatch.Game.GameOver() || !response.GameOver || !response.Timeout {
 		t.Error("Expected timed out game got", response)
 	}
@@ -66,6 +68,8 @@ func TestMatchingServerInsufficientMaterialDraw(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	response := <-player1.ResponseChanAsync
+	response = <-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
@@ -174,7 +178,7 @@ func TestMatchingServerInsufficientMaterialDraw(t *testing.T) {
 		Move:      model.Move{X: 0, Y: -1},
 		PromoteTo: nil})
 	black.GetSyncUpdate()
-	response := <-white.ResponseChanAsync
+	response = <-white.ResponseChanAsync
 	if !liveMatch.Game.GameOver() || !response.GameOver ||
 		!response.Draw || response.Timeout {
 		t.Error("Expected draw got", response)
@@ -198,6 +202,8 @@ func TestMatchingServerInsufficientMaterialTimeoutDraw(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	response := <-player1.ResponseChanAsync
+	response = <-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
@@ -296,7 +302,7 @@ func TestMatchingServerInsufficientMaterialTimeoutDraw(t *testing.T) {
 		Move:      model.Move{X: -1, Y: 0},
 		PromoteTo: nil})
 	black.GetSyncUpdate()
-	response := <-white.ResponseChanAsync
+	response = <-white.ResponseChanAsync
 	if !liveMatch.Game.GameOver() || !response.GameOver ||
 		!response.Draw || !response.Timeout {
 		t.Error("Expected draw got", response)
@@ -312,6 +318,8 @@ func TestMatchingServerDraw(t *testing.T) {
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.StartMatchServers(1, exitChan)
+	<-player1.ResponseChanAsync
+	<-player2.ResponseChanAsync
 	player1.RequestChanAsync <- RequestAsync{RequestToDraw: true}
 	response := <-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
@@ -369,6 +377,8 @@ func TestMatchingServerResignation(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	<-player1.ResponseChanAsync
+	<-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	player1.RequestChanAsync <- RequestAsync{Resign: true}
 	response := <-player1.ResponseChanAsync
@@ -391,6 +401,8 @@ func TestMatchingServerPlayerSecondGame(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	<-player1.ResponseChanAsync
+	<-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	player1.RequestChanAsync <- RequestAsync{Resign: true}
 	response := <-player1.ResponseChanAsync
@@ -411,6 +423,8 @@ func TestMatchingServerPlayerSecondGame(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	<-player1.ResponseChanAsync
+	<-player2.ResponseChanAsync
 	liveMatch = matchingServer.LiveMatches()[0]
 	player1.RequestChanAsync <- RequestAsync{Resign: true}
 	response = <-player1.ResponseChanAsync
@@ -435,6 +449,8 @@ func TestMatchingServerValidMoves(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	<-player1.ResponseChanAsync
+	<-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
@@ -466,6 +482,8 @@ func TestMatchingServerInvalidMoves(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	<-player1.ResponseChanAsync
+	<-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
@@ -503,6 +521,8 @@ func TestMatchingServerCheckmate(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	response := <-player1.ResponseChanAsync
+	response = <-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
@@ -553,7 +573,7 @@ func TestMatchingServerCheckmate(t *testing.T) {
 	if !liveMatch.Game.GameOver() {
 		t.Error("Expected gameover got ", liveMatch)
 	}
-	response := <-black.ResponseChanAsync
+	response = <-black.ResponseChanAsync
 	if !response.GameOver || !(response.Winner == white.name) {
 		t.Error("Expected checkmate got ", response)
 	}

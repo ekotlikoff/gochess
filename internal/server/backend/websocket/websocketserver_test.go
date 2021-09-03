@@ -70,14 +70,14 @@ func TestWSMatch(t *testing.T) {
 	wsResponse2 := matchserver.WebsocketResponse{}
 	ws.ReadJSON(&wsResponse)
 	ws2.ReadJSON(&wsResponse2)
-	if wsResponse.WebsocketResponseType != matchserver.MatchStartT ||
-		wsResponse.MatchedResponse.Color == wsResponse2.MatchedResponse.Color {
+	if wsResponse.WebsocketResponseType != matchserver.ResponseAsyncT ||
+		wsResponse.ResponseAsync.MatchDetails.Color == wsResponse2.ResponseAsync.MatchDetails.Color {
 		t.Error("Expected the two players to have different colors")
 	}
 	black := ws
 	white := ws2
 	whiteName := "player2"
-	if wsResponse.MatchedResponse.Color == model.White {
+	if wsResponse.ResponseAsync.MatchDetails.Color == model.White {
 		black = ws2
 		white = ws
 		whiteName = "player1"
@@ -175,13 +175,13 @@ func TestWSDraw(t *testing.T) {
 	wsResponse2 := matchserver.WebsocketResponse{}
 	ws.ReadJSON(&wsResponse)
 	ws2.ReadJSON(&wsResponse2)
-	if wsResponse.WebsocketResponseType != matchserver.MatchStartT ||
-		wsResponse.MatchedResponse.Color == wsResponse2.MatchedResponse.Color {
+	if wsResponse.WebsocketResponseType != matchserver.ResponseAsyncT ||
+		wsResponse.ResponseAsync.MatchDetails.Color == wsResponse2.ResponseAsync.MatchDetails.Color {
 		t.Error("Expected the two players to have different colors")
 	}
 	black := ws
 	white := ws2
-	if wsResponse.MatchedResponse.Color == model.White {
+	if wsResponse.ResponseAsync.MatchDetails.Color == model.White {
 		black = ws2
 		white = ws
 	}
@@ -267,13 +267,13 @@ func TestWSResign(t *testing.T) {
 	wsResponse2 := matchserver.WebsocketResponse{}
 	ws.ReadJSON(&wsResponse)
 	ws2.ReadJSON(&wsResponse2)
-	if wsResponse.WebsocketResponseType != matchserver.MatchStartT ||
-		wsResponse.MatchedResponse.Color == wsResponse2.MatchedResponse.Color {
+	if wsResponse.WebsocketResponseType != matchserver.ResponseAsyncT ||
+		wsResponse.ResponseAsync.MatchDetails.Color == wsResponse2.ResponseAsync.MatchDetails.Color {
 		t.Error("Expected the two players to have different colors")
 	}
 	black := ws
 	white := ws2
-	if wsResponse.MatchedResponse.Color == model.White {
+	if wsResponse.ResponseAsync.MatchDetails.Color == model.White {
 		black = ws2
 		white = ws
 	}
@@ -356,13 +356,14 @@ func TestWSRematch(t *testing.T) {
 	wsResponse2 := matchserver.WebsocketResponse{}
 	ws.ReadJSON(&wsResponse)
 	ws2.ReadJSON(&wsResponse2)
-	if wsResponse.WebsocketResponseType != matchserver.MatchStartT ||
-		wsResponse.MatchedResponse.Color == wsResponse2.MatchedResponse.Color {
+	if wsResponse.WebsocketResponseType != matchserver.ResponseAsyncT ||
+		wsResponse.ResponseAsync.MatchDetails.Color ==
+			wsResponse2.ResponseAsync.MatchDetails.Color {
 		t.Error("Expected the two players to have different colors")
 	}
 	black := ws
 	white := ws2
-	if wsResponse.MatchedResponse.Color == model.White {
+	if wsResponse.ResponseAsync.MatchDetails.Color == model.White {
 		black = ws2
 		white = ws
 	}
@@ -398,8 +399,9 @@ func TestWSRematch(t *testing.T) {
 	wsResponse2 = matchserver.WebsocketResponse{}
 	ws.ReadJSON(&wsResponse)
 	ws2.ReadJSON(&wsResponse2)
-	if wsResponse.WebsocketResponseType != matchserver.MatchStartT ||
-		wsResponse.MatchedResponse.Color == wsResponse2.MatchedResponse.Color {
+	if wsResponse.WebsocketResponseType != matchserver.ResponseAsyncT ||
+		wsResponse.ResponseAsync.MatchDetails.Color ==
+			wsResponse2.ResponseAsync.MatchDetails.Color {
 		t.Error("Expected the two players to have different colors")
 	}
 }

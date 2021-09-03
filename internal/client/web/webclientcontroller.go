@@ -291,12 +291,6 @@ func (cm *ClientModel) takeMove(
 	}
 }
 
-func (cm *ClientModel) listenForSyncUpdate() {
-	if cm.backendType == HttpBackend {
-		cm.listenForSyncUpdateHttp()
-	}
-}
-
 func (cm *ClientModel) listenForSyncUpdateHttp() {
 	for true {
 		select {
@@ -342,13 +336,7 @@ func (cm *ClientModel) handleSyncUpdate(opponentMove model.MoveRequest) {
 	cm.viewHandleMove(opponentMove, newPos, elMoving)
 }
 
-func (cm *ClientModel) listenForAsyncUpdate() {
-	if cm.backendType == HttpBackend {
-		cm.listenForAsyncUpdateHttp()
-	}
-}
-
-func (cm *ClientModel) listenForAsyncUpdateHttp() {
+func (cm *ClientModel) listenForAsyncUpdateHttp(buttonLoader js.Value) {
 	for true {
 		select {
 		case <-cm.remoteMatchModel.endRemoteGameChan:
@@ -369,12 +357,13 @@ func (cm *ClientModel) listenForAsyncUpdateHttp() {
 		if resp.StatusCode == 200 {
 			asyncResponse := matchserver.ResponseAsync{}
 			json.NewDecoder(resp.Body).Decode(&asyncResponse)
-			cm.handleResponseAsync(asyncResponse)
+			cm.handleResponseAsync(asyncResponse, buttonLoader)
 		}
 	}
 }
 
-func (cm *ClientModel) handleResponseAsync(responseAsync matchserver.ResponseAsync) {
+func (cm *ClientModel) handleResponseAsync(responseAsync matchserver.ResponseAsync,
+	buttonLoader js.Value) {
 	if responseAsync.GameOver {
 		cm.remoteGameEnd()
 		winType := ""
@@ -395,6 +384,11 @@ func (cm *ClientModel) handleResponseAsync(responseAsync matchserver.ResponseAsy
 		log.Println("Requested draw")
 		cm.SetRequestedDraw(cm.GetOpponentColor(),
 			!cm.GetRequestedDraw(cm.GetOpponentColor()))
+	} else if responseAsync.Matched {
+		cm.SetPlayerColor(responseAsync.MatchDetails.Color)
+		cm.SetOpponentName(responseAsync.MatchDetails.OpponentName)
+		cm.SetMaxTimeMs(responseAsync.MatchDetails.MaxTimeMs)
+		cm.handleStartMatch(buttonLoader)
 	}
 }
 
@@ -479,19 +473,22 @@ func (cm *ClientModel) lookForMatch() {
 		cm.SetPlayerName(username)
 		cm.SetHasSession(true)
 	}
-	var matchResponse matchserver.MatchedResponse
 	var err error
 	if cm.backendType == HttpBackend {
-		matchResponse, err = cm.httpMatch(buttonLoader)
+		err = cm.httpMatch(buttonLoader)
+		if err == nil {
+			go cm.listenForSyncUpdateHttp()
+			go cm.listenForAsyncUpdateHttp(buttonLoader)
+		}
 	} else if cm.backendType == WebsocketBackend {
-		matchResponse, err = cm.wsMatch(buttonLoader)
+		err = cm.wsMatch(buttonLoader)
 	}
 	if err != nil {
-		return
+		buttonLoader.Call("remove")
 	}
-	cm.SetPlayerColor(matchResponse.Color)
-	cm.SetOpponentName(matchResponse.OpponentName)
-	cm.SetMaxTimeMs(matchResponse.MaxTimeMs)
+}
+
+func (cm *ClientModel) handleStartMatch(buttonLoader js.Value) {
 	cm.resetGame()
 	// - TODO once matched briefly display matched icon?
 	cm.SetGameType(Remote)
@@ -501,13 +498,10 @@ func (cm *ClientModel) lookForMatch() {
 	cm.remoteMatchModel.endRemoteGameChan = make(chan bool, 0)
 	cm.viewSetMatchControls()
 	go cm.matchDetailsUpdateLoop()
-	go cm.listenForSyncUpdate()
-	go cm.listenForAsyncUpdate()
 }
 
-func (cm *ClientModel) httpMatch(buttonLoader js.Value,
-) (matchserver.MatchedResponse, error) {
-	resp, err := retryWrapper(
+func (cm *ClientModel) httpMatch(buttonLoader js.Value) error {
+	_, err := retryWrapper(
 		func() (*http.Response, error) {
 			return cm.client.Get("http/match")
 		},
@@ -517,23 +511,17 @@ func (cm *ClientModel) httpMatch(buttonLoader js.Value,
 			buttonLoader.Call("remove")
 		},
 	)
-	var matchedResponse matchserver.MatchedResponse
 	if err != nil {
-		return matchedResponse, err
+		return err
 	}
-	defer resp.Body.Close()
-	json.NewDecoder(resp.Body).Decode(&matchedResponse)
-	return matchedResponse, nil
+	return nil
 }
 
-func (cm *ClientModel) wsMatch(buttonLoader js.Value,
-) (matchserver.MatchedResponse, error) {
+func (cm *ClientModel) wsMatch(buttonLoader js.Value) error {
 	u := "ws://" + cm.origin + "/ws"
 	ws := js.Global().Get("WebSocket").New(u)
 	retries := 0
 	maxRetries := 100
-	matchedChan := make(chan matchserver.MatchedResponse)
-	var matchResponse matchserver.MatchedResponse
 	for true {
 		if ws.Get("readyState").Equal(js.Global().Get("WebSocket").Get("OPEN")) {
 			cm.SetWSConn(ws)
@@ -546,7 +534,7 @@ func (cm *ClientModel) wsMatch(buttonLoader js.Value,
 			}
 			jsonMsg, _ := json.Marshal(message)
 			ws.Call("send", string(jsonMsg))
-			go cm.wsListener(matchedChan)
+			go cm.wsListener(buttonLoader)
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
@@ -555,13 +543,13 @@ func (cm *ClientModel) wsMatch(buttonLoader js.Value,
 			cm.SetIsMatchmaking(false)
 			buttonLoader.Call("remove")
 			log.Println("ERROR: Error opening websocket connection")
-			return matchResponse, errors.New("Error opening websocket connection")
+			return errors.New("Error opening websocket connection")
 		}
 	}
-	return <-matchedChan, nil
+	return nil
 }
 
-func (cm *ClientModel) wsListener(matchedChan chan matchserver.MatchedResponse) {
+func (cm *ClientModel) wsListener(buttonLoader js.Value) {
 	ws := cm.GetWSConn()
 	ws.Set("onmessage",
 		js.FuncOf(func(this js.Value, args []js.Value) interface{} {
@@ -570,14 +558,12 @@ func (cm *ClientModel) wsListener(matchedChan chan matchserver.MatchedResponse) 
 			message := matchserver.WebsocketResponse{}
 			json.Unmarshal([]byte(jsonString), &message)
 			switch message.WebsocketResponseType {
-			case matchserver.MatchStartT:
-				matchedChan <- message.MatchedResponse
 			case matchserver.OpponentPlayedMoveT:
 				cm.handleSyncUpdate(message.OpponentPlayedMove)
 			case matchserver.ResponseSyncT:
 				cm.handleResponseSync(message.ResponseSync)
 			case matchserver.ResponseAsyncT:
-				cm.handleResponseAsync(message.ResponseAsync)
+				cm.handleResponseAsync(message.ResponseAsync, buttonLoader)
 			}
 			return nil
 		}))

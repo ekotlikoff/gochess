@@ -65,14 +65,6 @@ func writeLoop(c *websocket.Conn, player *matchserver.Player,
 	if err != nil {
 		log.Println("FATAL: Failed to find match")
 	}
-	matchedResponse := matchserver.WebsocketResponse{
-		WebsocketResponseType: matchserver.MatchStartT,
-		MatchedResponse: matchserver.MatchedResponse{
-			Color: player.Color(), OpponentName: player.MatchedOpponentName(),
-			MaxTimeMs: player.MatchMaxTimeMs(),
-		},
-	}
-	c.WriteJSON(&matchedResponse)
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
 	for {
