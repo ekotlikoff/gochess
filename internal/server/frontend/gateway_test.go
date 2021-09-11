@@ -18,13 +18,13 @@ var (
 )
 
 func init() {
-	serverSession = httptest.NewServer(http.HandlerFunc(StartSession))
+	serverSession = httptest.NewServer(http.HandlerFunc(Session))
 	SetQuiet()
 }
 
-func TestStartSession(t *testing.T) {
+func TestSession(t *testing.T) {
 	if debug {
-		fmt.Println("Test StartSession")
+		fmt.Println("Test Session")
 	}
 	credentialsBuf := new(bytes.Buffer)
 	credentials := Credentials{"my_username"}
@@ -45,9 +45,9 @@ func TestStartSession(t *testing.T) {
 	}
 }
 
-func TestStartSessionError(t *testing.T) {
+func TestSessionError(t *testing.T) {
 	if debug {
-		fmt.Println("Test StartSessionError")
+		fmt.Println("Test SessionError")
 	}
 	resp, err := http.Post(serverSession.URL, "application/json", bytes.NewBuffer([]byte("error")))
 	if err != nil {
@@ -64,9 +64,9 @@ func TestStartSessionError(t *testing.T) {
 	}
 }
 
-func TestStartSessionNoUsername(t *testing.T) {
+func TestSessionNoUsername(t *testing.T) {
 	if debug {
-		fmt.Println("Test StartSessionNoUsername")
+		fmt.Println("Test SessionNoUsername")
 	}
 	requestBody, _ := json.Marshal(map[string]string{
 		"not_username": "my_username",

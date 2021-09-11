@@ -29,10 +29,9 @@ var (
 )
 
 func init() {
-	serverSession = httptest.NewServer(http.HandlerFunc(gateway.StartSession))
+	serverSession = httptest.NewServer(http.HandlerFunc(gateway.Session))
 	serverAsync = httptest.NewServer(http.Handler(makeAsyncHandler()))
 	serverSync = httptest.NewServer(http.Handler(makeSyncHandler()))
-	currentMatch = httptest.NewServer(http.HandlerFunc(gateway.GetCurrentMatch))
 	matchingServer := matchserver.NewMatchingServer()
 	serverMatch = httptest.NewServer(
 		makeSearchForMatchHandler(&matchingServer))
@@ -243,13 +242,11 @@ func startSession(client *http.Client, username string) {
 	serverMatchURL, _ := url.Parse(serverMatch.URL)
 	serverSyncURL, _ := url.Parse(serverSync.URL)
 	serverAsyncURL, _ := url.Parse(serverAsync.URL)
-	currentMatchURL, _ := url.Parse(currentMatch.URL)
 	// Ensure that the various test handler URLs get passed the session cookie
 	// by the client.
 	client.Jar.SetCookies(serverMatchURL, client.Jar.Cookies(serverSessionURL))
 	client.Jar.SetCookies(serverSyncURL, client.Jar.Cookies(serverSessionURL))
 	client.Jar.SetCookies(serverAsyncURL, client.Jar.Cookies(serverSessionURL))
-	client.Jar.SetCookies(currentMatchURL, client.Jar.Cookies(serverSessionURL))
 	if err == nil {
 		defer resp.Body.Close()
 	}
@@ -262,7 +259,7 @@ func TestCurrentMatch(t *testing.T) {
 	jar, _ := cookiejar.New(&cookiejar.Options{})
 	client := &http.Client{Jar: jar}
 	startSession(client, "Dawn")
-	resp, err := client.Get(currentMatch.URL)
+	resp, err := client.Get(serverSession.URL)
 	if err != nil {
 		t.Error(err)
 	}
@@ -286,7 +283,7 @@ func TestCurrentMatchWithGame(t *testing.T) {
 	black, white, blackName, _ := createMatch(serverMatch)
 	sendMove(white, serverSync, 2, 1, 0, 2)
 	sendMove(black, serverSync, 2, 6, 0, -2)
-	resp, err := black.Get(currentMatch.URL)
+	resp, err := black.Get(serverSession.URL)
 	if err != nil {
 		t.Error(err)
 	}

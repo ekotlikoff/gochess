@@ -42,6 +42,17 @@ func (cm *ClientModel) initController() {
 		cm.genCloseModalOnClick())
 }
 
+func (cm *ClientModel) checkForSession() {
+	resp, err := cm.client.Get("session", ctp, credentialsBuf)
+	if err == nil {
+		resp.Body.Close()
+	}
+	if err != nil || resp.StatusCode != 200 {
+		log.Println("Error starting session")
+		return
+	}
+}
+
 func (cm *ClientModel) genMouseDown() js.Func {
 	return js.FuncOf(func(this js.Value, i []js.Value) interface{} {
 		if len(i) > 0 && !cm.GetIsMouseDown() {

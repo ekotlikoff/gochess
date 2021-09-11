@@ -47,6 +47,7 @@ func main() {
 	clientModel.initController()
 	clientModel.initStyle()
 	clientModel.viewInitBoard(clientModel.playerColor)
+	clientModel.checkForSession()
 	<-done
 }
 

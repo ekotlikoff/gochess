@@ -71,9 +71,7 @@ func Serve(httpBackend *url.URL, websocketBackend *url.URL, port int) {
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/", prometheusMiddleware(http.HandlerFunc(handleWebRoot)))
-	mux.Handle("/session", prometheusMiddleware(http.HandlerFunc(StartSession)))
-	mux.Handle("/currentmatch", prometheusMiddleware(
-		http.HandlerFunc(GetCurrentMatch)))
+	mux.Handle("/session", prometheusMiddleware(http.HandlerFunc(Session)))
 	// HTTP backend proxying
 	mux.Handle("/http/match", prometheusMiddleware(httpBackendProxy))
 	mux.Handle("/http/sync", prometheusMiddleware(httpBackendProxy))
@@ -92,48 +90,69 @@ func handleWebRoot(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.FS(webStaticFS)).ServeHTTP(w, r)
 }
 
-// StartSession credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
-func StartSession(w http.ResponseWriter, r *http.Request) {
+// Session credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
+func Session(w http.ResponseWriter, r *http.Request) {
 	tracer := opentracing.GlobalTracer()
-	startSessionSpan := tracer.StartSpan("StartSession")
-	defer startSessionSpan.Finish()
-	var creds Credentials
-	err := json.NewDecoder(r.Body).Decode(&creds)
-	if err != nil {
-		log.Println("Bad request", err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	} else if creds.Username == "" {
-		log.Println("Missing username")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Missing username"))
-		return
+	SessionSpan := tracer.StartSpan("Session")
+	defer SessionSpan.Finish()
+	if r.Method == http.MethodGet {
+		player := GetSession(w, r)
+		currentMatchResponse := CurrentMatchResponse{}
+		if player == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		} else if player.GetMatch() == nil {
+			currentMatchResponse = CurrentMatchResponse{
+				Credentials: Credentials{Username: player.Name()},
+			}
+		} else {
+			currentMatchResponse = CurrentMatchResponse{
+				Credentials: Credentials{Username: player.Name()},
+				Match:       currentMatchFromMatch(player.GetMatch()),
+			}
+		}
+		if err := json.NewEncoder(w).Encode(currentMatchResponse); err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+	} else if r.Method == http.MethodPost {
+		var creds Credentials
+		err := json.NewDecoder(r.Body).Decode(&creds)
+		if err != nil {
+			log.Println("Bad request", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		} else if creds.Username == "" {
+			log.Println("Missing username")
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("Missing username"))
+			return
+		}
+		newTokenSpan := tracer.StartSpan(
+			"NewToken",
+			opentracing.ChildOf(SessionSpan.Context()),
+		)
+		sessionToken, err := uuid.NewV4()
+		newTokenSpan.Finish()
+		if err != nil {
+			log.Println("Failed to generate session token")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		sessionTokenStr := sessionToken.String()
+		newPlayerSpan := tracer.StartSpan(
+			"NewPlayer",
+			opentracing.ChildOf(SessionSpan.Context()),
+		)
+		player := matchserver.NewPlayer(creds.Username)
+		newPlayerSpan.Finish()
+		sessionCache.Put(sessionTokenStr, player)
+		http.SetCookie(w, &http.Cookie{
+			Name:    "session_token",
+			Value:   sessionTokenStr,
+			Expires: time.Now().Add(1800 * time.Second),
+		})
 	}
-	newTokenSpan := tracer.StartSpan(
-		"NewToken",
-		opentracing.ChildOf(startSessionSpan.Context()),
-	)
-	sessionToken, err := uuid.NewV4()
-	newTokenSpan.Finish()
-	if err != nil {
-		log.Println("Failed to generate session token")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	sessionTokenStr := sessionToken.String()
-	newPlayerSpan := tracer.StartSpan(
-		"NewPlayer",
-		opentracing.ChildOf(startSessionSpan.Context()),
-	)
-	player := matchserver.NewPlayer(creds.Username)
-	newPlayerSpan.Finish()
-	sessionCache.Put(sessionTokenStr, player)
-	http.SetCookie(w, &http.Cookie{
-		Name:    "session_token",
-		Value:   sessionTokenStr,
-		Expires: time.Now().Add(1800 * time.Second),
-	})
-	w.WriteHeader(http.StatusOK)
 }
 
 // GetSession credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
@@ -206,6 +225,11 @@ func currentMatchFromMatch(match *matchserver.Match) CurrentMatch {
 	if requestedDraw {
 		requestedDrawName = match.GetRequestedDraw().Name()
 	}
+	previousMoverPtr := match.Game.PreviousMover()
+	previousMover := model.Piece{}
+	if previousMoverPtr != nil {
+		previousMover = *previousMoverPtr
+	}
 	return CurrentMatch{
 		BlackName:                   match.PlayerName(model.Black),
 		WhiteName:                   match.PlayerName(model.White),
@@ -216,7 +240,7 @@ func currentMatchFromMatch(match *matchserver.Match) CurrentMatch {
 		GameOver:                    match.Game.GameOver(),
 		Result:                      match.Game.Result(),
 		PreviousMove:                match.Game.PreviousMove(),
-		PreviousMover:               *match.Game.PreviousMover(),
+		PreviousMover:               previousMover,
 		BlackKing:                   *match.Game.BlackKing(),
 		WhiteKing:                   *match.Game.WhiteKing(),
 		WhitePieces:                 match.Game.WhitePieces(),
@@ -226,33 +250,6 @@ func currentMatchFromMatch(match *matchserver.Match) CurrentMatch {
 		RequestedDraw:               requestedDraw,
 		RequestedDrawName:           requestedDrawName,
 	}
-}
-
-// GetCurrentMatch returns the client's username if a valid token is supplied, it
-// also checks for a match the player is playing, if one exists it is returned.
-func GetCurrentMatch(w http.ResponseWriter, r *http.Request) {
-	tracer := opentracing.GlobalTracer()
-	currentMatchSpan := tracer.StartSpan("CurrentMatch")
-	player := GetSession(w, r)
-	currentMatchResponse := CurrentMatchResponse{}
-	if player == nil {
-		return
-	} else if player.GetMatch() == nil {
-		currentMatchResponse = CurrentMatchResponse{
-			Credentials: Credentials{Username: player.Name()},
-		}
-	} else {
-		currentMatchResponse = CurrentMatchResponse{
-			Credentials: Credentials{Username: player.Name()},
-			Match:       currentMatchFromMatch(player.GetMatch()),
-		}
-	}
-	if err := json.NewEncoder(w).Encode(currentMatchResponse); err != nil {
-		fmt.Println(err)
-		log.Println(err)
-	}
-	defer currentMatchSpan.Finish()
-	w.WriteHeader(http.StatusOK)
 }
 
 type statusWriter struct {

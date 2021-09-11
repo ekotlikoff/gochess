@@ -68,6 +68,7 @@ func writeLoop(c *websocket.Conn, player *matchserver.Player,
 	err := player.WaitForMatchStart()
 	if err != nil {
 		log.Println("FATAL: Failed to find match")
+		return
 	}
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()

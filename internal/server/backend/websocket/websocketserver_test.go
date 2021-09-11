@@ -28,7 +28,7 @@ func init() {
 	exitChan := make(chan bool, 1)
 	close(exitChan)
 	matchingServer.StartMatchServers(10, exitChan)
-	serverSession = httptest.NewServer(http.HandlerFunc(gateway.StartSession))
+	serverSession = httptest.NewServer(http.HandlerFunc(gateway.Session))
 	serverMatchAndPlay = httptest.NewServer(http.Handler(makeWebsocketHandler(&matchingServer)))
 }
 
