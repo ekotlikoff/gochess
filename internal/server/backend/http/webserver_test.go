@@ -25,7 +25,6 @@ var (
 	serverSync         *httptest.Server
 	serverAsync        *httptest.Server
 	serverMatchTimeout *httptest.Server
-	currentMatch       *httptest.Server
 )
 
 func init() {
