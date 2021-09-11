@@ -470,6 +470,12 @@ func (cm *ClientModel) lookForMatch() {
 		if err == nil {
 			resp.Body.Close()
 		}
+		if err != nil || resp.StatusCode != 200 {
+			log.Println("Error starting session")
+			buttonLoader.Call("remove")
+			cm.SetIsMatchmaking(false)
+			return
+		}
 		cm.SetPlayerName(username)
 		cm.SetHasSession(true)
 	}

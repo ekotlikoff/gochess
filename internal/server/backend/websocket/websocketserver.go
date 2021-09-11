@@ -42,6 +42,10 @@ func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
 		wsHandlerSpan := tracer.StartSpan("WSMatch")
 		defer wsHandlerSpan.Finish()
 		player := gateway.GetSession(w, r)
+		if player == nil {
+			log.Println("No player found for session")
+			return
+		}
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println("Upgrade error:", err)
@@ -134,11 +138,14 @@ func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
 				websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("Websocketserver read error: %v", err)
 			}
+			/* TODO instead of immediate resignation let the matchserver know
+			that there is no client connected, then matchserver can handle when
+			to time them out
 			if player.GetMatch() != nil && !player.GetMatch().GameOver() {
 				player.RequestChanAsync <- matchserver.RequestAsync{
 					Resign: true,
 				}
-			}
+			}*/
 			close(waitc)
 			readWSSpan.LogFields(opentracinglog.String("readType", "ConnClosed"))
 			readWSSpan.Finish()

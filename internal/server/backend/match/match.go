@@ -96,7 +96,6 @@ func (match *Match) PlayerRemainingTimeMs(color model.Color) int64 {
 func (match *Match) GameOver() bool {
 	match.mutex.RLock()
 	defer match.mutex.RUnlock()
-	println(match.Game)
 	return match.Game.GameOver()
 }
 

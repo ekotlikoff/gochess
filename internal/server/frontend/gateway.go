@@ -143,7 +143,6 @@ func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 	defer getSessionSpan.Finish()
 	c, err := r.Cookie("session_token")
 	if err != nil {
-		println("GET SESSION ERROR")
 		if err == http.ErrNoCookie {
 			log.Println("session_token is not set")
 			w.WriteHeader(http.StatusUnauthorized)
@@ -155,7 +154,6 @@ func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 		return nil
 	}
 	sessionToken := c.Value
-	println("SESSION token: " + sessionToken)
 	getTokenSpan := tracer.StartSpan(
 		"GetToken",
 		opentracing.ChildOf(getSessionSpan.Context()),
@@ -163,12 +161,10 @@ func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 	player, err := sessionCache.Get(sessionToken)
 	getTokenSpan.Finish()
 	if err != nil {
-		println("SESSION CACHE ERROR")
 		log.Println("ERROR ", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return nil
 	} else if player == nil {
-		println("PLAYER IS NIL")
 		log.Println("No player found for token ", sessionToken)
 		w.WriteHeader(http.StatusUnauthorized)
 		return nil
