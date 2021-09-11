@@ -43,7 +43,7 @@ func (cm *ClientModel) initController() {
 }
 
 func (cm *ClientModel) checkForSession() {
-	resp, err := cm.client.Get("session", ctp, credentialsBuf)
+	resp, err := cm.client.Get("session", ctp)
 	if err == nil {
 		resp.Body.Close()
 	}
