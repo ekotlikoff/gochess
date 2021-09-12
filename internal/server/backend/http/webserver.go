@@ -108,9 +108,8 @@ func makeAsyncHandler() http.Handler {
 				return
 			}
 			if asyncUpdate.GameOver {
-				player.ClientDoneWithMatch()
-				// player.Reset() TODO should player reset itself instead of
-				// match server
+				player.WaitForMatchOver()
+				player.Reset()
 			}
 		case "POST":
 			var requestAsync matchserver.RequestAsync

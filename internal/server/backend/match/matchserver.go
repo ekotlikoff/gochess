@@ -164,6 +164,11 @@ func (player *Player) WaitForMatchStart() error {
 	}
 }
 
+// WaitForMatchOver used by client servers to synchronize around match ending
+func (player *Player) WaitForMatchOver() {
+	<-player.match.matchOverChan
+}
+
 // HasMatchStarted player checks if their match has started
 func (player *Player) HasMatchStarted(ctx context.Context) bool {
 	player.matchStartMutex.RLock()
@@ -247,7 +252,6 @@ func (player *Player) Reset() {
 func (player *Player) startMatch() {
 	player.ChannelMutex.Lock()
 	defer player.ChannelMutex.Unlock()
-	player.clientDoneWithMatch = make(chan struct{})
 	player.matchStartMutex.RLock()
 	defer player.matchStartMutex.RUnlock()
 	close(player.matchStart)
@@ -259,21 +263,6 @@ func (player *Player) startMatch() {
 			MaxTimeMs:    player.MatchMaxTimeMs(),
 		},
 	}
-}
-
-// ClientDoneWithMatch the client is now done with the match
-func (player *Player) ClientDoneWithMatch() {
-	player.ChannelMutex.RLock()
-	defer player.ChannelMutex.RUnlock()
-	close(player.clientDoneWithMatch)
-}
-
-// WaitForClientToBeDoneWithMatch block until the client is done with their
-// match
-func (player *Player) WaitForClientToBeDoneWithMatch() {
-	player.ChannelMutex.RLock()
-	defer player.ChannelMutex.RUnlock()
-	<-player.clientDoneWithMatch
 }
 
 // ResponseSync represents a response to the client related to a move

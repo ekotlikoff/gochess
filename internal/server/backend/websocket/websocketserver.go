@@ -58,11 +58,11 @@ func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
 		writeLoop(c, player, wsHandlerSpan)
 		<-waitc
 		log.Println("Websocketserver disconnecting from client")
-		player.ClientDoneWithMatch()
-		/* TODO do we have player reset itself instead
 		if player.GetMatch() != nil && player.GetMatch().GameOver() {
+			log.Println("Websocketserver detects player is over, resetting player")
+			player.WaitForMatchOver()
+			player.Reset()
 		}
-		*/
 	}
 	return http.HandlerFunc(handler)
 }
@@ -148,12 +148,12 @@ func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
 			/* TODO instead of immediate resignation let the matchserver know
 			that there is no client connected, then matchserver can handle when
 			to time them out
-			*/
 			if player.GetMatch() != nil && !player.GetMatch().GameOver() {
 				player.RequestChanAsync <- matchserver.RequestAsync{
 					Resign: true,
 				}
 			}
+			*/
 			close(waitc)
 			readWSSpan.LogFields(opentracinglog.String("readType", "ConnClosed"))
 			readWSSpan.Finish()

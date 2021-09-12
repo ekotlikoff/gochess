@@ -11,9 +11,8 @@
         - On initial page load call /session
         - Server will return the corresponding username (credentials) regardless of if a game is ongoing or not, client will set the username input to that username
         - Server will also check for an ongoing game, if one is ongoing send the game state to the client, client will set the game state accordingly
-        - [] clientDoneWithMatch needs to either not be closed immediately on websocket loop exit, or we need to re-init it on reconnect, or redeign e.g.:
-          - matchserver does not handle player.Reset, leaves it to client servers, and instead of client server instances telling matchserver when they're done with the match, the matchserver signifies in the match object when it's over over and client servers wait for that and then reset players
         - [] debug why pieces aren't looking right for the client
+        - [x] redesign clientDoneWithMatch, instead the match signifies when it's over and client servers synchronize on that, resetting themselves.  The other way around required client servers to let the matchserver know when they were done with a match, this made less sense because a client could have disconnected and take some time to reconnect and it's harder to tell when they're done.  Worth noting here that to scale we would likely want to be somewhat aggressive on reeping inactive players in sessionCache, because players could frequently disconnect when losing without formally resigning and letting their client server reset the player object, thus keeping a reference to the match and preventing GC.
       - [ ] Use browser session storage to save the session token cookie, that way a client can refresh and check if their token is still valid/in a game https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage
     - http server sessions
       - [ ] user auth?

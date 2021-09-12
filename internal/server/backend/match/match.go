@@ -16,6 +16,7 @@ type (
 		white         *Player
 		Game          *model.Game
 		gameOverChan  chan struct{}
+		matchOverChan chan struct{}
 		maxTimeMs     int64
 		requestedDraw *Player
 		mutex         sync.RWMutex
@@ -34,8 +35,8 @@ func NewMatch(black *Player, white *Player, maxTimeMs int64) Match {
 		white.name = white.name + "_white"
 	}
 	game := model.NewGame()
-	return Match{black, white, game, make(chan struct{}), maxTimeMs, nil,
-		sync.RWMutex{}}
+	return Match{black, white, game, make(chan struct{}), make(chan struct{}),
+		maxTimeMs, nil, sync.RWMutex{}}
 }
 
 // Create a new match between two players with no pawns
@@ -47,8 +48,8 @@ func newMatchNoPawns(black *Player, white *Player, maxTimeMs int64) Match {
 		white.name = white.name + "_white"
 	}
 	game := model.NewGameNoPawns()
-	return Match{black, white, game, make(chan struct{}), maxTimeMs, nil,
-		sync.RWMutex{}}
+	return Match{black, white, game, make(chan struct{}), make(chan struct{}),
+		maxTimeMs, nil, sync.RWMutex{}}
 }
 
 // DefaultMatchGenerator default match generator
@@ -120,11 +121,15 @@ func (match *Match) play() {
 		match.handleTurn()
 	}
 	<-waitc
-	/* TODO maybe let client servers reset the clients? */
-	match.black.WaitForClientToBeDoneWithMatch()
-	match.white.WaitForClientToBeDoneWithMatch()
-	match.black.Reset()
-	match.white.Reset()
+	match.matchOver()
+}
+
+func (match *Match) matchOver() {
+	close(match.matchOverChan)
+}
+
+func (match *Match) waitForMatchOver() {
+	<-match.matchOverChan
 }
 
 func (match *Match) handleTurn() {

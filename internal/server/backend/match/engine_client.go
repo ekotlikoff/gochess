@@ -72,7 +72,8 @@ func (matchingServer *MatchingServer) engineSession(botPlayer *Player) {
 		case <-gameOver:
 			stream.CloseSend()
 			<-waitc
-			botPlayer.ClientDoneWithMatch()
+			botPlayer.WaitForMatchOver()
+			botPlayer.Reset()
 			return
 		}
 	}

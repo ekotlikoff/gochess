@@ -406,8 +406,10 @@ func TestMatchingServerPlayerSecondGame(t *testing.T) {
 	liveMatch := matchingServer.LiveMatches()[0]
 	player1.RequestChanAsync <- RequestAsync{Resign: true}
 	response := <-player1.ResponseChanAsync
-	player1.ClientDoneWithMatch()
-	player2.ClientDoneWithMatch()
+	player1.WaitForMatchOver()
+	player2.WaitForMatchOver()
+	player1.Reset()
+	player2.Reset()
 	tries = 0
 	for len(matchingServer.LiveMatches()) == 1 && tries < 10 {
 		time.Sleep(time.Millisecond)
