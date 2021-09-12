@@ -8,8 +8,8 @@ import (
 func movePiece(board *Board, oldX uint8, oldY uint8, newX uint8, newY uint8) {
 	board[newX][newY] = board[oldX][oldY]
 	board[oldX][oldY] = nil
-	board[newX][newY].position.File = newX
-	board[newX][newY].position.Rank = newY
+	board[newX][newY].Position.File = newX
+	board[newX][newY].Position.Rank = newY
 }
 
 func TestValidMovesPawnUnmoved(t *testing.T) {
@@ -52,7 +52,7 @@ func TestValidMovesPawnEnPassant(t *testing.T) {
 	if debug {
 		fmt.Println(board)
 	}
-	if board[3][3] == nil || board[3][3].Position().Rank != 3 {
+	if board[3][3] == nil || board[3][3].Position.Rank != 3 {
 		t.Error("Expected pawn in the correct position")
 	}
 	validMoves :=

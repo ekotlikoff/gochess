@@ -97,17 +97,18 @@ func Session(w http.ResponseWriter, r *http.Request) {
 	defer SessionSpan.Finish()
 	if r.Method == http.MethodGet {
 		player := GetSession(w, r)
-		currentMatchResponse := CurrentMatchResponse{}
+		currentMatchResponse := SessionResponse{}
 		if player == nil {
-			w.WriteHeader(http.StatusNotFound)
 			return
 		} else if player.GetMatch() == nil {
-			currentMatchResponse = CurrentMatchResponse{
+			log.Println("Found session,", player.Name())
+			currentMatchResponse = SessionResponse{
 				Credentials: Credentials{Username: player.Name()},
 			}
 		} else {
-			currentMatchResponse = CurrentMatchResponse{
+			currentMatchResponse = SessionResponse{
 				Credentials: Credentials{Username: player.Name()},
+				InMatch:     true,
 				Match:       currentMatchFromMatch(player.GetMatch()),
 			}
 		}
@@ -146,6 +147,7 @@ func Session(w http.ResponseWriter, r *http.Request) {
 		)
 		player := matchserver.NewPlayer(creds.Username)
 		newPlayerSpan.Finish()
+		log.Println("Adding to sessionCache,", creds.Username)
 		sessionCache.Put(sessionTokenStr, player)
 		http.SetCookie(w, &http.Cookie{
 			Name:    "session_token",
@@ -168,7 +170,7 @@ func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 			w.Write([]byte("Missing session_token"))
 			return nil
 		}
-		log.Println("ERROR ", err)
+		log.Println("ERROR", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return nil
 	}
@@ -180,8 +182,8 @@ func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 	player, err := sessionCache.Get(sessionToken)
 	getTokenSpan.Finish()
 	if err != nil {
-		log.Println("ERROR ", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("ERROR token is invalid")
+		w.WriteHeader(http.StatusUnauthorized)
 		return nil
 	} else if player == nil {
 		log.Println("No player found for token ", sessionToken)
@@ -197,7 +199,7 @@ type CurrentMatch struct {
 	WhiteName                   string
 	BlackRemainingTimeMs        int64
 	WhiteRemainingTimeMs        int64
-	Board                       model.Board
+	Board                       model.SerializableBoard
 	Turn                        model.Color
 	GameOver                    bool
 	Result                      model.GameResult
@@ -213,9 +215,10 @@ type CurrentMatch struct {
 	RequestedDrawName           string
 }
 
-// CurrentMatchResponse serializable struct to bring client up to speed
-type CurrentMatchResponse struct {
+// SessionResponse serializable struct to send client's session
+type SessionResponse struct {
 	Credentials Credentials
+	InMatch     bool
 	Match       CurrentMatch
 }
 
@@ -235,7 +238,7 @@ func currentMatchFromMatch(match *matchserver.Match) CurrentMatch {
 		WhiteName:                   match.PlayerName(model.White),
 		BlackRemainingTimeMs:        match.PlayerRemainingTimeMs(model.Black),
 		WhiteRemainingTimeMs:        match.PlayerRemainingTimeMs(model.White),
-		Board:                       *match.Game.GetBoard(),
+		Board:                       match.Game.GetSerializableBoard(),
 		Turn:                        match.Game.Turn(),
 		GameOver:                    match.Game.GameOver(),
 		Result:                      match.Game.Result(),

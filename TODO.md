@@ -7,11 +7,13 @@
     - http server
       - [ ] If no response from client in x seconds then call disconnect win for opponent
       - [ ] Support some mechanism for a user cancelling their matchmaking
-      - [ ] Implement /currentmatch so that a disconnected client can reconnect
-        - On initial page load call /currentgame if the session_token is set
+      - [ ] Implement GET /session so that a disconnected client can reconnect
+        - On initial page load call /session
         - Server will return the corresponding username (credentials) regardless of if a game is ongoing or not, client will set the username input to that username
         - Server will also check for an ongoing game, if one is ongoing send the game state to the client, client will set the game state accordingly
-        - Upgrade WS handler to check for an ongoing game when the client connects
+        - [] clientDoneWithMatch needs to either not be closed immediately on websocket loop exit, or we need to re-init it on reconnect, or redeign e.g.:
+          - matchserver does not handle player.Reset, leaves it to client servers, and instead of client server instances telling matchserver when they're done with the match, the matchserver signifies in the match object when it's over over and client servers wait for that and then reset players
+        - [] debug why pieces aren't looking right for the client
       - [ ] Use browser session storage to save the session token cookie, that way a client can refresh and check if their token is still valid/in a game https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage
     - http server sessions
       - [ ] user auth?

@@ -120,6 +120,7 @@ func (match *Match) play() {
 		match.handleTurn()
 	}
 	<-waitc
+	/* TODO maybe let client servers reset the clients? */
 	match.black.WaitForClientToBeDoneWithMatch()
 	match.white.WaitForClientToBeDoneWithMatch()
 	match.black.Reset()

@@ -45,11 +45,25 @@ func (cm *ClientModel) initController() {
 func (cm *ClientModel) checkForSession() {
 	resp, err := cm.client.Get("session")
 	if err == nil {
-		resp.Body.Close()
+		defer resp.Body.Close()
 	}
 	if err != nil || resp.StatusCode != 200 {
-		log.Println("Error starting session")
+		log.Println("No session found")
 		return
+	}
+	sessionResponse := gateway.SessionResponse{}
+	err = json.NewDecoder(resp.Body).Decode(&sessionResponse)
+	if err != nil {
+		log.Println(err)
+	}
+	cm.document.Call("getElementById", "username").Set("value",
+		sessionResponse.Credentials.Username)
+	cm.SetPlayerName(sessionResponse.Credentials.Username)
+	cm.SetHasSession(true)
+	if sessionResponse.InMatch {
+		log.Println("Rejoining match")
+		println(sessionResponse.Match.Board[5].String())
+		cm.RejoinMatch(sessionResponse.Match)
 	}
 }
 
@@ -220,7 +234,7 @@ func (cm *ClientModel) handleClickEnd(event js.Value) {
 		int8(newPosition.Rank) - int8(cm.positionOriginal.Rank)},
 		promoteTo,
 	}
-	if pieceDragging.PieceType() == model.Pawn &&
+	if pieceDragging.PieceType == model.Pawn &&
 		((cm.positionOriginal.Rank == 1 && cm.game.Turn() == model.Black) ||
 			(cm.positionOriginal.Rank == 6 && cm.game.Turn() == model.White)) &&
 		(newPosition.Rank == 0 || newPosition.Rank == 7) {
@@ -517,6 +531,16 @@ func (cm *ClientModel) handleStartMatch(buttonLoader js.Value) {
 	go cm.matchDetailsUpdateLoop()
 }
 
+func (cm *ClientModel) handleRejoinMatch(match gateway.CurrentMatch) {
+	cm.resetGameWithInProgressGame(match)
+	cm.SetGameType(Remote)
+	cm.SetIsMatched(true)
+	cm.SetIsMatchmaking(false)
+	cm.remoteMatchModel.endRemoteGameChan = make(chan bool, 0)
+	cm.viewSetMatchControls()
+	go cm.matchDetailsUpdateLoop()
+}
+
 func (cm *ClientModel) httpMatch(buttonLoader js.Value) error {
 	_, err := retryWrapper(
 		func() (*http.Response, error) {
@@ -649,6 +673,19 @@ func preventDefault(this js.Value, i []js.Value) interface{} {
 func (cm *ClientModel) resetGame() {
 	game := model.NewGame()
 	cm.SetGame(game)
+	cm.viewClearBoard()
+	cm.viewInitBoard(cm.playerColor)
+}
+
+func (cm *ClientModel) resetGameWithInProgressGame(
+	match gateway.CurrentMatch) {
+	game := model.NewCustomGame(match.Board, match.BlackKing,
+		match.WhiteKing, match.PositionHistory, match.BlackPieces,
+		match.WhitePieces)
+	cm.SetGame(game)
+	println(len(match.Board))
+	println(match.Board[1].String())
+	println(game.GetBoard().String())
 	cm.viewClearBoard()
 	cm.viewInitBoard(cm.playerColor)
 }

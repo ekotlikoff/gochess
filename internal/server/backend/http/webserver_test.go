@@ -263,7 +263,7 @@ func TestCurrentMatch(t *testing.T) {
 		t.Error(err)
 	}
 	defer resp.Body.Close()
-	var currentMatchResponse gateway.CurrentMatchResponse
+	var currentMatchResponse gateway.SessionResponse
 	json.NewDecoder(resp.Body).Decode(&currentMatchResponse)
 	if debug {
 		fmt.Println(currentMatchResponse)
@@ -287,7 +287,7 @@ func TestCurrentMatchWithGame(t *testing.T) {
 		t.Error(err)
 	}
 	defer resp.Body.Close()
-	var currentMatchResponse gateway.CurrentMatchResponse
+	var currentMatchResponse gateway.SessionResponse
 	json.NewDecoder(resp.Body).Decode(&currentMatchResponse)
 	if debug {
 		fmt.Println(currentMatchResponse)

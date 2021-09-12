@@ -19,7 +19,8 @@ type (
 	}
 
 	// Board is a chess board of pieces
-	Board [8][8]*Piece
+	Board             [8][8]*Piece
+	SerializableBoard []Piece
 )
 
 // NewPosition creates a new position
@@ -44,7 +45,7 @@ func newFullBoard() Board {
 			rank = 1
 		}
 		piece := NewPiece(Pawn, NewPosition(uint8(i%8), rank), color)
-		board[piece.position.File][piece.position.Rank] = piece
+		board[piece.Position.File][piece.Position.Rank] = piece
 	}
 	// Create the rest.
 	createTheBackLine(&board)
@@ -55,6 +56,14 @@ func newBoardNoPawns() Board {
 	var board Board
 	createTheBackLine(&board)
 	return board
+}
+
+func newBoardFromSerializableBoard(serializableBoard SerializableBoard) *Board {
+	var board Board
+	for _, piece := range serializableBoard {
+		board[piece.File()][piece.Rank()] = &piece
+	}
+	return &board
 }
 
 func createTheBackLine(board *Board) {
