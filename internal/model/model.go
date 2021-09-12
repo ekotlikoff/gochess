@@ -19,7 +19,8 @@ type (
 	}
 
 	// Board is a chess board of pieces
-	Board             [8][8]*Piece
+	Board [8][8]*Piece
+	// SerializableBoard is a chess board of pieces that can be serialized
 	SerializableBoard []Piece
 )
 
