@@ -62,7 +62,7 @@ func (cm *ClientModel) checkForSession() {
 	cm.SetHasSession(true)
 	if sessionResponse.InMatch {
 		log.Println("Rejoining match")
-		cm.RejoinMatch(sessionResponse.Match)
+		cm.handleRejoinMatch(sessionResponse.Match)
 	}
 }
 
@@ -531,19 +531,36 @@ func (cm *ClientModel) handleStartMatch() {
 }
 
 func (cm *ClientModel) handleRejoinMatch(match gateway.CurrentMatch) {
+	myColor := model.Black
+	opponentName := match.WhiteName
+	if opponentName == cm.GetPlayerName() {
+		myColor = model.White
+		opponentName = match.BlackName
+	}
+	cm.SetPlayerColor(myColor)
+	cm.SetOpponentName(opponentName)
+	cm.SetMaxTimeMs(match.MaxTimeMs)
+	cm.SetPlayerElapsedMs(model.Black, match.MaxTimeMs-match.BlackRemainingTimeMs)
+	cm.SetPlayerElapsedMs(model.White, match.MaxTimeMs-match.WhiteRemainingTimeMs)
 	cm.resetGameWithInProgressGame(match)
 	cm.SetGameType(Remote)
 	cm.SetIsMatched(true)
 	cm.SetIsMatchmaking(false)
 	cm.remoteMatchModel.endRemoteGameChan = make(chan bool, 0)
 	cm.viewSetMatchControls()
-	err := cm.wsConnect()
-	if err != nil {
-		cm.SetIsMatched(false)
-		cm.SetIsMatchmaking(false)
-		cm.resetGame()
-	} else {
+	if cm.backendType == WebsocketBackend {
+		err := cm.wsConnect()
+		if err != nil {
+			cm.SetIsMatched(false)
+			cm.SetIsMatchmaking(false)
+			cm.resetGame()
+		} else {
+			go cm.matchDetailsUpdateLoop()
+		}
+	} else if cm.backendType == HttpBackend {
 		go cm.matchDetailsUpdateLoop()
+		go cm.listenForSyncUpdateHttp()
+		go cm.listenForAsyncUpdateHttp()
 	}
 }
 

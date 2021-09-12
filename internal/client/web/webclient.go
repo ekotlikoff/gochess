@@ -8,7 +8,6 @@ import (
 	"syscall/js"
 
 	"github.com/Ekotlikoff/gochess/internal/model"
-	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
 )
 
 const (
@@ -95,21 +94,6 @@ func (cm *ClientModel) GetTurn() model.Color {
 	cm.gameMutex.Lock()
 	defer cm.gameMutex.Unlock()
 	return cm.game.Turn()
-}
-
-func (cm *ClientModel) RejoinMatch(match gateway.CurrentMatch) {
-	myColor := model.Black
-	opponentName := match.WhiteName
-	if opponentName == cm.GetPlayerName() {
-		myColor = model.White
-		opponentName = match.BlackName
-	}
-	cm.SetPlayerColor(myColor)
-	cm.SetOpponentName(opponentName)
-	cm.SetMaxTimeMs(match.MaxTimeMs)
-	cm.SetPlayerElapsedMs(model.Black, match.MaxTimeMs-match.BlackRemainingTimeMs)
-	cm.SetPlayerElapsedMs(model.White, match.MaxTimeMs-match.WhiteRemainingTimeMs)
-	cm.handleRejoinMatch(match)
 }
 
 func (cm *ClientModel) GetPointAdvantage(color model.Color) int8 {
