@@ -1,24 +1,14 @@
 ### Todo
 * Observability
-    - [ ] Prometheus metrics
-        - [ ] more?
+    - [ ] More Prometheus metrics
     - [ ] Improve logging
 * Server
     - http server
-      - [ ] If no response from client in x seconds then call disconnect win for opponent
       - [ ] Support some mechanism for a user cancelling their matchmaking
-      - [ ] Implement GET /session so that a disconnected client can reconnect
-        - On initial page load call /session
-        - Server will return the corresponding username (credentials) regardless of if a game is ongoing or not, client will set the username input to that username
-        - Server will also check for an ongoing game, if one is ongoing send the game state to the client, client will set the game state accordingly
-        - [] handle disconnected client gracefully, let matchserver know on disconnect and it starts a timer, ending game with timeout on alarm
-        - [x] redesign clientDoneWithMatch, instead the match signifies when it's over and client servers synchronize on that, resetting themselves.  The other way around required client servers to let the matchserver know when they were done with a match, this made less sense because a client could have disconnected and take some time to reconnect and it's harder to tell when they're done.  Worth noting here that to scale we would likely want to be somewhat aggressive on reeping inactive players in sessionCache, because players could frequently disconnect when losing without formally resigning and letting their client server reset the player object, thus keeping a reference to the match and preventing GC.
-      - [ ] Use browser session storage to save the session token cookie, that way a client can refresh and check if their token is still valid/in a game https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage
+        - Probably would require a matching redesign, right now matchmaking is handled from a channel which doesn't support adhoc removal
+    - [] handle disconnected WS client gracefully, let matchserver know on disconnect and it starts a timer, ending game with timeout on alarm
     - http server sessions
       - [ ] user auth?
-* Client
-    - [ ] Check cookies for session token instead of using hasSession bool
-        - Not sure if possible, the golang cookiejar doesn't seem like it supports this.
 
 ### Done
 * Observability
@@ -60,6 +50,13 @@
       - [x] resignation test
       - [x] timeout test
       - [x] GET /sync should also provide player and opponent's remaining time to keep client, server in sync (implemented for WS only)
+      - [x] Implement GET /session so that a disconnected client can reconnect
+        - On initial page load client calls /session
+        - Server will return the user's username if supplied a valid token
+        - Server will also check for an ongoing game, if one is ongoing it sends the game state to the client, client will set the game state accordingly and rejoin the game
+        - [x] Redesign websocket to gracefully handle an initial connection + match request and a reconnect
+        - [x] Implement reconnect logic in web client
+        - [x] Redesign clientDoneWithMatch, instead the match signifies when it's over and client servers synchronize on that (WaitForMatchOver), then resetting themselves.  The other way around required client servers to let the matchserver know when they were done with a match, this made less sense because a client could have disconnected and take some time to reconnect, it's harder to tell when they're done with the match.  Worth noting here that to scale we would likely want to be somewhat aggressive on reeping inactive players in sessionCache, because players could frequently disconnect when losing without formally resigning and letting their client server reset the player object, thus keeping a reference to the match and preventing GC.
     - [x] http server sessions
       - [x] testing
     - [x] client agnostic matching server
