@@ -71,21 +71,20 @@ type (
 	// Player is a struct representing a matchserver client, containing channels
 	// for communications between the client and the the matchserver
 	Player struct {
-		name                string
-		color               model.Color
-		elapsedMs           int64
-		requestChanSync     chan model.MoveRequest
-		ResponseChanSync    chan ResponseSync
-		RequestChanAsync    chan RequestAsync
-		ResponseChanAsync   chan ResponseAsync
-		OpponentPlayedMove  chan model.MoveRequest
-		matchStart          chan struct{}
-		clientDoneWithMatch chan struct{}
-		ChannelMutex        sync.RWMutex
-		matchStartMutex     sync.RWMutex
-		matchMutex          sync.RWMutex
-		searchingForMatch   bool
-		match               *Match
+		name               string
+		color              model.Color
+		elapsedMs          int64
+		requestChanSync    chan model.MoveRequest
+		ResponseChanSync   chan ResponseSync
+		RequestChanAsync   chan RequestAsync
+		ResponseChanAsync  chan ResponseAsync
+		OpponentPlayedMove chan model.MoveRequest
+		matchStart         chan struct{}
+		ChannelMutex       sync.RWMutex
+		matchStartMutex    sync.RWMutex
+		matchMutex         sync.RWMutex
+		searchingForMatch  bool
+		match              *Match
 	}
 )
 
@@ -166,7 +165,7 @@ func (player *Player) WaitForMatchStart() error {
 
 // WaitForMatchOver used by client servers to synchronize around match ending
 func (player *Player) WaitForMatchOver() {
-	<-player.match.matchOverChan
+	player.match.waitForMatchOver()
 }
 
 // HasMatchStarted player checks if their match has started
