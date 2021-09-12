@@ -11,7 +11,7 @@
         - On initial page load call /session
         - Server will return the corresponding username (credentials) regardless of if a game is ongoing or not, client will set the username input to that username
         - Server will also check for an ongoing game, if one is ongoing send the game state to the client, client will set the game state accordingly
-        - [] debug why pieces aren't looking right for the client
+        - [] handle disconnected client gracefully, let matchserver know on disconnect and it starts a timer, ending game with timeout on alarm
         - [x] redesign clientDoneWithMatch, instead the match signifies when it's over and client servers synchronize on that, resetting themselves.  The other way around required client servers to let the matchserver know when they were done with a match, this made less sense because a client could have disconnected and take some time to reconnect and it's harder to tell when they're done.  Worth noting here that to scale we would likely want to be somewhat aggressive on reeping inactive players in sessionCache, because players could frequently disconnect when losing without formally resigning and letting their client server reset the player object, thus keeping a reference to the match and preventing GC.
       - [ ] Use browser session storage to save the session token cookie, that way a client can refresh and check if their token is still valid/in a game https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage
     - http server sessions

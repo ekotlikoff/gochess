@@ -40,6 +40,7 @@ type (
 		gameMutex                sync.RWMutex
 		game                     *model.Game
 		remoteMatchModel         RemoteMatchModel
+		buttonLoader             js.Value
 		// Unchanging elements
 		document          js.Value
 		board             js.Value
@@ -105,8 +106,9 @@ func (cm *ClientModel) RejoinMatch(match gateway.CurrentMatch) {
 	}
 	cm.SetPlayerColor(myColor)
 	cm.SetOpponentName(opponentName)
-	cm.SetPlayerElapsedMs(model.Black, match.BlackRemainingTimeMs)
-	cm.SetPlayerElapsedMs(model.White, match.WhiteRemainingTimeMs)
+	cm.SetMaxTimeMs(match.MaxTimeMs)
+	cm.SetPlayerElapsedMs(model.Black, match.MaxTimeMs-match.BlackRemainingTimeMs)
+	cm.SetPlayerElapsedMs(model.White, match.MaxTimeMs-match.WhiteRemainingTimeMs)
 	cm.handleRejoinMatch(match)
 }
 
@@ -380,4 +382,16 @@ func (cm *ClientModel) SetWSConn(conn js.Value) {
 	cm.cmMutex.Lock()
 	defer cm.cmMutex.Unlock()
 	cm.wsConn = conn
+}
+
+func (cm *ClientModel) GetButtonLoader() js.Value {
+	cm.cmMutex.RLock()
+	defer cm.cmMutex.RUnlock()
+	return cm.buttonLoader
+}
+
+func (cm *ClientModel) SetButtonLoader(buttonLoader js.Value) {
+	cm.cmMutex.Lock()
+	defer cm.cmMutex.Unlock()
+	cm.buttonLoader = buttonLoader
 }

@@ -197,6 +197,7 @@ func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 type CurrentMatch struct {
 	BlackName                   string
 	WhiteName                   string
+	MaxTimeMs                   int64
 	BlackRemainingTimeMs        int64
 	WhiteRemainingTimeMs        int64
 	Board                       model.SerializableBoard
@@ -236,6 +237,7 @@ func currentMatchFromMatch(match *matchserver.Match) CurrentMatch {
 	return CurrentMatch{
 		BlackName:                   match.PlayerName(model.Black),
 		WhiteName:                   match.PlayerName(model.White),
+		MaxTimeMs:                   match.MaxTimeMs(),
 		BlackRemainingTimeMs:        match.PlayerRemainingTimeMs(model.Black),
 		WhiteRemainingTimeMs:        match.PlayerRemainingTimeMs(model.White),
 		Board:                       match.Game.GetSerializableBoard(),

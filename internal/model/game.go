@@ -201,27 +201,17 @@ func NewGame() *Game {
 // NewCustomGame create a new custom game
 func NewCustomGame(serializableBoard SerializableBoard,
 	blackKing Piece, whiteKing Piece, positionHistory map[string]uint8,
-	blackPieces map[PieceType]uint8, whitePieces map[PieceType]uint8) *Game {
+	blackPieces map[PieceType]uint8, whitePieces map[PieceType]uint8,
+	turn Color, gameOver bool, result GameResult, previousMove Move,
+	previousMover Piece, turnsSinceCaptureOrPawnMove uint8) *Game {
 	board := newBoardFromSerializableBoard(serializableBoard)
 	game := Game{
-		board: board, blackKing: board[blackKing.File()][blackKing.Rank()],
-		whiteKing:       board[whiteKing.File()][whiteKing.Rank()],
-		positionHistory: positionHistory,
-		blackPieces:     blackPieces, whitePieces: whitePieces,
+		board, turn, gameOver, result, previousMove, &previousMover,
+		board[blackKing.File()][blackKing.Rank()],
+		board[whiteKing.File()][whiteKing.Rank()],
+		whitePieces, blackPieces, positionHistory, turnsSinceCaptureOrPawnMove,
+		sync.RWMutex{},
 	}
-	for _, file := range board {
-		for _, piece := range file {
-			if piece != nil {
-				if piece.Color == Black {
-					game.blackPieces[piece.PieceType]++
-				} else {
-					game.whitePieces[piece.PieceType]++
-				}
-			}
-		}
-	}
-	game.updatePositionHistory()
-	game.turn = White
 	return &game
 }
 

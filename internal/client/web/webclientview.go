@@ -295,11 +295,11 @@ func (cm *ClientModel) viewHandleCastle(
 	}
 }
 
-func (clientModel *ClientModel) buttonBeginLoading(button js.Value) js.Value {
-	i := clientModel.document.Call("createElement", "div")
-	i.Get("classList").Call("add", "loading")
-	button.Call("appendChild", i)
-	return i
+func (clientModel *ClientModel) buttonBeginLoading(button js.Value) {
+	buttonLoader := clientModel.document.Call("createElement", "div")
+	clientModel.SetButtonLoader(buttonLoader)
+	buttonLoader.Get("classList").Call("add", "loading")
+	button.Call("appendChild", buttonLoader)
 }
 
 func addClass(element js.Value, class string) {

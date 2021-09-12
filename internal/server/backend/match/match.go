@@ -83,6 +83,13 @@ func (match *Match) PlayerName(color model.Color) string {
 	return match.white.Name()
 }
 
+// MaxTimeMs get match max time
+func (match *Match) MaxTimeMs() int64 {
+	match.mutex.RLock()
+	defer match.mutex.RUnlock()
+	return match.maxTimeMs
+}
+
 // PlayerRemainingTimeMs get the player corresponding to the input color
 func (match *Match) PlayerRemainingTimeMs(color model.Color) int64 {
 	match.mutex.RLock()

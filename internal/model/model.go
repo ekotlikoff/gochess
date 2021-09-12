@@ -62,7 +62,8 @@ func newBoardNoPawns() Board {
 func newBoardFromSerializableBoard(serializableBoard SerializableBoard) *Board {
 	var board Board
 	for _, piece := range serializableBoard {
-		board[piece.File()][piece.Rank()] = &piece
+		pieceCopy := piece
+		board[piece.File()][piece.Rank()] = &pieceCopy
 	}
 	return &board
 }
