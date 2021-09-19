@@ -375,20 +375,6 @@ func TestWSRematch(t *testing.T) {
 	if !playerResp.ResponseAsync.GameOver {
 		t.Error("Expected gameover")
 	}
-	white.Close()
-	black.Close()
-	startSession(client, "player1")
-	startSession(client2, "player2")
-	ws, _, err = wsDialer.Dial(u, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer ws.Close()
-	ws2, _, err = wsDialer2.Dial(u, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer ws2.Close()
 	message = matchserver.WebsocketRequest{
 		WebsocketRequestType: matchserver.RequestAsyncT,
 		RequestAsync:         matchserver.RequestAsync{Match: true},

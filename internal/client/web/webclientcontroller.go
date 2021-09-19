@@ -582,7 +582,10 @@ func (cm *ClientModel) httpMatch() error {
 }
 
 func (cm *ClientModel) wsMatch() error {
-	err := cm.wsConnect()
+	var err error
+	if cm.GetWSConn().Equal(js.Undefined()) {
+		err = cm.wsConnect()
+	}
 	if err == nil {
 		message := matchserver.WebsocketRequest{
 			WebsocketRequestType: matchserver.RequestAsyncT,

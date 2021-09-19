@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
@@ -56,21 +57,17 @@ func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
 		waitc := make(chan struct{})
 		player.ClientConnectToMatch()
 		defer player.ClientDisconnectFromMatch()
-		go readLoop(c, matchServer, player, wsHandlerSpan, waitc)
-		writeLoop(c, player, wsHandlerSpan)
+		playerMutex := sync.Mutex{}
+		go readLoop(c, matchServer, player, wsHandlerSpan, waitc, playerMutex)
+		writeLoop(c, player, wsHandlerSpan, playerMutex)
 		<-waitc
 		log.Println("Websocketserver disconnecting from client")
-		if player.GetMatch() != nil && player.GetMatch().GameOver() {
-			log.Println("Websocketserver detects match is over, resetting player")
-			player.WaitForMatchOver()
-			player.Reset()
-		}
 	}
 	return http.HandlerFunc(handler)
 }
 
 func writeLoop(c *websocket.Conn, player *matchserver.Player,
-	span opentracing.Span) {
+	span opentracing.Span, playerMutex sync.Mutex) {
 	tracer := opentracing.GlobalTracer()
 	err := player.WaitForMatchStart()
 	if err != nil {
@@ -123,21 +120,22 @@ func writeLoop(c *websocket.Conn, player *matchserver.Player,
 			return
 		} else if response.WebsocketResponseType == matchserver.ResponseAsyncT &&
 			response.ResponseAsync.GameOver {
-			return
+			playerMutex.Lock()
+			log.Println("Websocketserver detects match is over, resetting player")
+			player.WaitForMatchOver()
+			player.Reset()
+			playerMutex.Unlock()
 		}
 	}
 }
 
 func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
-	player *matchserver.Player, span opentracing.Span, waitc chan struct{}) {
+	player *matchserver.Player, span opentracing.Span, waitc chan struct{},
+	playerMutex sync.Mutex) {
 	defer c.Close()
 	tracer := opentracing.GlobalTracer()
 	for {
 		message := matchserver.WebsocketRequest{}
-		if player.GetMatch() != nil && player.GetMatch().GameOver() {
-			close(waitc)
-			return
-		}
 		readWSSpan := tracer.StartSpan(
 			"ReadWS",
 			opentracing.ChildOf(span.Context()),
@@ -165,13 +163,16 @@ func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
 		readWSSpan.Finish()
 		switch message.WebsocketRequestType {
 		case matchserver.RequestSyncT:
+			playerMutex.Lock()
 			makeMoveSpan := tracer.StartSpan(
 				"MakeMove",
 				opentracing.ChildOf(span.Context()),
 			)
 			player.MakeMoveWS(message.RequestSync)
 			makeMoveSpan.Finish()
+			playerMutex.Unlock()
 		case matchserver.RequestAsyncT:
+			playerMutex.Lock()
 			if message.RequestAsync.Match {
 				ctx, cancel := context.WithTimeout(
 					context.Background(), 20*time.Millisecond)
@@ -205,6 +206,7 @@ func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
 				player.RequestAsync(message.RequestAsync)
 				requestAsyncSpan.Finish()
 			}
+			playerMutex.Unlock()
 		}
 	}
 }
