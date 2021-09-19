@@ -57,7 +57,7 @@ func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
 		waitc := make(chan struct{})
 		player.ClientConnectToMatch()
 		defer player.ClientDisconnectFromMatch()
-		playerMutex := sync.Mutex{}
+		playerMutex := &sync.Mutex{}
 		go readLoop(c, matchServer, player, wsHandlerSpan, waitc, playerMutex)
 		writeLoop(c, player, wsHandlerSpan, playerMutex)
 		<-waitc
@@ -67,7 +67,7 @@ func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
 }
 
 func writeLoop(c *websocket.Conn, player *matchserver.Player,
-	span opentracing.Span, playerMutex sync.Mutex) {
+	span opentracing.Span, playerMutex *sync.Mutex) {
 	tracer := opentracing.GlobalTracer()
 	err := player.WaitForMatchStart()
 	if err != nil {
@@ -131,7 +131,7 @@ func writeLoop(c *websocket.Conn, player *matchserver.Player,
 
 func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
 	player *matchserver.Player, span opentracing.Span, waitc chan struct{},
-	playerMutex sync.Mutex) {
+	playerMutex *sync.Mutex) {
 	defer c.Close()
 	tracer := opentracing.GlobalTracer()
 	for {
