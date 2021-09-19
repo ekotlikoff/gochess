@@ -92,69 +92,85 @@ func handleWebRoot(w http.ResponseWriter, r *http.Request) {
 
 // Session credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
 func Session(w http.ResponseWriter, r *http.Request) {
-	tracer := opentracing.GlobalTracer()
-	SessionSpan := tracer.StartSpan("Session")
-	defer SessionSpan.Finish()
 	if r.Method == http.MethodGet {
-		player := GetSession(w, r)
-		currentMatchResponse := SessionResponse{}
-		if player == nil {
-			return
-		} else if player.GetMatch() == nil {
-			log.Println("Found session,", player.Name())
-			currentMatchResponse = SessionResponse{
-				Credentials: Credentials{Username: player.Name()},
-			}
-		} else {
-			currentMatchResponse = SessionResponse{
-				Credentials: Credentials{Username: player.Name()},
-				InMatch:     true,
-				Match:       currentMatchFromMatch(player.GetMatch()),
-			}
-		}
-		if err := json.NewEncoder(w).Encode(currentMatchResponse); err != nil {
-			log.Println(err)
-			w.WriteHeader(http.StatusInternalServerError)
-		}
+		getSession(w, r)
 	} else if r.Method == http.MethodPost {
-		var creds Credentials
-		err := json.NewDecoder(r.Body).Decode(&creds)
-		if err != nil {
-			log.Println("Bad request", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		} else if creds.Username == "" {
-			log.Println("Missing username")
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Missing username"))
-			return
-		}
-		newTokenSpan := tracer.StartSpan(
-			"NewToken",
-			opentracing.ChildOf(SessionSpan.Context()),
-		)
-		sessionToken, err := uuid.NewV4()
-		newTokenSpan.Finish()
-		if err != nil {
-			log.Println("Failed to generate session token")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		sessionTokenStr := sessionToken.String()
-		newPlayerSpan := tracer.StartSpan(
-			"NewPlayer",
-			opentracing.ChildOf(SessionSpan.Context()),
-		)
-		player := matchserver.NewPlayer(creds.Username)
-		newPlayerSpan.Finish()
-		log.Println("Adding to sessionCache,", creds.Username)
-		sessionCache.Put(sessionTokenStr, player)
-		http.SetCookie(w, &http.Cookie{
-			Name:    "session_token",
-			Value:   sessionTokenStr,
-			Expires: time.Now().Add(1800 * time.Second),
-		})
+		newSession(w, r)
 	}
+}
+
+func getSession(w http.ResponseWriter, r *http.Request) {
+	tracer := opentracing.GlobalTracer()
+	SessionSpan := tracer.StartSpan("GETSession")
+	defer SessionSpan.Finish()
+	player := GetSession(w, r)
+	currentMatchResponse := SessionResponse{}
+	if player == nil {
+		return
+	} else if player.GetMatch() == nil {
+		log.Println("Found session,", player.Name())
+		currentMatchResponse = SessionResponse{
+			Credentials: Credentials{Username: player.Name()},
+		}
+	} else {
+		currentMatchResponse = SessionResponse{
+			Credentials: Credentials{Username: player.Name()},
+			InMatch:     true,
+			Match:       currentMatchFromMatch(player.GetMatch()),
+		}
+	}
+	if err := json.NewEncoder(w).Encode(currentMatchResponse); err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func newSession(w http.ResponseWriter, r *http.Request) {
+	tracer := opentracing.GlobalTracer()
+	SessionSpan := tracer.StartSpan("POSTSession")
+	defer SessionSpan.Finish()
+	var creds Credentials
+	err := json.NewDecoder(r.Body).Decode(&creds)
+	if err != nil {
+		log.Println("Bad request", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	} else if creds.Username == "" {
+		log.Println("Missing username")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Missing username"))
+		return
+	}
+	newTokenSpan := tracer.StartSpan(
+		"NewToken",
+		opentracing.ChildOf(SessionSpan.Context()),
+	)
+	sessionToken, err := uuid.NewV4()
+	newTokenSpan.Finish()
+	if err != nil {
+		log.Println("Failed to generate session token")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	sessionTokenStr := sessionToken.String()
+	newPlayerSpan := tracer.StartSpan(
+		"NewPlayer",
+		opentracing.ChildOf(SessionSpan.Context()),
+	)
+	player := matchserver.NewPlayer(creds.Username)
+	newPlayerSpan.Finish()
+	log.Println("Adding to sessionCache,", creds.Username)
+	err = sessionCache.Put(sessionTokenStr, player)
+	if err != nil {
+		log.Println("Failed to store session token in sessionCache")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:    "session_token",
+		Value:   sessionTokenStr,
+		Expires: time.Now().Add(1800 * time.Second),
+	})
 }
 
 // GetSession credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/

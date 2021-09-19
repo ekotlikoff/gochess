@@ -406,6 +406,75 @@ func TestWSRematch(t *testing.T) {
 	}
 }
 
+func TestWSReconnect(t *testing.T) {
+	jar, _ := cookiejar.New(&cookiejar.Options{})
+	jar2, _ := cookiejar.New(&cookiejar.Options{})
+	client := &http.Client{Jar: jar}
+	client2 := &http.Client{Jar: jar2}
+	startSession(client, "player1")
+	startSession(client2, "player2")
+	u := "ws" + strings.TrimPrefix(serverMatchAndPlay.URL, "http")
+	wsDialer := &websocket.Dialer{
+		Proxy:            http.ProxyFromEnvironment,
+		HandshakeTimeout: 45 * time.Second,
+		Jar:              client.Jar,
+	}
+	wsDialer2 := &websocket.Dialer{
+		Proxy:            http.ProxyFromEnvironment,
+		HandshakeTimeout: 45 * time.Second,
+		Jar:              client2.Jar,
+	}
+	ws, _, err := wsDialer.Dial(u, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ws2, _, err := wsDialer2.Dial(u, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	message := matchserver.WebsocketRequest{
+		WebsocketRequestType: matchserver.RequestAsyncT,
+		RequestAsync:         matchserver.RequestAsync{Match: true},
+	}
+	ws.WriteJSON(&message)
+	ws2.WriteJSON(&message)
+	wsResponse := matchserver.WebsocketResponse{}
+	wsResponse2 := matchserver.WebsocketResponse{}
+	ws.ReadJSON(&wsResponse)
+	ws2.ReadJSON(&wsResponse2)
+	if wsResponse.WebsocketResponseType != matchserver.ResponseAsyncT ||
+		wsResponse.ResponseAsync.MatchDetails.Color ==
+			wsResponse2.ResponseAsync.MatchDetails.Color {
+		t.Error("Expected the two players to have different colors")
+	}
+	black := ws
+	blackDialer := wsDialer
+	white := ws2
+	if wsResponse.ResponseAsync.MatchDetails.Color == model.White {
+		black = ws2
+		blackDialer = wsDialer2
+		white = ws
+	}
+	err = black.Close()
+	if err != nil {
+		t.Error("Expected to close the black ws connection")
+	}
+	black, _, err = blackDialer.Dial(u, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	playerResp, enemyResp := makeAsyncReq(
+		matchserver.RequestAsync{Resign: true}, black, white)
+	if !enemyResp.ResponseAsync.GameOver {
+		t.Error("Expected gameover")
+	}
+	if !playerResp.ResponseAsync.GameOver {
+		t.Error("Expected gameover")
+	}
+	white.Close()
+	black.Close()
+}
+
 func makeAsyncReq(asyncReq matchserver.RequestAsync, player *websocket.Conn,
 	enemy *websocket.Conn) (matchserver.WebsocketResponse,
 	matchserver.WebsocketResponse) {

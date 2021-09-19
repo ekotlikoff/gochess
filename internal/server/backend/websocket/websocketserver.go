@@ -39,7 +39,7 @@ func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
 ) http.Handler {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		tracer := opentracing.GlobalTracer()
-		wsHandlerSpan := tracer.StartSpan("WSMatch")
+		wsHandlerSpan := tracer.StartSpan("WebsocketConnection")
 		defer wsHandlerSpan.Finish()
 		player := gateway.GetSession(w, r)
 		if player == nil {
@@ -54,12 +54,14 @@ func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
 		}
 		defer c.Close()
 		waitc := make(chan struct{})
+		player.ClientConnectToMatch()
+		defer player.ClientDisconnectFromMatch()
 		go readLoop(c, matchServer, player, wsHandlerSpan, waitc)
 		writeLoop(c, player, wsHandlerSpan)
 		<-waitc
 		log.Println("Websocketserver disconnecting from client")
 		if player.GetMatch() != nil && player.GetMatch().GameOver() {
-			log.Println("Websocketserver detects player is over, resetting player")
+			log.Println("Websocketserver detects match is over, resetting player")
 			player.WaitForMatchOver()
 			player.Reset()
 		}

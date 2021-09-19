@@ -297,7 +297,6 @@ func TestCurrentMatchWithGame(t *testing.T) {
 	if resp.StatusCode != 200 || err != nil ||
 		currentMatchResponse.Credentials.Username != blackName ||
 		currentMatchResponse.Match.GameOver == true {
-		println(resp.StatusCode)
 		t.Error("Expected cookies")
 	}
 }

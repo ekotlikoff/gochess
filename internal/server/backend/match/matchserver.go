@@ -85,6 +85,7 @@ type (
 		matchMutex         sync.RWMutex
 		searchingForMatch  bool
 		match              *Match
+		clientMutex        sync.Mutex // Only one client connected at a time
 	}
 )
 
@@ -126,6 +127,18 @@ func (player *Player) SetMatch(match *Match) {
 	player.matchMutex.Lock()
 	defer player.matchMutex.Unlock()
 	player.match = match
+}
+
+// ClientConnectToMatch ensures that only one client is connected to the player
+// at a time (even if two client's have the session token)
+func (player *Player) ClientConnectToMatch() {
+	player.clientMutex.Lock()
+}
+
+// ClientDisconnectFromMatch ensures that only one client is connected to the
+// player at a time (even if two client's have the session token)
+func (player *Player) ClientDisconnectFromMatch() {
+	player.clientMutex.Unlock()
 }
 
 // MatchedOpponentName returns the matched opponent name

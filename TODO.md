@@ -55,6 +55,7 @@
         - Server will return the user's username if supplied a valid token
         - Server will also check for an ongoing game, if one is ongoing it sends the game state to the client, client will set the game state accordingly and rejoin the game
         - [x] Redesign websocket to gracefully handle an initial connection + match request and a reconnect
+        - [x] test websocket reconnect, and add a lock for each session.  We should only process one request from a session at a time (WS or http)
         - [x] Implement reconnect logic in web client
         - [x] Redesign clientDoneWithMatch, instead the match signifies when it's over and client servers synchronize on that (WaitForMatchOver), then resetting themselves.  The other way around required client servers to let the matchserver know when they were done with a match, this made less sense because a client could have disconnected and take some time to reconnect, it's harder to tell when they're done with the match.  Worth noting here that to scale we would likely want to be somewhat aggressive on reeping inactive players in sessionCache, because players could frequently disconnect when losing without formally resigning and letting their client server reset the player object, thus keeping a reference to the match and preventing GC.
     - [x] http server sessions
