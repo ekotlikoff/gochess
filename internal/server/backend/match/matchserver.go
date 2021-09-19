@@ -80,7 +80,6 @@ type (
 		ResponseChanAsync  chan ResponseAsync
 		OpponentPlayedMove chan model.MoveRequest
 		matchStart         chan struct{}
-		ChannelMutex       sync.RWMutex
 		matchStartMutex    sync.RWMutex
 		matchMutex         sync.RWMutex
 		searchingForMatch  bool
@@ -195,15 +194,11 @@ func (player *Player) HasMatchStarted(ctx context.Context) bool {
 
 // MakeMoveWS player (websocket client) make a move
 func (player *Player) MakeMoveWS(pieceMove model.MoveRequest) {
-	player.ChannelMutex.RLock()
-	defer player.ChannelMutex.RUnlock()
 	player.requestChanSync <- pieceMove
 }
 
 // MakeMove player makes a move
 func (player *Player) MakeMove(pieceMove model.MoveRequest) bool {
-	player.ChannelMutex.RLock()
-	defer player.ChannelMutex.RUnlock()
 	player.requestChanSync <- pieceMove
 	response := <-player.ResponseChanSync
 	return response.MoveSuccess
@@ -211,8 +206,6 @@ func (player *Player) MakeMove(pieceMove model.MoveRequest) bool {
 
 // GetSyncUpdate get the next sync update for a player
 func (player *Player) GetSyncUpdate() *model.MoveRequest {
-	player.ChannelMutex.RLock()
-	defer player.ChannelMutex.RUnlock()
 	select {
 	case update := <-player.OpponentPlayedMove:
 		return &update
@@ -223,15 +216,11 @@ func (player *Player) GetSyncUpdate() *model.MoveRequest {
 
 // RequestAsync player makes an async request
 func (player *Player) RequestAsync(requestAsync RequestAsync) {
-	player.ChannelMutex.RLock()
-	defer player.ChannelMutex.RUnlock()
 	player.RequestChanAsync <- requestAsync
 }
 
 // GetAsyncUpdate get the next async update for a player
 func (player *Player) GetAsyncUpdate() *ResponseAsync {
-	player.ChannelMutex.RLock()
-	defer player.ChannelMutex.RUnlock()
 	select {
 	case update := <-player.ResponseChanAsync:
 		return &update
@@ -242,8 +231,6 @@ func (player *Player) GetAsyncUpdate() *ResponseAsync {
 
 // Reset a player for their next match
 func (player *Player) Reset() {
-	player.ChannelMutex.Lock()
-	defer player.ChannelMutex.Unlock()
 	// If the player preexisted there may be a client waiting on the opponent's
 	// move.
 	if player.OpponentPlayedMove != nil {
@@ -262,8 +249,6 @@ func (player *Player) Reset() {
 }
 
 func (player *Player) startMatch() {
-	player.ChannelMutex.Lock()
-	defer player.ChannelMutex.Unlock()
 	player.matchStartMutex.RLock()
 	defer player.matchStartMutex.RUnlock()
 	close(player.matchStart)
