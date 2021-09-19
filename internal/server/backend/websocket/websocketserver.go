@@ -55,8 +55,10 @@ func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
 		}
 		defer c.Close()
 		waitc := make(chan struct{})
-		player.ClientConnectToMatch()
-		defer player.ClientDisconnectFromMatch()
+		player.ClientConnectToPlayer()
+		defer player.ClientDisconnectFromPlayer()
+		// playerMutex is used to ensure we are not interacting with the player
+		// while resetting it
 		playerMutex := &sync.Mutex{}
 		go readLoop(c, matchServer, player, wsHandlerSpan, waitc, playerMutex)
 		writeLoop(c, player, wsHandlerSpan, playerMutex)

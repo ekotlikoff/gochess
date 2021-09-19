@@ -129,15 +129,15 @@ func (player *Player) SetMatch(match *Match) {
 	player.match = match
 }
 
-// ClientConnectToMatch ensures that only one client is connected to the player
+// ClientConnectToPlayer ensures that only one client is connected to the player
 // at a time (even if two client's have the session token)
-func (player *Player) ClientConnectToMatch() {
+func (player *Player) ClientConnectToPlayer() {
 	player.clientMutex.Lock()
 }
 
-// ClientDisconnectFromMatch ensures that only one client is connected to the
+// ClientDisconnectFromPlayer ensures that only one client is connected to the
 // player at a time (even if two client's have the session token)
-func (player *Player) ClientDisconnectFromMatch() {
+func (player *Player) ClientDisconnectFromPlayer() {
 	player.clientMutex.Unlock()
 }
 
