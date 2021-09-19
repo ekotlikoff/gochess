@@ -28,7 +28,7 @@ var (
 )
 
 func init() {
-	serverSession = httptest.NewServer(http.HandlerFunc(gateway.StartSession))
+	serverSession = httptest.NewServer(http.HandlerFunc(gateway.Session))
 	serverAsync = httptest.NewServer(http.Handler(makeAsyncHandler()))
 	serverSync = httptest.NewServer(http.Handler(makeSyncHandler()))
 	matchingServer := matchserver.NewMatchingServer()
@@ -62,7 +62,7 @@ func TestHTTPServerMatch(t *testing.T) {
 	wait := make(chan struct{})
 	var resp *http.Response
 	go func() { resp, _ = client.Get(serverMatch.URL); close(wait) }()
-	resp2, err2 := client2.Get(serverMatch.URL)
+	resp2, _ := client2.Get(serverMatch.URL)
 	<-wait
 	defer resp.Body.Close()
 	defer resp2.Body.Close()
@@ -74,9 +74,12 @@ func TestHTTPServerMatch(t *testing.T) {
 		fmt.Println(string(body2))
 		fmt.Println(resp2.StatusCode)
 	}
-	if err2 != nil || (!strings.HasPrefix(string(body), "{\"Color\":1,\"Opp") &&
-		!strings.HasPrefix(string(body2), "{\"Color\":1,\"Opp")) {
-		t.Error("Expected match got ", string(body))
+	resp, err := client.Get(serverAsync.URL)
+	responseAsync := matchserver.ResponseAsync{}
+	json.NewDecoder(resp.Body).Decode(&responseAsync)
+	resp.Body.Close()
+	if err != nil || responseAsync.Matched != true {
+		t.Error("Expected match")
 	}
 }
 
@@ -200,10 +203,12 @@ func createMatch(testMatchServer *httptest.Server) (
 	blackName = "player1"
 	whiteName = "player2"
 	white = client2
-	var matchResponse matchserver.MatchedResponse
-	json.NewDecoder(resp.Body).Decode(&matchResponse)
+	resp, _ = white.Get(serverAsync.URL)
+	resp, _ = black.Get(serverAsync.URL)
+	responseAsync := matchserver.ResponseAsync{}
+	json.NewDecoder(resp.Body).Decode(&responseAsync)
 	resp.Body.Close()
-	if matchResponse.Color == model.White {
+	if responseAsync.MatchDetails.Color == model.White {
 		black = client2
 		blackName = "player2"
 		whiteName = "player1"
@@ -243,5 +248,55 @@ func startSession(client *http.Client, username string) {
 	client.Jar.SetCookies(serverAsyncURL, client.Jar.Cookies(serverSessionURL))
 	if err == nil {
 		defer resp.Body.Close()
+	}
+}
+
+func TestCurrentMatch(t *testing.T) {
+	if debug {
+		fmt.Println("Test CurrentMatch")
+	}
+	jar, _ := cookiejar.New(&cookiejar.Options{})
+	client := &http.Client{Jar: jar}
+	startSession(client, "Dawn")
+	resp, err := client.Get(serverSession.URL)
+	if err != nil {
+		t.Error(err)
+	}
+	defer resp.Body.Close()
+	var currentMatchResponse gateway.SessionResponse
+	json.NewDecoder(resp.Body).Decode(&currentMatchResponse)
+	if debug {
+		fmt.Println(currentMatchResponse)
+		fmt.Println(resp.Cookies())
+	}
+	if resp.StatusCode != 200 || err != nil ||
+		currentMatchResponse.Credentials.Username != "Dawn" {
+		t.Error("Expected a username")
+	}
+}
+
+func TestCurrentMatchWithGame(t *testing.T) {
+	if debug {
+		fmt.Println("Test CurrentMatchWithGame")
+	}
+	black, white, blackName, _ := createMatch(serverMatch)
+	sendMove(white, serverSync, 2, 1, 0, 2)
+	sendMove(black, serverSync, 2, 6, 0, -2)
+	resp, err := black.Get(serverSession.URL)
+	if err != nil {
+		t.Error(err)
+	}
+	defer resp.Body.Close()
+	var currentMatchResponse gateway.SessionResponse
+	json.NewDecoder(resp.Body).Decode(&currentMatchResponse)
+	if debug {
+		fmt.Println(currentMatchResponse)
+		fmt.Println(currentMatchResponse.Match)
+		fmt.Println(resp.Cookies())
+	}
+	if resp.StatusCode != 200 || err != nil ||
+		currentMatchResponse.Credentials.Username != blackName ||
+		currentMatchResponse.Match.GameOver == true {
+		t.Error("Expected cookies")
 	}
 }

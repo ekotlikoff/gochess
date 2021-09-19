@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
@@ -39,9 +40,13 @@ func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
 ) http.Handler {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		tracer := opentracing.GlobalTracer()
-		wsHandlerSpan := tracer.StartSpan("WSMatch")
+		wsHandlerSpan := tracer.StartSpan("WebsocketConnection")
 		defer wsHandlerSpan.Finish()
 		player := gateway.GetSession(w, r)
+		if player == nil {
+			log.Println("No player found for session")
+			return
+		}
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println("Upgrade error:", err)
@@ -50,29 +55,27 @@ func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
 		}
 		defer c.Close()
 		waitc := make(chan struct{})
-		go readLoop(c, matchServer, player, wsHandlerSpan, waitc)
-		writeLoop(c, player, wsHandlerSpan)
+		player.ClientConnectToPlayer()
+		defer player.ClientDisconnectFromPlayer()
+		// playerMutex is used to ensure we are not interacting with the player
+		// while resetting it
+		playerMutex := &sync.Mutex{}
+		go readLoop(c, matchServer, player, wsHandlerSpan, waitc, playerMutex)
+		writeLoop(c, player, wsHandlerSpan, playerMutex)
 		<-waitc
-		player.ClientDoneWithMatch()
+		log.Println("Websocketserver disconnecting from client")
 	}
 	return http.HandlerFunc(handler)
 }
 
 func writeLoop(c *websocket.Conn, player *matchserver.Player,
-	span opentracing.Span) {
+	span opentracing.Span, playerMutex *sync.Mutex) {
 	tracer := opentracing.GlobalTracer()
 	err := player.WaitForMatchStart()
 	if err != nil {
 		log.Println("FATAL: Failed to find match")
+		return
 	}
-	matchedResponse := matchserver.WebsocketResponse{
-		WebsocketResponseType: matchserver.MatchStartT,
-		MatchedResponse: matchserver.MatchedResponse{
-			Color: player.Color(), OpponentName: player.MatchedOpponentName(),
-			MaxTimeMs: player.MatchMaxTimeMs(),
-		},
-	}
-	c.WriteJSON(&matchedResponse)
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
 	for {
@@ -119,20 +122,22 @@ func writeLoop(c *websocket.Conn, player *matchserver.Player,
 			return
 		} else if response.WebsocketResponseType == matchserver.ResponseAsyncT &&
 			response.ResponseAsync.GameOver {
-			return
+			playerMutex.Lock()
+			log.Println("Websocketserver detects match is over, resetting player")
+			player.WaitForMatchOver()
+			player.Reset()
+			playerMutex.Unlock()
 		}
 	}
 }
 
 func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
-	player *matchserver.Player, span opentracing.Span, waitc chan struct{}) {
+	player *matchserver.Player, span opentracing.Span, waitc chan struct{},
+	playerMutex *sync.Mutex) {
 	defer c.Close()
 	tracer := opentracing.GlobalTracer()
 	for {
 		message := matchserver.WebsocketRequest{}
-		if player.GetMatch() != nil && player.GetMatch().GameOver() {
-			return
-		}
 		readWSSpan := tracer.StartSpan(
 			"ReadWS",
 			opentracing.ChildOf(span.Context()),
@@ -142,11 +147,15 @@ func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
 				websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("Websocketserver read error: %v", err)
 			}
+			/* TODO instead of immediate resignation let the matchserver know
+			that there is no client connected, then matchserver can handle when
+			to time them out
 			if player.GetMatch() != nil && !player.GetMatch().GameOver() {
 				player.RequestChanAsync <- matchserver.RequestAsync{
 					Resign: true,
 				}
 			}
+			*/
 			close(waitc)
 			readWSSpan.LogFields(opentracinglog.String("readType", "ConnClosed"))
 			readWSSpan.Finish()
@@ -156,13 +165,16 @@ func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
 		readWSSpan.Finish()
 		switch message.WebsocketRequestType {
 		case matchserver.RequestSyncT:
+			playerMutex.Lock()
 			makeMoveSpan := tracer.StartSpan(
 				"MakeMove",
 				opentracing.ChildOf(span.Context()),
 			)
 			player.MakeMoveWS(message.RequestSync)
 			makeMoveSpan.Finish()
+			playerMutex.Unlock()
 		case matchserver.RequestAsyncT:
+			playerMutex.Lock()
 			if message.RequestAsync.Match {
 				ctx, cancel := context.WithTimeout(
 					context.Background(), 20*time.Millisecond)
@@ -196,6 +208,7 @@ func readLoop(c *websocket.Conn, matchServer *matchserver.MatchingServer,
 				player.RequestAsync(message.RequestAsync)
 				requestAsyncSpan.Finish()
 			}
+			playerMutex.Unlock()
 		}
 	}
 }

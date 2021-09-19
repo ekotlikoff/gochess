@@ -150,7 +150,7 @@ func (clientModel *ClientModel) viewInitBoard(playerColor model.Color) {
 				div.Get("classList").Call("add", "piece")
 				div.Get("classList").Call("add", piece.ClientString())
 				div.Get("classList").Call(
-					"add", getPositionClass(piece.Position(), playerColor))
+					"add", getPositionClass(piece.Position, playerColor))
 				clientModel.board.Call("appendChild", div)
 				div.Call("addEventListener", "mousedown",
 					clientModel.genMouseDown(), false)
@@ -250,7 +250,7 @@ func (cm *ClientModel) genPromoteOnClick() js.Func {
 func (cm *ClientModel) viewHandleEnPassant(
 	move model.Move, newPos model.Position, targetEmpty bool) {
 	pawn := cm.game.GetBoard().Piece(newPos)
-	if pawn.PieceType() == model.Pawn && move.X != 0 && targetEmpty {
+	if pawn.PieceType == model.Pawn && move.X != 0 && targetEmpty {
 		capturedY := pawn.Rank() + 1
 		if move.Y > 0 {
 			capturedY = pawn.Rank() - 1
@@ -268,7 +268,7 @@ func (cm *ClientModel) viewHandleEnPassant(
 func (cm *ClientModel) viewHandleCastle(
 	move model.Move, newPos model.Position) {
 	king := cm.game.GetBoard().Piece(newPos)
-	if king.PieceType() == model.King &&
+	if king.PieceType == model.King &&
 		(move.X < -1 || move.X > 1) {
 		var rookPosition model.Position
 		var rookPosClass string
@@ -295,11 +295,11 @@ func (cm *ClientModel) viewHandleCastle(
 	}
 }
 
-func (clientModel *ClientModel) buttonBeginLoading(button js.Value) js.Value {
-	i := clientModel.document.Call("createElement", "div")
-	i.Get("classList").Call("add", "loading")
-	button.Call("appendChild", i)
-	return i
+func (clientModel *ClientModel) buttonBeginLoading(button js.Value) {
+	buttonLoader := clientModel.document.Call("createElement", "div")
+	clientModel.SetButtonLoader(buttonLoader)
+	buttonLoader.Get("classList").Call("add", "loading")
+	button.Call("appendChild", buttonLoader)
 }
 
 func addClass(element js.Value, class string) {

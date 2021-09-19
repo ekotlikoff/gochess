@@ -25,8 +25,6 @@ var (
 const (
 	// NullT is the WS response type for a null response
 	NullT = WebsocketResponseType(iota)
-	// MatchStartT is the WS response type for a match response
-	MatchStartT = WebsocketResponseType(iota)
 	// RequestSyncT is the WS request type for a sync request
 	RequestSyncT = WebsocketRequestType(iota)
 	// RequestAsyncT is the WS request type for an async request
@@ -47,7 +45,6 @@ type (
 	// WebsocketResponse is a struct for a response over the WS conn
 	WebsocketResponse struct {
 		WebsocketResponseType WebsocketResponseType
-		MatchedResponse       MatchedResponse
 		ResponseSync          ResponseSync
 		ResponseAsync         ResponseAsync
 		OpponentPlayedMove    model.MoveRequest
@@ -64,8 +61,8 @@ type (
 		RequestAsync         RequestAsync
 	}
 
-	// MatchedResponse is a struct for the matched response
-	MatchedResponse struct {
+	// MatchDetails is a struct for the matched response
+	MatchDetails struct {
 		Color        model.Color
 		OpponentName string
 		MaxTimeMs    int64
@@ -74,21 +71,20 @@ type (
 	// Player is a struct representing a matchserver client, containing channels
 	// for communications between the client and the the matchserver
 	Player struct {
-		name                string
-		color               model.Color
-		elapsedMs           int64
-		requestChanSync     chan model.MoveRequest
-		ResponseChanSync    chan ResponseSync
-		RequestChanAsync    chan RequestAsync
-		ResponseChanAsync   chan ResponseAsync
-		OpponentPlayedMove  chan model.MoveRequest
-		matchStart          chan struct{}
-		clientDoneWithMatch chan struct{}
-		ChannelMutex        sync.RWMutex
-		matchStartMutex     sync.RWMutex
-		matchMutex          sync.RWMutex
-		searchingForMatch   bool
-		match               *Match
+		name               string
+		color              model.Color
+		elapsedMs          int64
+		requestChanSync    chan model.MoveRequest
+		ResponseChanSync   chan ResponseSync
+		RequestChanAsync   chan RequestAsync
+		ResponseChanAsync  chan ResponseAsync
+		OpponentPlayedMove chan model.MoveRequest
+		matchStart         chan struct{}
+		matchStartMutex    sync.RWMutex
+		matchMutex         sync.RWMutex
+		searchingForMatch  bool
+		match              *Match
+		clientMutex        sync.Mutex // Only one client connected at a time
 	}
 )
 
@@ -132,6 +128,18 @@ func (player *Player) SetMatch(match *Match) {
 	player.match = match
 }
 
+// ClientConnectToPlayer ensures that only one client is connected to the player
+// at a time (even if two client's have the session token)
+func (player *Player) ClientConnectToPlayer() {
+	player.clientMutex.Lock()
+}
+
+// ClientDisconnectFromPlayer ensures that only one client is connected to the
+// player at a time (even if two client's have the session token)
+func (player *Player) ClientDisconnectFromPlayer() {
+	player.clientMutex.Unlock()
+}
+
 // MatchedOpponentName returns the matched opponent name
 func (player *Player) MatchedOpponentName() string {
 	player.matchMutex.RLock()
@@ -145,7 +153,7 @@ func (player *Player) MatchedOpponentName() string {
 
 // MatchMaxTimeMs returns players max time in ms
 func (player *Player) MatchMaxTimeMs() int64 {
-	return player.GetMatch().MaxTimeMs()
+	return player.GetMatch().maxTimeMs
 }
 
 // Color returns player color
@@ -167,6 +175,11 @@ func (player *Player) WaitForMatchStart() error {
 	}
 }
 
+// WaitForMatchOver used by client servers to synchronize around match ending
+func (player *Player) WaitForMatchOver() {
+	player.match.waitForMatchOver()
+}
+
 // HasMatchStarted player checks if their match has started
 func (player *Player) HasMatchStarted(ctx context.Context) bool {
 	player.matchStartMutex.RLock()
@@ -181,15 +194,11 @@ func (player *Player) HasMatchStarted(ctx context.Context) bool {
 
 // MakeMoveWS player (websocket client) make a move
 func (player *Player) MakeMoveWS(pieceMove model.MoveRequest) {
-	player.ChannelMutex.RLock()
-	defer player.ChannelMutex.RUnlock()
 	player.requestChanSync <- pieceMove
 }
 
 // MakeMove player makes a move
 func (player *Player) MakeMove(pieceMove model.MoveRequest) bool {
-	player.ChannelMutex.RLock()
-	defer player.ChannelMutex.RUnlock()
 	player.requestChanSync <- pieceMove
 	response := <-player.ResponseChanSync
 	return response.MoveSuccess
@@ -197,8 +206,6 @@ func (player *Player) MakeMove(pieceMove model.MoveRequest) bool {
 
 // GetSyncUpdate get the next sync update for a player
 func (player *Player) GetSyncUpdate() *model.MoveRequest {
-	player.ChannelMutex.RLock()
-	defer player.ChannelMutex.RUnlock()
 	select {
 	case update := <-player.OpponentPlayedMove:
 		return &update
@@ -209,15 +216,11 @@ func (player *Player) GetSyncUpdate() *model.MoveRequest {
 
 // RequestAsync player makes an async request
 func (player *Player) RequestAsync(requestAsync RequestAsync) {
-	player.ChannelMutex.RLock()
-	defer player.ChannelMutex.RUnlock()
 	player.RequestChanAsync <- requestAsync
 }
 
 // GetAsyncUpdate get the next async update for a player
 func (player *Player) GetAsyncUpdate() *ResponseAsync {
-	player.ChannelMutex.RLock()
-	defer player.ChannelMutex.RUnlock()
 	select {
 	case update := <-player.ResponseChanAsync:
 		return &update
@@ -228,8 +231,6 @@ func (player *Player) GetAsyncUpdate() *ResponseAsync {
 
 // Reset a player for their next match
 func (player *Player) Reset() {
-	player.ChannelMutex.Lock()
-	defer player.ChannelMutex.Unlock()
 	// If the player preexisted there may be a client waiting on the opponent's
 	// move.
 	if player.OpponentPlayedMove != nil {
@@ -248,27 +249,17 @@ func (player *Player) Reset() {
 }
 
 func (player *Player) startMatch() {
-	player.ChannelMutex.Lock()
-	defer player.ChannelMutex.Unlock()
-	player.clientDoneWithMatch = make(chan struct{})
 	player.matchStartMutex.RLock()
 	defer player.matchStartMutex.RUnlock()
 	close(player.matchStart)
-}
-
-// ClientDoneWithMatch the client is now done with the match
-func (player *Player) ClientDoneWithMatch() {
-	player.ChannelMutex.RLock()
-	defer player.ChannelMutex.RUnlock()
-	close(player.clientDoneWithMatch)
-}
-
-// WaitForClientToBeDoneWithMatch block until the client is done with their
-// match
-func (player *Player) WaitForClientToBeDoneWithMatch() {
-	player.ChannelMutex.RLock()
-	defer player.ChannelMutex.RUnlock()
-	<-player.clientDoneWithMatch
+	player.ResponseChanAsync <- ResponseAsync{
+		Matched: true,
+		MatchDetails: MatchDetails{
+			Color:        player.Color(),
+			OpponentName: player.MatchedOpponentName(),
+			MaxTimeMs:    player.MatchMaxTimeMs(),
+		},
+	}
 }
 
 // ResponseSync represents a response to the client related to a move
@@ -285,8 +276,9 @@ type RequestAsync struct {
 
 // ResponseAsync represents a response to the client unrelated to a move
 type ResponseAsync struct {
-	GameOver, RequestToDraw, Draw, Resignation, Timeout bool
-	Winner                                              string
+	GameOver, RequestToDraw, Draw, Resignation, Timeout, Matched bool
+	Winner                                                       string
+	MatchDetails                                                 MatchDetails
 }
 
 // MatchingServer handles matching players and carrying out the game

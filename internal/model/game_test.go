@@ -13,8 +13,12 @@ func TestNewGame(t *testing.T) {
 	if game.turn != White {
 		t.Error("Expected turn = ", White, " got ", game.turn)
 	}
-	if game.blackKing.pieceType != King || game.whiteKing.pieceType != King {
-		t.Error("Expected kings got ", game.blackKing.pieceType)
+	if game.blackKing.PieceType != King || game.whiteKing.PieceType != King {
+		t.Error("Expected kings got ", game.blackKing.PieceType)
+	}
+	board := game.GetSerializableBoard()
+	if board[1].Position == board[10].Position {
+		t.Error("Expected a serializable board got", game.GetSerializableBoard())
 	}
 }
 
@@ -186,14 +190,14 @@ func TestPromotion(t *testing.T) {
 	game.Move(MoveRequest{Position{4, 5}, Move{1, 1}, nil})
 	game.Move(MoveRequest{Position{4, 7}, Move{-1, -1}, nil})
 	err := game.Move(MoveRequest{Position{5, 6}, Move{1, 1}, nil})
-	if err == nil || game.board[6][7].PieceType() != Knight {
+	if err == nil || game.board[6][7].PieceType != Knight {
 		t.Error("Pawn should not have moved since the move is invalid without promotion.")
 	}
 	game.Move(MoveRequest{Position{5, 6}, Move{1, 1}, &promotionType})
 	if debug {
 		fmt.Println(game.board)
 	}
-	if game.board[6][7] == nil || game.board[6][7].PieceType() != Rook {
+	if game.board[6][7] == nil || game.board[6][7].PieceType != Rook {
 		t.Error("Pawn should have been promoted")
 	}
 }

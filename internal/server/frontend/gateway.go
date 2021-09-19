@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	model "github.com/Ekotlikoff/gochess/internal/model"
 	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
 	"github.com/gofrs/uuid"
 	opentracing "github.com/opentracing/opentracing-go"
@@ -70,7 +71,7 @@ func Serve(httpBackend *url.URL, websocketBackend *url.URL, port int) {
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/", prometheusMiddleware(http.HandlerFunc(handleWebRoot)))
-	mux.Handle("/session", prometheusMiddleware(http.HandlerFunc(StartSession)))
+	mux.Handle("/session", prometheusMiddleware(http.HandlerFunc(Session)))
 	// HTTP backend proxying
 	mux.Handle("/http/match", prometheusMiddleware(httpBackendProxy))
 	mux.Handle("/http/sync", prometheusMiddleware(httpBackendProxy))
@@ -89,11 +90,45 @@ func handleWebRoot(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.FS(webStaticFS)).ServeHTTP(w, r)
 }
 
-// StartSession credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
-func StartSession(w http.ResponseWriter, r *http.Request) {
+// Session credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
+func Session(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		getSession(w, r)
+	} else if r.Method == http.MethodPost {
+		newSession(w, r)
+	}
+}
+
+func getSession(w http.ResponseWriter, r *http.Request) {
 	tracer := opentracing.GlobalTracer()
-	startSessionSpan := tracer.StartSpan("StartSession")
-	defer startSessionSpan.Finish()
+	SessionSpan := tracer.StartSpan("GETSession")
+	defer SessionSpan.Finish()
+	player := GetSession(w, r)
+	currentMatchResponse := SessionResponse{}
+	if player == nil {
+		return
+	} else if player.GetMatch() == nil {
+		log.Println("Found session,", player.Name())
+		currentMatchResponse = SessionResponse{
+			Credentials: Credentials{Username: player.Name()},
+		}
+	} else {
+		currentMatchResponse = SessionResponse{
+			Credentials: Credentials{Username: player.Name()},
+			InMatch:     true,
+			Match:       currentMatchFromMatch(player.GetMatch()),
+		}
+	}
+	if err := json.NewEncoder(w).Encode(currentMatchResponse); err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func newSession(w http.ResponseWriter, r *http.Request) {
+	tracer := opentracing.GlobalTracer()
+	SessionSpan := tracer.StartSpan("POSTSession")
+	defer SessionSpan.Finish()
 	var creds Credentials
 	err := json.NewDecoder(r.Body).Decode(&creds)
 	if err != nil {
@@ -108,7 +143,7 @@ func StartSession(w http.ResponseWriter, r *http.Request) {
 	}
 	newTokenSpan := tracer.StartSpan(
 		"NewToken",
-		opentracing.ChildOf(startSessionSpan.Context()),
+		opentracing.ChildOf(SessionSpan.Context()),
 	)
 	sessionToken, err := uuid.NewV4()
 	newTokenSpan.Finish()
@@ -120,17 +155,22 @@ func StartSession(w http.ResponseWriter, r *http.Request) {
 	sessionTokenStr := sessionToken.String()
 	newPlayerSpan := tracer.StartSpan(
 		"NewPlayer",
-		opentracing.ChildOf(startSessionSpan.Context()),
+		opentracing.ChildOf(SessionSpan.Context()),
 	)
 	player := matchserver.NewPlayer(creds.Username)
 	newPlayerSpan.Finish()
-	sessionCache.Put(sessionTokenStr, player)
+	log.Println("Adding to sessionCache,", creds.Username)
+	err = sessionCache.Put(sessionTokenStr, player)
+	if err != nil {
+		log.Println("Failed to store session token in sessionCache")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:    "session_token",
 		Value:   sessionTokenStr,
 		Expires: time.Now().Add(1800 * time.Second),
 	})
-	w.WriteHeader(http.StatusOK)
 }
 
 // GetSession credit to https://www.sohamkamani.com/blog/2018/03/25/golang-session-authentication/
@@ -146,7 +186,7 @@ func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 			w.Write([]byte("Missing session_token"))
 			return nil
 		}
-		log.Println("ERROR ", err)
+		log.Println("ERROR", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return nil
 	}
@@ -158,8 +198,8 @@ func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 	player, err := sessionCache.Get(sessionToken)
 	getTokenSpan.Finish()
 	if err != nil {
-		log.Println("ERROR ", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("ERROR token is invalid")
+		w.WriteHeader(http.StatusUnauthorized)
 		return nil
 	} else if player == nil {
 		log.Println("No player found for token ", sessionToken)
@@ -167,6 +207,70 @@ func GetSession(w http.ResponseWriter, r *http.Request) *matchserver.Player {
 		return nil
 	}
 	return player
+}
+
+// CurrentMatch serializable struct to bring client up to speed
+type CurrentMatch struct {
+	BlackName                   string
+	WhiteName                   string
+	MaxTimeMs                   int64
+	BlackRemainingTimeMs        int64
+	WhiteRemainingTimeMs        int64
+	Board                       model.SerializableBoard
+	Turn                        model.Color
+	GameOver                    bool
+	Result                      model.GameResult
+	PreviousMove                model.Move
+	PreviousMover               model.Piece
+	BlackKing                   model.Piece
+	WhiteKing                   model.Piece
+	WhitePieces                 map[model.PieceType]uint8
+	BlackPieces                 map[model.PieceType]uint8
+	PositionHistory             map[string]uint8
+	TurnsSinceCaptureOrPawnMove uint8
+	RequestedDraw               bool
+	RequestedDrawName           string
+}
+
+// SessionResponse serializable struct to send client's session
+type SessionResponse struct {
+	Credentials Credentials
+	InMatch     bool
+	Match       CurrentMatch
+}
+
+func currentMatchFromMatch(match *matchserver.Match) CurrentMatch {
+	requestedDraw := match.GetRequestedDraw() != nil
+	requestedDrawName := ""
+	if requestedDraw {
+		requestedDrawName = match.GetRequestedDraw().Name()
+	}
+	previousMoverPtr := match.Game.PreviousMover()
+	previousMover := model.Piece{}
+	if previousMoverPtr != nil {
+		previousMover = *previousMoverPtr
+	}
+	return CurrentMatch{
+		BlackName:                   match.PlayerName(model.Black),
+		WhiteName:                   match.PlayerName(model.White),
+		MaxTimeMs:                   match.MaxTimeMs(),
+		BlackRemainingTimeMs:        match.PlayerRemainingTimeMs(model.Black),
+		WhiteRemainingTimeMs:        match.PlayerRemainingTimeMs(model.White),
+		Board:                       match.Game.GetSerializableBoard(),
+		Turn:                        match.Game.Turn(),
+		GameOver:                    match.Game.GameOver(),
+		Result:                      match.Game.Result(),
+		PreviousMove:                match.Game.PreviousMove(),
+		PreviousMover:               previousMover,
+		BlackKing:                   *match.Game.BlackKing(),
+		WhiteKing:                   *match.Game.WhiteKing(),
+		WhitePieces:                 match.Game.WhitePieces(),
+		BlackPieces:                 match.Game.BlackPieces(),
+		PositionHistory:             match.Game.PositionHistory(),
+		TurnsSinceCaptureOrPawnMove: match.Game.TurnsSinceCaptureOrPawnMove(),
+		RequestedDraw:               requestedDraw,
+		RequestedDrawName:           requestedDrawName,
+	}
 }
 
 type statusWriter struct {

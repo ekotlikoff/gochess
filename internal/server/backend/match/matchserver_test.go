@@ -42,9 +42,11 @@ func TestMatchingServerTimeout(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
-	liveMatch := matchingServer.LiveMatches()[0]
 	response := <-player1.ResponseChanAsync
-	if !liveMatch.game.GameOver() || !response.GameOver || !response.Timeout {
+	response = <-player2.ResponseChanAsync
+	liveMatch := matchingServer.LiveMatches()[0]
+	response = <-player1.ResponseChanAsync
+	if !liveMatch.Game.GameOver() || !response.GameOver || !response.Timeout {
 		t.Error("Expected timed out game got", response)
 	}
 }
@@ -66,6 +68,8 @@ func TestMatchingServerInsufficientMaterialDraw(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	response := <-player1.ResponseChanAsync
+	response = <-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
@@ -174,8 +178,8 @@ func TestMatchingServerInsufficientMaterialDraw(t *testing.T) {
 		Move:      model.Move{X: 0, Y: -1},
 		PromoteTo: nil})
 	black.GetSyncUpdate()
-	response := <-white.ResponseChanAsync
-	if !liveMatch.game.GameOver() || !response.GameOver ||
+	response = <-white.ResponseChanAsync
+	if !liveMatch.Game.GameOver() || !response.GameOver ||
 		!response.Draw || response.Timeout {
 		t.Error("Expected draw got", response)
 	}
@@ -198,6 +202,8 @@ func TestMatchingServerInsufficientMaterialTimeoutDraw(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	response := <-player1.ResponseChanAsync
+	response = <-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
@@ -296,8 +302,8 @@ func TestMatchingServerInsufficientMaterialTimeoutDraw(t *testing.T) {
 		Move:      model.Move{X: -1, Y: 0},
 		PromoteTo: nil})
 	black.GetSyncUpdate()
-	response := <-white.ResponseChanAsync
-	if !liveMatch.game.GameOver() || !response.GameOver ||
+	response = <-white.ResponseChanAsync
+	if !liveMatch.Game.GameOver() || !response.GameOver ||
 		!response.Draw || !response.Timeout {
 		t.Error("Expected draw got", response)
 	}
@@ -312,6 +318,8 @@ func TestMatchingServerDraw(t *testing.T) {
 	exitChan := make(chan bool, 1)
 	exitChan <- true
 	matchingServer.StartMatchServers(1, exitChan)
+	<-player1.ResponseChanAsync
+	<-player2.ResponseChanAsync
 	player1.RequestChanAsync <- RequestAsync{RequestToDraw: true}
 	response := <-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
@@ -349,9 +357,9 @@ func TestMatchingServerDraw(t *testing.T) {
 	}
 	player2.RequestChanAsync <- RequestAsync{RequestToDraw: true}
 	response = <-player2.ResponseChanAsync
-	if !liveMatch.game.GameOver() || !response.GameOver ||
+	if !liveMatch.Game.GameOver() || !response.GameOver ||
 		!response.Draw {
-		t.Error("Expected a draw got ", response.Draw, response.GameOver, liveMatch.game.GameOver())
+		t.Error("Expected a draw got ", response.Draw, response.GameOver, liveMatch.Game.GameOver())
 	}
 }
 
@@ -369,10 +377,12 @@ func TestMatchingServerResignation(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	<-player1.ResponseChanAsync
+	<-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	player1.RequestChanAsync <- RequestAsync{Resign: true}
 	response := <-player1.ResponseChanAsync
-	if !liveMatch.game.GameOver() || !response.GameOver ||
+	if !liveMatch.Game.GameOver() || !response.GameOver ||
 		!response.Resignation {
 		t.Error("Expected resignation got ", response)
 	}
@@ -391,17 +401,21 @@ func TestMatchingServerPlayerSecondGame(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	<-player1.ResponseChanAsync
+	<-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	player1.RequestChanAsync <- RequestAsync{Resign: true}
 	response := <-player1.ResponseChanAsync
-	player1.ClientDoneWithMatch()
-	player2.ClientDoneWithMatch()
+	player1.WaitForMatchOver()
+	player2.WaitForMatchOver()
+	player1.Reset()
+	player2.Reset()
 	tries = 0
 	for len(matchingServer.LiveMatches()) == 1 && tries < 10 {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
-	if !liveMatch.game.GameOver() || !response.GameOver ||
+	if !liveMatch.Game.GameOver() || !response.GameOver ||
 		!response.Resignation || len(matchingServer.LiveMatches()) > 0 {
 		t.Error("Expected resignation got ", response.GameOver)
 	}
@@ -411,10 +425,12 @@ func TestMatchingServerPlayerSecondGame(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	<-player1.ResponseChanAsync
+	<-player2.ResponseChanAsync
 	liveMatch = matchingServer.LiveMatches()[0]
 	player1.RequestChanAsync <- RequestAsync{Resign: true}
 	response = <-player1.ResponseChanAsync
-	if !liveMatch.game.GameOver() || !response.GameOver ||
+	if !liveMatch.Game.GameOver() || !response.GameOver ||
 		!response.Resignation {
 		t.Error("Expected resignation got ", response)
 	}
@@ -435,6 +451,8 @@ func TestMatchingServerValidMoves(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	<-player1.ResponseChanAsync
+	<-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
@@ -466,6 +484,8 @@ func TestMatchingServerInvalidMoves(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	<-player1.ResponseChanAsync
+	<-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
@@ -503,6 +523,8 @@ func TestMatchingServerCheckmate(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		tries++
 	}
+	response := <-player1.ResponseChanAsync
+	response = <-player2.ResponseChanAsync
 	liveMatch := matchingServer.LiveMatches()[0]
 	black := liveMatch.black
 	white := liveMatch.white
@@ -550,10 +572,10 @@ func TestMatchingServerCheckmate(t *testing.T) {
 		Position:  model.Position{File: 7, Rank: 4},
 		Move:      model.Move{X: -2, Y: 2},
 		PromoteTo: nil})
-	if !liveMatch.game.GameOver() {
+	if !liveMatch.Game.GameOver() {
 		t.Error("Expected gameover got ", liveMatch)
 	}
-	response := <-black.ResponseChanAsync
+	response = <-black.ResponseChanAsync
 	if !response.GameOver || !(response.Winner == white.name) {
 		t.Error("Expected checkmate got ", response)
 	}

@@ -1,5 +1,8 @@
 - POST /session
     - Start the session and fetch sessionToken, providing username
+- GET /session
+    - Get a session and username if one exists and match details if currently in one
+    - Client calls this on page load and sets username/game state accordingly
 - GET /match
     - Begin matching, receive color when match is found, otherwise HTTP 202
 - POST /sync
@@ -11,6 +14,3 @@
         - gameOver, requestToDraw, gameOver results
 - GET /sync
     - Get opponents move (should query this after a successful move), returns HTTP 204 if no update after server timeout
-- GET /currentgame
-    - Get the state of the board (call this to check if in a game and to get the state of it if so)
-    - Return 404 if not in a game, 200 with state otherwise

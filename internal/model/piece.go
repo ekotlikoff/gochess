@@ -8,10 +8,10 @@ import (
 type (
 	// Piece a chess piece
 	Piece struct {
-		pieceType  PieceType
-		position   Position
-		color      Color
-		movesTaken uint16
+		PieceType  PieceType
+		Position   Position
+		Color      Color
+		MovesTaken uint16
 	}
 
 	// PieceType the various piece types
@@ -43,34 +43,34 @@ func (piece *Piece) String() string {
 	if piece == nil {
 		return "-"
 	}
-	switch piece.pieceType {
+	switch piece.PieceType {
 	case Rook:
-		if piece.Color() == White {
+		if piece.Color == White {
 			return "\u2656"
 		}
 		return "\u265C"
 	case Knight:
-		if piece.Color() == White {
+		if piece.Color == White {
 			return "\u2658"
 		}
 		return "\u265E"
 	case Bishop:
-		if piece.Color() == White {
+		if piece.Color == White {
 			return "\u2657"
 		}
 		return "\u265D"
 	case Queen:
-		if piece.Color() == White {
+		if piece.Color == White {
 			return "\u2655"
 		}
 		return "\u265B"
 	case King:
-		if piece.Color() == White {
+		if piece.Color == White {
 			return "\u2654"
 		}
 		return "\u265A"
 	case Pawn:
-		if piece.Color() == White {
+		if piece.Color == White {
 			return "\u2659"
 		}
 		return "\u265F"
@@ -85,12 +85,12 @@ func (piece *Piece) ClientString() string {
 		return ""
 	}
 	out := ""
-	if piece.Color() == Black {
+	if piece.Color == Black {
 		out += "b"
 	} else {
 		out += "w"
 	}
-	switch piece.pieceType {
+	switch piece.PieceType {
 	case Rook:
 		out += "r"
 	case Knight:
@@ -112,7 +112,7 @@ func (piece *Piece) Value() int8 {
 	if piece == nil {
 		return 0
 	}
-	switch piece.pieceType {
+	switch piece.PieceType {
 	case Queen:
 		return 9
 	case Rook:
@@ -132,11 +132,11 @@ func (piece *Piece) MarshalBinary(
 	// Ensure temporary options (castle/en passant) are taken into account
 	// for draw by repetition.
 	temporaryMoveRights := uint8(0)
-	if piece.pieceType == Pawn {
+	if piece.PieceType == Pawn {
 		validMoves :=
 			piece.ValidMoves(board, previousMove, previousMover, false, king)
 		temporaryMoveRights = uint8(len(validMoves))
-	} else if piece.pieceType == King {
+	} else if piece.PieceType == King {
 		castleLeft, castleRight := piece.hasCastleRights(board)
 		if castleLeft {
 			temporaryMoveRights++
@@ -147,10 +147,10 @@ func (piece *Piece) MarshalBinary(
 	}
 	buf := new(bytes.Buffer)
 	err = binary.Write(buf, binary.BigEndian, []byte{
-		byte(piece.pieceType),
-		byte(piece.color),
-		piece.position.File,
-		piece.position.Rank,
+		byte(piece.PieceType),
+		byte(piece.Color),
+		piece.Position.File,
+		piece.Position.Rank,
 		temporaryMoveRights,
 	})
 	return buf.Bytes(), err
@@ -165,10 +165,10 @@ func (piece *Piece) StringSimple() string {
 	colorWhite := "\033[37m"
 	colorReset := "\033[0m"
 	out := colorPurple
-	if piece.Color() == White {
+	if piece.Color == White {
 		out = colorWhite
 	}
-	switch piece.pieceType {
+	switch piece.PieceType {
 	case Rook:
 		out += "r"
 	case Knight:
@@ -185,27 +185,12 @@ func (piece *Piece) StringSimple() string {
 	return out + colorReset
 }
 
-// Position return the piece's position
-func (piece *Piece) Position() Position {
-	return piece.position
-}
-
 // File return the piece's file
 func (piece *Piece) File() uint8 {
-	return piece.position.File
+	return piece.Position.File
 }
 
 // Rank return the piece's rank
 func (piece *Piece) Rank() uint8 {
-	return piece.position.Rank
-}
-
-// PieceType return the piece's type
-func (piece *Piece) PieceType() PieceType {
-	return piece.pieceType
-}
-
-// Color return the piece's color
-func (piece *Piece) Color() Color {
-	return piece.color
+	return piece.Position.Rank
 }

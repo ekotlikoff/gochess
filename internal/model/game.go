@@ -60,7 +60,7 @@ func (game *Game) Move(moveRequest MoveRequest) error {
 		return err
 	}
 	drawByFiftyMoveRule := game.turnsSinceCaptureOrPawnMove >= 100
-	possibleEnemyMoves := AllMoves(game.board, getOppositeColor(piece.color),
+	possibleEnemyMoves := AllMoves(game.board, getOppositeColor(piece.Color),
 		moveRequest.Move, piece, false, enemyKing)
 	if len(possibleEnemyMoves) == 0 &&
 		enemyKing.isThreatened(game.board, moveRequest.Move, piece) {
@@ -73,12 +73,12 @@ func (game *Game) Move(moveRequest MoveRequest) error {
 	}
 	game.previousMove = moveRequest.Move
 	game.previousMover = piece
-	game.turn = getOppositeColor(piece.color)
+	game.turn = getOppositeColor(piece.Color)
 	return nil
 }
 
 func (game *Game) handleCapturedPiece(piece *Piece, capturedPiece *Piece) {
-	if piece.pieceType != Pawn && capturedPiece == nil {
+	if piece.PieceType != Pawn && capturedPiece == nil {
 		game.turnsSinceCaptureOrPawnMove++
 	} else {
 		game.clearPositionHistory()
@@ -86,10 +86,10 @@ func (game *Game) handleCapturedPiece(piece *Piece, capturedPiece *Piece) {
 		if capturedPiece == nil {
 			return
 		}
-		if capturedPiece.color == Black {
-			game.blackPieces[capturedPiece.pieceType]--
+		if capturedPiece.Color == Black {
+			game.blackPieces[capturedPiece.PieceType]--
 		} else {
-			game.whitePieces[capturedPiece.pieceType]--
+			game.whitePieces[capturedPiece.PieceType]--
 		}
 	}
 }
@@ -125,7 +125,7 @@ func (game *Game) isMoveRequestValid(piece *Piece) error {
 		return errors.New("the game is over")
 	} else if piece == nil {
 		return errors.New("cannot move nil piece")
-	} else if piece.color != game.turn {
+	} else if piece.Color != game.turn {
 		return errors.New("it's not your turn")
 	}
 	return nil
@@ -165,7 +165,7 @@ func (game *Game) MarshalBinary() (data []byte, err error) {
 		for _, piece := range file {
 			if piece != nil {
 				king := game.blackKing
-				if piece.color == White {
+				if piece.Color == White {
 					king = game.whiteKing
 				}
 				bytes, err := piece.MarshalBinary(
@@ -198,6 +198,23 @@ func NewGame() *Game {
 	return createGame(board)
 }
 
+// NewCustomGame create a new custom game
+func NewCustomGame(serializableBoard SerializableBoard,
+	blackKing Piece, whiteKing Piece, positionHistory map[string]uint8,
+	blackPieces map[PieceType]uint8, whitePieces map[PieceType]uint8,
+	turn Color, gameOver bool, result GameResult, previousMove Move,
+	previousMover Piece, turnsSinceCaptureOrPawnMove uint8) *Game {
+	board := newBoardFromSerializableBoard(serializableBoard)
+	game := Game{
+		board, turn, gameOver, result, previousMove, &previousMover,
+		board[blackKing.File()][blackKing.Rank()],
+		board[whiteKing.File()][whiteKing.Rank()],
+		whitePieces, blackPieces, positionHistory, turnsSinceCaptureOrPawnMove,
+		sync.RWMutex{},
+	}
+	return &game
+}
+
 // NewGameNoPawns create a new game with no pawns
 func NewGameNoPawns() *Game {
 	board := newBoardNoPawns()
@@ -214,10 +231,10 @@ func createGame(board Board) *Game {
 	for _, file := range board {
 		for _, piece := range file {
 			if piece != nil {
-				if piece.color == Black {
-					game.blackPieces[piece.pieceType]++
+				if piece.Color == Black {
+					game.blackPieces[piece.PieceType]++
 				} else {
-					game.whitePieces[piece.pieceType]++
+					game.whitePieces[piece.PieceType]++
 				}
 			}
 		}
@@ -241,6 +258,22 @@ func (game *Game) GetBoard() *Board {
 	return game.board
 }
 
+// GetSerializableBoard get the game's board
+func (game *Game) GetSerializableBoard() SerializableBoard {
+	game.mutex.RLock()
+	board := game.board
+	game.mutex.RUnlock()
+	serializableBoard := []Piece{}
+	for _, file := range board {
+		for _, piece := range file {
+			if piece != nil {
+				serializableBoard = append(serializableBoard, *piece)
+			}
+		}
+	}
+	return serializableBoard
+}
+
 // PointAdvantage get the color's point advantage
 func (game *Game) PointAdvantage(color Color) int8 {
 	game.mutex.RLock()
@@ -249,7 +282,7 @@ func (game *Game) PointAdvantage(color Color) int8 {
 	for _, file := range game.board {
 		for _, piece := range file {
 			if piece != nil {
-				if piece.Color() == color {
+				if piece.Color == color {
 					points += piece.Value()
 				} else {
 					points -= piece.Value()
@@ -288,6 +321,63 @@ func (game *Game) Result() GameResult {
 	game.mutex.RLock()
 	defer game.mutex.RUnlock()
 	return game.result
+}
+
+// PreviousMover get the game's previous mover
+func (game *Game) PreviousMover() *Piece {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.previousMover
+}
+
+// PreviousMove get the game's previous move
+func (game *Game) PreviousMove() Move {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.previousMove
+}
+
+// BlackKing get the game's black king
+func (game *Game) BlackKing() *Piece {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.blackKing
+}
+
+// WhiteKing get the game's white king
+func (game *Game) WhiteKing() *Piece {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.whiteKing
+}
+
+// WhitePieces get the game's white pieces
+func (game *Game) WhitePieces() map[PieceType]uint8 {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.whitePieces
+}
+
+// BlackPieces get the game's black pieces
+func (game *Game) BlackPieces() map[PieceType]uint8 {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.blackPieces
+}
+
+// PositionHistory get the game's position history
+func (game *Game) PositionHistory() map[string]uint8 {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.positionHistory
+}
+
+// TurnsSinceCaptureOrPawnMove get the game's number of turns since a capture or
+// pawn move
+func (game *Game) TurnsSinceCaptureOrPawnMove() uint8 {
+	game.mutex.RLock()
+	defer game.mutex.RUnlock()
+	return game.turnsSinceCaptureOrPawnMove
 }
 
 func (mr MoveRequest) String() string {
