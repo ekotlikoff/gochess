@@ -55,18 +55,21 @@ const (
 )
 
 func main() {
-	config := loadConfig()
-	configureLogging(config)
+	StartChessServer(nil)
+}
+
+// StartChessServer starts the chess server
+func StartChessServer(config *Configuration) {
+	if config == nil {
+		config = loadConfig()
+	}
+	configureLogging(*config)
 	if config.EnableTracing {
-		closer := configureTracing(config)
+		closer := configureTracing(*config)
 		if closer != nil {
 			defer closer.Close()
 		}
 	}
-	startChessServer(config)
-}
-
-func startChessServer(config Configuration) {
 	engineConnTimeout, _ := time.ParseDuration(config.EngineConnectionTimeout)
 	maxMatchingDuration, _ := time.ParseDuration(config.MaxMatchingDuration)
 	var matchingServer matchserver.MatchingServer
@@ -129,11 +132,11 @@ func configureTracing(config Configuration) io.Closer {
 	return closer
 }
 
-func loadConfig() Configuration {
+func loadConfig() *Configuration {
 	configuration := Configuration{}
 	err := json.Unmarshal(config, &configuration)
 	if err != nil {
 		fmt.Println("ERROR:", err)
 	}
-	return configuration
+	return &configuration
 }
