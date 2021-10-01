@@ -3,12 +3,14 @@
     - [ ] More Prometheus metrics
     - [ ] Improve logging
 * Server
-    - http server
-      - [ ] Support some mechanism for a user cancelling their matchmaking
-        - Probably would require a matching redesign, right now matchmaking is handled from a channel which doesn't support adhoc removal
-    - [] handle disconnected WS client gracefully, let matchserver know on disconnect and it starts a timer, ending game with timeout on alarm
+    - [ ] handle disconnected WS client gracefully, let matchserver know on disconnect and it starts a timer, ending game with timeout on alarm
+    - [ ] Support some mechanism for a user cancelling their matchmaking
+      - Probably would require a matching redesign, right now matchmaking is handled from a channel which doesn't support adhoc removal
     - http server sessions
       - [ ] user auth?
+* Hosting
+    - [ ] Port forwarding or public cloud?
+    - [ ] Let's encrypt for SSL
 
 ### Done
 * Observability
