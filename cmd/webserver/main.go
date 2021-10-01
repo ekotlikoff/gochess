@@ -55,6 +55,10 @@ const (
 )
 
 func main() {
+	StartChessServer(config)
+}
+
+func StartChessServer(config Configuration) {
 	config := loadConfig()
 	configureLogging(config)
 	if config.EnableTracing {
@@ -63,10 +67,6 @@ func main() {
 			defer closer.Close()
 		}
 	}
-	startChessServer(config)
-}
-
-func startChessServer(config Configuration) {
 	engineConnTimeout, _ := time.ParseDuration(config.EngineConnectionTimeout)
 	maxMatchingDuration, _ := time.ParseDuration(config.MaxMatchingDuration)
 	var matchingServer matchserver.MatchingServer
