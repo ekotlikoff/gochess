@@ -58,6 +58,7 @@ func main() {
 	StartChessServer(nil)
 }
 
+// StartChessServer starts the chess server
 func StartChessServer(config *Configuration) {
 	if config == nil {
 		config = loadConfig()
