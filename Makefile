@@ -1,5 +1,5 @@
 webclient_package := github.com/Ekotlikoff/gochess/internal/client/web
-run_local_package := github.com/Ekotlikoff/gochess/cmd/webserver
+run_local_package := github.com/Ekotlikoff/gochess/cmd/gochess
 
 all: vet proto web test testrace
 

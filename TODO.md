@@ -9,6 +9,12 @@
     - http server sessions
       - [ ] user auth?
 * Hosting
+    - [ ] Restructure to enable other repos depending on this as a library
+      - [ ] internal/server/frontend may need to go in pkg so that consuming
+        repos can compile to lib.wasm? Or just commit the wasm binary?  What's
+        the cleanest way of handling this?
+      - [ ] Whatever we choose we should document clear in README.md for
+        projects that consume this library
     - [ ] Port forwarding or public cloud?
     - [ ] Let's encrypt for SSL
 
