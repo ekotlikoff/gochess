@@ -55,14 +55,16 @@ const (
 )
 
 func main() {
-	StartChessServer(config)
+	StartChessServer(nil)
 }
 
-func StartChessServer(config Configuration) {
-	config := loadConfig()
-	configureLogging(config)
+func StartChessServer(config *Configuration) {
+	if config == nil {
+		config = loadConfig()
+	}
+	configureLogging(*config)
 	if config.EnableTracing {
-		closer := configureTracing(config)
+		closer := configureTracing(*config)
 		if closer != nil {
 			defer closer.Close()
 		}
@@ -129,11 +131,11 @@ func configureTracing(config Configuration) io.Closer {
 	return closer
 }
 
-func loadConfig() Configuration {
+func loadConfig() *Configuration {
 	configuration := Configuration{}
 	err := json.Unmarshal(config, &configuration)
 	if err != nil {
 		fmt.Println("ERROR:", err)
 	}
-	return configuration
+	return &configuration
 }
