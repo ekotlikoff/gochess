@@ -57,13 +57,16 @@ const (
 )
 
 // RunServer runs the gochess server
-func RunServer(config *Configuration) {
-	if config == nil {
-		config = loadConfig()
-	}
-	configureLogging(*config)
+func RunServer() {
+	config = loadConfig()
+	RunServerWithConfig(config)
+}
+
+// RunServerWithConfig runs the gochess server with a custom config
+func RunServerWithConfig(config Configuration) {
+	configureLogging(config)
 	if config.EnableTracing {
-		closer := configureTracing(*config)
+		closer := configureTracing(config)
 		if closer != nil {
 			defer closer.Close()
 		}
@@ -130,11 +133,11 @@ func configureTracing(config Configuration) io.Closer {
 	return closer
 }
 
-func loadConfig() *Configuration {
+func loadConfig() Configuration {
 	configuration := Configuration{}
-	err := json.Unmarshal(config, &configuration)
+	err := json.Unmarshal(config, configuration)
 	if err != nil {
 		fmt.Println("ERROR:", err)
 	}
-	return &configuration
+	return configuration
 }
