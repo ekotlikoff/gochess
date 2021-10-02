@@ -19,7 +19,5 @@ A chess server where players can match and play with others using their web brow
 
 ## Usage as a package
 * `go get github.com/Ekotlikoff/gochess/pkg/chessserver`
-*	`GOARCH=wasm GOOS=js go build \
-		-o ~/bin/gochessclient.wasm \
-		-tags webclient github.com/Ekotlikoff/gochess/internal/client/web`
+*	`GOARCH=wasm GOOS=js go build -o ~/bin/gochessclient.wasm -tags webclient github.com/Ekotlikoff/gochess/internal/client/web`
 * `go chessserver.RunServer()`
