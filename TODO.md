@@ -14,6 +14,9 @@
     - http server sessions
       - [ ] user auth?
 * Hosting
+    - [ ] Just including including wasm in the package sucks, every build
+      creates a diff because of the different build ID.  Remove the wasm and
+      instead look to consume the package as a binary stored in a git release
     - [ ] Port forwarding or public cloud?
     - [ ] Let's encrypt for SSL
 
