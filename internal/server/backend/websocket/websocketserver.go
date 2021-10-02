@@ -28,12 +28,23 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 )
 
+// WSBackend handles websocket connections
+type WSBackend struct {
+	MatchServer *matchserver.MatchingServer
+	BasePath    string
+	Port        int
+}
+
 // Serve the websocket server
-func Serve(matchServer *matchserver.MatchingServer, port int) {
+func (backend *WSBackend) Serve() {
+	bp := backend.BasePath
+	if len(bp) > 0 && (bp[len(bp)-1:] == "/" || bp[0:1] != "/") {
+		panic("Invalid gateway base path")
+	}
 	mux := http.NewServeMux()
-	mux.Handle("/ws", makeWebsocketHandler(matchServer))
-	log.Println("WebsocketServer listening on port", port, "...")
-	http.ListenAndServe(":"+strconv.Itoa(port), mux)
+	mux.Handle(bp+"/ws", makeWebsocketHandler(backend.MatchServer))
+	log.Println("WebsocketServer listening on port", backend.Port, "...")
+	http.ListenAndServe(":"+strconv.Itoa(backend.Port), mux)
 }
 
 func makeWebsocketHandler(matchServer *matchserver.MatchingServer,

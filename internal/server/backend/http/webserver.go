@@ -13,16 +13,25 @@ import (
 	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
 )
 
+// HTTPBackend handles http requests
+type HTTPBackend struct {
+	MatchServer *matchserver.MatchingServer
+	BasePath    string
+	Port        int
+}
+
 // Serve the http server
-func Serve(
-	matchServer *matchserver.MatchingServer, port int,
-) {
+func (backend *HTTPBackend) Serve() {
+	bp := backend.BasePath
+	if len(bp) > 0 && (bp[len(bp)-1:] == "/" || bp[0:1] != "/") {
+		panic("Invalid gateway base path")
+	}
 	mux := http.NewServeMux()
-	mux.Handle("/http/match", makeSearchForMatchHandler(matchServer))
-	mux.Handle("/http/sync", makeSyncHandler())
-	mux.Handle("/http/async", makeAsyncHandler())
-	log.Println("HTTP server listening on port", port, "...")
-	http.ListenAndServe(":"+strconv.Itoa(port), mux)
+	mux.Handle(bp+"/http/match", makeSearchForMatchHandler(backend.MatchServer))
+	mux.Handle(bp+"/http/sync", makeSyncHandler())
+	mux.Handle(bp+"/http/async", makeAsyncHandler())
+	log.Println("HTTP server listening on port", backend.Port, "...")
+	http.ListenAndServe(":"+strconv.Itoa(backend.Port), mux)
 }
 
 // SetQuiet logging

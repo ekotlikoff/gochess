@@ -14,16 +14,16 @@
     - http server sessions
       - [ ] user auth?
 * Hosting
-    - [ ] Restructure to enable other repos depending on this as a library
-      - [ ] internal/server/frontend may need to go in pkg so that consuming
-        repos can compile to lib.wasm? Or just commit the wasm binary?  What's
-        the cleanest way of handling this?
-      - [ ] Whatever we choose we should document clear in README.md for
-        projects that consume this library
-    - [ ] Port forwarding or public cloud?
-    - [ ] Let's encrypt for SSL
+    - [ ] Write a build script to simplify setup for client pkges, they can just
+      run the script and not bother with the go build command
+    - [ ] Publish gochess binary in a git release
 
 ### Done
+* Hosting
+    - [x] Let consuming packages build the web client into lib.wasm (client finds .wasm in ~/bin/)
+    - [x] Make the url path that gochess listens on configurable, this will make it easier to embed in another site (proxy all calls to that url path to
+      gochess)
+    - [x] Restructure to enable other repos depending on this as a library
 * Observability
     - Prometheus metrics
         - [x] gauge for number of live games

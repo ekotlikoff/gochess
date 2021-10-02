@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
@@ -55,38 +56,62 @@ func init() {
 	prometheus.MustRegister(gatewayResponseDurationMetric)
 }
 
-// Credentials are the credentialss for authentication
-type Credentials struct {
-	Username string
-}
+type (
+	// Gateway is the server that serves static files and proxies to the different
+	// backends
+	Gateway struct {
+		HTTPBackend *url.URL
+		WSBackend   *url.URL
+		BasePath    string
+		Port        int
+	}
+
+	// Credentials for authentication
+	Credentials struct {
+		Username string
+	}
+)
 
 // Serve static files and proxy to the different backends
-func Serve(httpBackend *url.URL, websocketBackend *url.URL, port int) {
-	httpBackendProxy := httputil.NewSingleHostReverseProxy(httpBackend)
-	wsBackendProxy := httputil.NewSingleHostReverseProxy(websocketBackend)
+func (gw *Gateway) Serve() {
+	httpBackendProxy := httputil.NewSingleHostReverseProxy(gw.HTTPBackend)
+	wsBackendProxy := httputil.NewSingleHostReverseProxy(gw.WSBackend)
 	wsBackendProxy.ModifyResponse = func(res *http.Response) error {
 		gatewayResponseMetric.WithLabelValues(
 			res.Request.URL.Path, res.Request.Method, res.Status).Inc()
 		return nil
 	}
 	mux := http.NewServeMux()
-	mux.Handle("/", prometheusMiddleware(http.HandlerFunc(handleWebRoot)))
-	mux.Handle("/session", prometheusMiddleware(http.HandlerFunc(Session)))
+	bp := gw.BasePath
+	if len(bp) > 0 && (bp[len(bp)-1:] == "/" || bp[0:1] != "/") {
+		panic("Invalid gateway base path")
+	}
+	mux.Handle(bp+"/", prometheusMiddleware(http.HandlerFunc(gw.handleWebRoot)))
+	mux.Handle(bp+"/gochessclient.wasm", prometheusMiddleware(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, os.Getenv("HOME")+"/bin/gochessclient.wasm")
+		})))
+	mux.Handle(bp+"/session", prometheusMiddleware(http.HandlerFunc(Session)))
 	// HTTP backend proxying
-	mux.Handle("/http/match", prometheusMiddleware(httpBackendProxy))
-	mux.Handle("/http/sync", prometheusMiddleware(httpBackendProxy))
-	mux.Handle("/http/async", prometheusMiddleware(httpBackendProxy))
+	mux.Handle(bp+"/http/match", prometheusMiddleware(httpBackendProxy))
+	mux.Handle(bp+"/http/sync", prometheusMiddleware(httpBackendProxy))
+	mux.Handle(bp+"/http/async", prometheusMiddleware(httpBackendProxy))
 	// Websocket backend proxying
-	mux.Handle("/ws", wsBackendProxy)
+	mux.Handle(bp+"/ws", wsBackendProxy)
 	// Prometheus metrics endpoint
-	mux.Handle("/metrics", prometheusMiddleware(
+	mux.Handle(bp+"/metrics", prometheusMiddleware(
 		promhttp.Handler()))
-	log.Println("Gateway server listening on port", port, "...")
-	http.ListenAndServe(":"+strconv.Itoa(port), mux)
+	log.Println("Gateway server listening on port", gw.Port, "...")
+	http.ListenAndServe(":"+strconv.Itoa(gw.Port), mux)
 }
 
-func handleWebRoot(w http.ResponseWriter, r *http.Request) {
-	r.URL.Path = "/static" + r.URL.Path // This is a hack to get the embedded path
+func (gw *Gateway) handleWebRoot(w http.ResponseWriter, r *http.Request) {
+	bp := gw.BasePath
+	if len(bp) > 0 && len(r.URL.Path) > len(bp) && r.URL.Path[0:len(bp)] == bp {
+		r.URL.Path = "/static" + r.URL.Path[len(bp):]
+	} else {
+		r.URL.Path = "/static" + r.URL.Path // This is a hack to get the embedded path
+	}
 	http.FileServer(http.FS(webStaticFS)).ServeHTTP(w, r)
 }
 

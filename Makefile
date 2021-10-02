@@ -23,7 +23,7 @@ testrace:
 
 web:
 	GOARCH=wasm GOOS=js go build \
-		-o $(GOPATH)/src/gochess/internal/server/frontend/static/lib.wasm \
+		-o ~/bin/gochessclient.wasm \
 		-tags webclient $(webclient_package)
 
 runweb: web

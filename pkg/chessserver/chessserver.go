@@ -33,6 +33,7 @@ type (
 		ServiceName             string
 		Environment             string
 		BackendType             BackendType
+		BasePath                string
 		EnableBotMatching       bool
 		EngineConnectionTimeout string
 		EngineAddr              string
@@ -57,13 +58,16 @@ const (
 )
 
 // RunServer runs the gochess server
-func RunServer(config *Configuration) {
-	if config == nil {
-		config = loadConfig()
-	}
-	configureLogging(*config)
+func RunServer() {
+	c := loadConfig()
+	RunServerWithConfig(c)
+}
+
+// RunServerWithConfig runs the gochess server with a custom config
+func RunServerWithConfig(config Configuration) {
+	configureLogging(config)
 	if config.EnableTracing {
-		closer := configureTracing(*config)
+		closer := configureTracing(config)
 		if closer != nil {
 			defer closer.Close()
 		}
@@ -82,15 +86,31 @@ func RunServer(config *Configuration) {
 		matchserver.CreateCustomMatchGenerator(config.MatchPlayerTimeSeconds),
 		exitChan)
 	if config.BackendType == HTTPBackend {
-		go httpserver.Serve(&matchingServer, config.HTTPPort)
+		httpBackend := httpserver.HTTPBackend{
+			MatchServer: &matchingServer,
+			BasePath:    config.BasePath,
+			Port:        config.HTTPPort,
+		}
+		go httpBackend.Serve()
 	} else if config.BackendType == WebsocketBackend {
-		go websocketserver.Serve(&matchingServer, config.WSPort)
+		wsBackend := websocketserver.WSBackend{
+			MatchServer: &matchingServer,
+			BasePath:    config.BasePath,
+			Port:        config.WSPort,
+		}
+		go wsBackend.Serve()
 	}
 	httpserverURL, _ := url.Parse("http://localhost:" +
 		strconv.Itoa(config.HTTPPort))
 	websocketURL, _ := url.Parse("http://localhost:" +
 		strconv.Itoa(config.WSPort))
-	gateway.Serve(httpserverURL, websocketURL, config.GatewayPort)
+	gw := gateway.Gateway{
+		HTTPBackend: httpserverURL,
+		WSBackend:   websocketURL,
+		BasePath:    config.BasePath,
+		Port:        config.GatewayPort,
+	}
+	gw.Serve()
 }
 
 func configureLogging(config Configuration) {
@@ -130,11 +150,11 @@ func configureTracing(config Configuration) io.Closer {
 	return closer
 }
 
-func loadConfig() *Configuration {
+func loadConfig() Configuration {
 	configuration := Configuration{}
 	err := json.Unmarshal(config, &configuration)
 	if err != nil {
 		fmt.Println("ERROR:", err)
 	}
-	return &configuration
+	return configuration
 }
