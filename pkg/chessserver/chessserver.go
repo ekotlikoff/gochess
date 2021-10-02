@@ -11,6 +11,9 @@ import (
 	"strconv"
 	"time"
 
+	// Blank import to embed config.json
+	_ "embed"
+
 	httpserver "github.com/Ekotlikoff/gochess/internal/server/backend/http"
 	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
 	websocketserver "github.com/Ekotlikoff/gochess/internal/server/backend/websocket"
@@ -53,6 +56,7 @@ const (
 	WebsocketBackend = BackendType("websocket")
 )
 
+// RunServer runs the gochess server
 func RunServer(config *Configuration) {
 	if config == nil {
 		config = loadConfig()
