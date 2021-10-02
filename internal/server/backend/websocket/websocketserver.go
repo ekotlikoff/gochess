@@ -28,6 +28,7 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 )
 
+// WSBackend handles websocket connections
 type WSBackend struct {
 	MatchServer *matchserver.MatchingServer
 	BasePath    string

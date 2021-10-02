@@ -13,6 +13,7 @@ import (
 	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
 )
 
+// HTTPBackend handles http requests
 type HTTPBackend struct {
 	MatchServer *matchserver.MatchingServer
 	BasePath    string
