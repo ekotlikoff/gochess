@@ -3,6 +3,11 @@
     - [ ] More Prometheus metrics
     - [ ] Improve logging
 * Server
+    - [ ] Create http server objects to use for graceful shutdowns
+      - use https://pkg.go.dev/net/http#Server.Shutdown to shut down without
+        interrupting active connections
+      - use https://pkg.go.dev/net/http#Server.RegisterOnShutdown (not sure if
+        needed for websocket conns)
     - [ ] handle disconnected WS client gracefully, let matchserver know on disconnect and it starts a timer, ending game with timeout on alarm
     - [ ] Support some mechanism for a user cancelling their matchmaking
       - Probably would require a matching redesign, right now matchmaking is handled from a channel which doesn't support adhoc removal
