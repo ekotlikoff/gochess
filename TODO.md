@@ -3,12 +3,23 @@
     - [ ] More Prometheus metrics
     - [ ] Improve logging
 * Server
+    - [ ] Create http server objects to use for graceful shutdowns
+      - use https://pkg.go.dev/net/http#Server.Shutdown to shut down without
+        interrupting active connections
+      - use https://pkg.go.dev/net/http#Server.RegisterOnShutdown (not sure if
+        needed for websocket conns)
     - [ ] handle disconnected WS client gracefully, let matchserver know on disconnect and it starts a timer, ending game with timeout on alarm
     - [ ] Support some mechanism for a user cancelling their matchmaking
       - Probably would require a matching redesign, right now matchmaking is handled from a channel which doesn't support adhoc removal
     - http server sessions
       - [ ] user auth?
 * Hosting
+    - [ ] Restructure to enable other repos depending on this as a library
+      - [ ] internal/server/frontend may need to go in pkg so that consuming
+        repos can compile to lib.wasm? Or just commit the wasm binary?  What's
+        the cleanest way of handling this?
+      - [ ] Whatever we choose we should document clear in README.md for
+        projects that consume this library
     - [ ] Port forwarding or public cloud?
     - [ ] Let's encrypt for SSL
 

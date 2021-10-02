@@ -1,7 +1,6 @@
-package main
+package chessserver
 
 import (
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +10,9 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	// Blank import to embed config.json
+	_ "embed"
 
 	httpserver "github.com/Ekotlikoff/gochess/internal/server/backend/http"
 	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
@@ -54,12 +56,8 @@ const (
 	WebsocketBackend = BackendType("websocket")
 )
 
-func main() {
-	StartChessServer(nil)
-}
-
-// StartChessServer starts the chess server
-func StartChessServer(config *Configuration) {
+// RunServer runs the gochess server
+func RunServer(config *Configuration) {
 	if config == nil {
 		config = loadConfig()
 	}
