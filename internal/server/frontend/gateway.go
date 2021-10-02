@@ -55,15 +55,26 @@ func init() {
 	prometheus.MustRegister(gatewayResponseDurationMetric)
 }
 
-// Credentials are the credentialss for authentication
-type Credentials struct {
-	Username string
-}
+type (
+	// Gateway is the server that serves static files and proxies to the different
+	// backends
+	Gateway struct {
+		HTTPBackend *url.URL
+		WSBackend   *url.URL
+		BasePath    string
+		Port        int
+	}
+
+	// Credentials for authentication
+	Credentials struct {
+		Username string
+	}
+)
 
 // Serve static files and proxy to the different backends
-func Serve(httpBackend *url.URL, websocketBackend *url.URL, port int) {
-	httpBackendProxy := httputil.NewSingleHostReverseProxy(httpBackend)
-	wsBackendProxy := httputil.NewSingleHostReverseProxy(websocketBackend)
+func (gw *Gateway) Serve() {
+	httpBackendProxy := httputil.NewSingleHostReverseProxy(gw.HTTPBackend)
+	wsBackendProxy := httputil.NewSingleHostReverseProxy(gw.WSBackend)
 	wsBackendProxy.ModifyResponse = func(res *http.Response) error {
 		gatewayResponseMetric.WithLabelValues(
 			res.Request.URL.Path, res.Request.Method, res.Status).Inc()
@@ -81,8 +92,8 @@ func Serve(httpBackend *url.URL, websocketBackend *url.URL, port int) {
 	// Prometheus metrics endpoint
 	mux.Handle("/metrics", prometheusMiddleware(
 		promhttp.Handler()))
-	log.Println("Gateway server listening on port", port, "...")
-	http.ListenAndServe(":"+strconv.Itoa(port), mux)
+	log.Println("Gateway server listening on port", gw.Port, "...")
+	http.ListenAndServe(":"+strconv.Itoa(gw.Port), mux)
 }
 
 func handleWebRoot(w http.ResponseWriter, r *http.Request) {

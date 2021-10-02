@@ -93,7 +93,12 @@ func RunServerWithConfig(config Configuration) {
 		strconv.Itoa(config.HTTPPort))
 	websocketURL, _ := url.Parse("http://localhost:" +
 		strconv.Itoa(config.WSPort))
-	gateway.Serve(httpserverURL, websocketURL, config.GatewayPort)
+	gw := gateway.Gateway{
+		HTTPBackend: httpserverURL,
+		WSBackend:   websocketURL,
+		Port:        config.GatewayPort,
+	}
+	gw.Serve()
 }
 
 func configureLogging(config Configuration) {

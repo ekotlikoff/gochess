@@ -14,9 +14,13 @@
     - http server sessions
       - [ ] user auth?
 * Hosting
-    - [ ] Just including including wasm in the package sucks, every build
+    - [x] Just kidding including including wasm in the package sucks, every build
       creates a diff because of the different build ID.  Remove the wasm and
       instead look to consume the package as a binary stored in a git release
+    - [ ] Make the url path that gochess listens on configurable, this will make
+      it easier to embed in another site (proxy all calls to that url path to
+      gochess)
+    - [ ] Publish gochess binary in a git release
     - [ ] Port forwarding or public cloud?
     - [ ] Let's encrypt for SSL
 
