@@ -1,7 +1,6 @@
 package chessserver
 
 import (
-	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
