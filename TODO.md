@@ -14,9 +14,9 @@
     - http server sessions
       - [ ] user auth?
 * Hosting
+    - [ ] Write a build script to simplify setup for client pkges, they can just
+      run the script and not bother with the go build command
     - [ ] Publish gochess binary in a git release
-    - [ ] Port forwarding or public cloud?
-    - [ ] Let's encrypt for SSL
 
 ### Done
 * Hosting
