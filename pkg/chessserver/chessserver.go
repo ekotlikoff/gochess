@@ -135,7 +135,7 @@ func configureTracing(config Configuration) io.Closer {
 
 func loadConfig() Configuration {
 	configuration := Configuration{}
-	err := json.Unmarshal(config, configuration)
+	err := json.Unmarshal(config, &configuration)
 	if err != nil {
 		fmt.Println("ERROR:", err)
 	}
