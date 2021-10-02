@@ -288,7 +288,8 @@ func (cm *ClientModel) takeMove(
 			json.NewEncoder(movePayloadBuf).Encode(moveRequest)
 			resp, err := retryWrapper(
 				func() (*http.Response, error) {
-					return cm.client.Post("http/sync", ctp, movePayloadBuf)
+					pathname := js.Global().Get("location").Get("pathname").String()
+					return cm.client.Post(pathname+"http/sync", ctp, movePayloadBuf)
 				},
 				"POST http/sync", 0,
 				func() { cm.remoteGameEnd() },
@@ -324,7 +325,8 @@ func (cm *ClientModel) listenForSyncUpdateHttp() {
 		}
 		resp, err := retryWrapper(
 			func() (*http.Response, error) {
-				return cm.client.Get("http/sync")
+				pathname := js.Global().Get("location").Get("pathname").String()
+				return cm.client.Get(pathname + "http/sync")
 			},
 			"GET http/sync", 0,
 			func() { cm.remoteGameEnd() },
@@ -369,7 +371,8 @@ func (cm *ClientModel) listenForAsyncUpdateHttp() {
 		}
 		resp, err := retryWrapper(
 			func() (*http.Response, error) {
-				return cm.client.Get("http/async")
+				pathname := js.Global().Get("location").Get("pathname").String()
+				return cm.client.Get(pathname + "http/async")
 			},
 			"http/async", 0,
 			func() { cm.remoteGameEnd() },
@@ -439,7 +442,8 @@ func (cm *ClientModel) genResign() js.Func {
 		request := matchserver.RequestAsync{Resign: true}
 		json.NewEncoder(requestBuf).Encode(request)
 		if cm.backendType == HttpBackend {
-			go cm.client.Post("http/async", ctp, requestBuf)
+			pathname := js.Global().Get("location").Get("pathname").String()
+			go cm.client.Post(pathname+"http/async", ctp, requestBuf)
 		} else if cm.backendType == WebsocketBackend {
 			message := matchserver.WebsocketRequest{
 				WebsocketRequestType: matchserver.RequestAsyncT,
@@ -464,7 +468,8 @@ func (cm *ClientModel) sendDraw() {
 	request := matchserver.RequestAsync{RequestToDraw: true}
 	json.NewEncoder(requestBuf).Encode(request)
 	if cm.backendType == HttpBackend {
-		_, err := cm.client.Post("http/async", ctp, requestBuf)
+		pathname := js.Global().Get("location").Get("pathname").String()
+		_, err := cm.client.Post(pathname+"http/async", ctp, requestBuf)
 		if err != nil {
 			return
 		}
@@ -567,7 +572,8 @@ func (cm *ClientModel) handleRejoinMatch(match gateway.CurrentMatch) {
 func (cm *ClientModel) httpMatch() error {
 	_, err := retryWrapper(
 		func() (*http.Response, error) {
-			return cm.client.Get("http/match")
+			pathname := js.Global().Get("location").Get("pathname").String()
+			return cm.client.Get(pathname + "http/match")
 		},
 		"http/match", 200,
 		func() {
@@ -601,7 +607,8 @@ func (cm *ClientModel) wsMatch() error {
 }
 
 func (cm *ClientModel) wsConnect() error {
-	u := "ws://" + cm.origin + "/ws"
+	pathname := js.Global().Get("location").Get("pathname").String()
+	u := "ws://" + cm.origin + pathname + "ws"
 	ws := js.Global().Get("WebSocket").New(u)
 	retries := 0
 	maxRetries := 100

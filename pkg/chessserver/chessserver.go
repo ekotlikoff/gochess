@@ -33,6 +33,7 @@ type (
 		ServiceName             string
 		Environment             string
 		BackendType             BackendType
+		BasePath                string
 		EnableBotMatching       bool
 		EngineConnectionTimeout string
 		EngineAddr              string
@@ -85,9 +86,19 @@ func RunServerWithConfig(config Configuration) {
 		matchserver.CreateCustomMatchGenerator(config.MatchPlayerTimeSeconds),
 		exitChan)
 	if config.BackendType == HTTPBackend {
-		go httpserver.Serve(&matchingServer, config.HTTPPort)
+		httpBackend := httpserver.HTTPBackend{
+			MatchServer: &matchingServer,
+			BasePath:    config.BasePath,
+			Port:        config.HTTPPort,
+		}
+		go httpBackend.Serve()
 	} else if config.BackendType == WebsocketBackend {
-		go websocketserver.Serve(&matchingServer, config.WSPort)
+		wsBackend := websocketserver.WSBackend{
+			MatchServer: &matchingServer,
+			BasePath:    config.BasePath,
+			Port:        config.WSPort,
+		}
+		go wsBackend.Serve()
 	}
 	httpserverURL, _ := url.Parse("http://localhost:" +
 		strconv.Itoa(config.HTTPPort))
@@ -96,6 +107,7 @@ func RunServerWithConfig(config Configuration) {
 	gw := gateway.Gateway{
 		HTTPBackend: httpserverURL,
 		WSBackend:   websocketURL,
+		BasePath:    config.BasePath,
 		Port:        config.GatewayPort,
 	}
 	gw.Serve()

@@ -2,6 +2,7 @@
     "ServiceName": "gochess",
     "Environment": "local",
     "BackendType": "websocket",
+    "BasePath": "/chess",
     "EnableBotMatching": true,
     "EngineConnectionTimeout": "1s",
     "EngineAddr": "localhost:50051",

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
@@ -81,23 +82,36 @@ func (gw *Gateway) Serve() {
 		return nil
 	}
 	mux := http.NewServeMux()
-	mux.Handle("/", prometheusMiddleware(http.HandlerFunc(handleWebRoot)))
-	mux.Handle("/session", prometheusMiddleware(http.HandlerFunc(Session)))
+	bp := gw.BasePath
+	if len(bp) > 0 && (bp[len(bp)-1:] == "/" || bp[0:1] != "/") {
+		panic("Invalid gateway base path")
+	}
+	mux.Handle(bp+"/", prometheusMiddleware(http.HandlerFunc(gw.handleWebRoot)))
+	mux.Handle(bp+"/gochessclient.wasm", prometheusMiddleware(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, os.Getenv("HOME")+"/bin/gochessclient.wasm")
+		})))
+	mux.Handle(bp+"/session", prometheusMiddleware(http.HandlerFunc(Session)))
 	// HTTP backend proxying
-	mux.Handle("/http/match", prometheusMiddleware(httpBackendProxy))
-	mux.Handle("/http/sync", prometheusMiddleware(httpBackendProxy))
-	mux.Handle("/http/async", prometheusMiddleware(httpBackendProxy))
+	mux.Handle(bp+"/http/match", prometheusMiddleware(httpBackendProxy))
+	mux.Handle(bp+"/http/sync", prometheusMiddleware(httpBackendProxy))
+	mux.Handle(bp+"/http/async", prometheusMiddleware(httpBackendProxy))
 	// Websocket backend proxying
-	mux.Handle("/ws", wsBackendProxy)
+	mux.Handle(bp+"/ws", wsBackendProxy)
 	// Prometheus metrics endpoint
-	mux.Handle("/metrics", prometheusMiddleware(
+	mux.Handle(bp+"/metrics", prometheusMiddleware(
 		promhttp.Handler()))
 	log.Println("Gateway server listening on port", gw.Port, "...")
 	http.ListenAndServe(":"+strconv.Itoa(gw.Port), mux)
 }
 
-func handleWebRoot(w http.ResponseWriter, r *http.Request) {
-	r.URL.Path = "/static" + r.URL.Path // This is a hack to get the embedded path
+func (gw *Gateway) handleWebRoot(w http.ResponseWriter, r *http.Request) {
+	bp := gw.BasePath
+	if len(bp) > 0 && len(r.URL.Path) > len(bp) && r.URL.Path[0:len(bp)] == bp {
+		r.URL.Path = "/static" + r.URL.Path[len(bp):]
+	} else {
+		r.URL.Path = "/static" + r.URL.Path // This is a hack to get the embedded path
+	}
 	http.FileServer(http.FS(webStaticFS)).ServeHTTP(w, r)
 }
 

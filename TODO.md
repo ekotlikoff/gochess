@@ -14,25 +14,16 @@
     - http server sessions
       - [ ] user auth?
 * Hosting
-    - [x] Just kidding including including wasm in the package sucks, every build
-      creates a diff because of the different build ID.  Remove the wasm and
-      instead look to consume the package as a binary stored in a git release
-    - [ ] Make the url path that gochess listens on configurable, this will make
-      it easier to embed in another site (proxy all calls to that url path to
-      gochess)
     - [ ] Publish gochess binary in a git release
     - [ ] Port forwarding or public cloud?
     - [ ] Let's encrypt for SSL
 
 ### Done
 * Hosting
+    - [x] Let consuming packages build the web client into lib.wasm (client finds .wasm in ~/bin/)
+    - [x] Make the url path that gochess listens on configurable, this will make it easier to embed in another site (proxy all calls to that url path to
+      gochess)
     - [x] Restructure to enable other repos depending on this as a library
-      - [x] internal/server/frontend may need to go in pkg so that consuming
-        repos can compile to lib.wasm? Or just commit the wasm binary?  What's
-        the cleanest way of handling this?
-         - Decided to include the wasm binary in the package, not sure how clean
-           it is but until we package up gochess as a container or binary this
-           will have to do
 * Observability
     - Prometheus metrics
         - [x] gauge for number of live games
