@@ -58,8 +58,8 @@ const (
 
 // RunServer runs the gochess server
 func RunServer() {
-	config = loadConfig()
-	RunServerWithConfig(config)
+	c := loadConfig()
+	RunServerWithConfig(c)
 }
 
 // RunServerWithConfig runs the gochess server with a custom config
