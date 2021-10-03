@@ -10,7 +10,7 @@ require (
 	github.com/uber/jaeger-client-go v2.29.1+incompatible
 	github.com/uber/jaeger-lib v2.4.1+incompatible
 	google.golang.org/grpc v1.27.0
-	google.golang.org/protobuf v1.26.0-rc.1
+	google.golang.org/protobuf v1.27.1
 )
 
 require (
