@@ -1,4 +1,4 @@
-// +build webclient
+//go:build webclient
 
 package main
 
