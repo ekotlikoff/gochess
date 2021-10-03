@@ -1,6 +1,7 @@
 ### Todo
 * Observability
     - [ ] More Prometheus metrics
+      - [ ] Number of sessions
     - [ ] Improve logging
 * Server
     - [ ] Create http server objects to use for graceful shutdowns

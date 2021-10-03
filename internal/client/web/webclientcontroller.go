@@ -609,6 +609,9 @@ func (cm *ClientModel) wsMatch() error {
 func (cm *ClientModel) wsConnect() error {
 	pathname := js.Global().Get("location").Get("pathname").String()
 	u := "ws://" + cm.origin + pathname + "ws"
+	if cm.tls {
+		u = "wss://" + cm.origin + pathname + "ws"
+	}
 	ws := js.Global().Get("WebSocket").New(u)
 	retries := 0
 	maxRetries := 100
