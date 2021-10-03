@@ -23,13 +23,11 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.18.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
-	github.com/stretchr/testify v1.7.0 // indirect
 	go.uber.org/atomic v1.5.0 // indirect
 	golang.org/x/lint v0.0.0-20190930215403-16217165b5de // indirect
 	golang.org/x/net v0.0.0-20200822124328-c89045814202 // indirect
 	golang.org/x/sys v0.0.0-20210309074719-68d13333faf2 // indirect
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/tools v0.0.0-20200103221440-774c71fcf114 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 )
