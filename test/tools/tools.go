@@ -1,4 +1,4 @@
-// +build tools
+//go:build tools
 
 // This package exists to cause `go mod` and `go get` to believe these tools
 // are dependencies, even though they are not runtime dependencies.
