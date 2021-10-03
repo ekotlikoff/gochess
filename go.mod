@@ -9,7 +9,7 @@ require (
 	github.com/prometheus/client_golang v1.7.1
 	github.com/uber/jaeger-client-go v2.29.1+incompatible
 	github.com/uber/jaeger-lib v2.4.1+incompatible
-	google.golang.org/grpc v1.27.0
+	google.golang.org/grpc v1.41.0
 	google.golang.org/protobuf v1.27.1
 )
 
@@ -26,7 +26,7 @@ require (
 	github.com/stretchr/testify v1.7.0 // indirect
 	go.uber.org/atomic v1.5.0 // indirect
 	golang.org/x/lint v0.0.0-20190930215403-16217165b5de // indirect
-	golang.org/x/net v0.0.0-20200625001655-4c5254603344 // indirect
+	golang.org/x/net v0.0.0-20200822124328-c89045814202 // indirect
 	golang.org/x/sys v0.0.0-20210309074719-68d13333faf2 // indirect
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/tools v0.0.0-20200103221440-774c71fcf114 // indirect
