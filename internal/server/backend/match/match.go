@@ -9,6 +9,8 @@ import (
 	"github.com/Ekotlikoff/gochess/internal/model"
 )
 
+const clientGameoverNotifGracePeriod = 1 * time.Second
+
 type (
 	// Match is a struct representing a game between two players
 	Match struct {
@@ -279,7 +281,7 @@ func (match *Match) handleGameOver(
 			defer wg.Done()
 			select {
 			case thisPlayer.ResponseChanAsync <- response:
-			case <-time.After(5 * time.Second):
+			case <-time.After(clientGameoverNotifGracePeriod):
 			}
 		}()
 	}
