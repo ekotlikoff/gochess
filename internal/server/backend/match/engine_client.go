@@ -69,6 +69,8 @@ func (matchingServer *MatchingServer) engineSession(botPlayer *Player) {
 		case move := <-botPlayer.OpponentPlayedMove:
 			moveMsg := moveToPB(move)
 			stream.Send(&moveMsg)
+		case <-botPlayer.ResponseChanAsync:
+			// Do nothing.
 		case <-gameOver:
 			stream.CloseSend()
 			<-waitc
@@ -102,7 +104,12 @@ func engineReceiveLoop(
 		}
 		botMove := pbToMove(in.GetChessMove())
 		botPlayer.requestChanSync <- botMove
-		<-botPlayer.ResponseChanSync
+		if !(<-botPlayer.ResponseChanSync).MoveSuccess {
+			promoteTo := model.Queen
+			botMove.PromoteTo = &promoteTo
+			botPlayer.requestChanSync <- botMove
+			<-botPlayer.ResponseChanSync
+		}
 	}
 }
 
@@ -136,5 +143,4 @@ func pbToMove(msg *pb.ChessMove) model.MoveRequest {
 				msg.OriginalPosition.Rank),
 		},
 	}
-
 }
