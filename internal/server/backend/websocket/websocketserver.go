@@ -25,7 +25,7 @@ const (
 	pongWait = 5 * time.Second
 
 	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
+	pingPeriod = (pongWait * 7) / 10
 )
 
 // WSBackend handles websocket connections
@@ -74,7 +74,7 @@ func makeWebsocketHandler(matchServer *matchserver.MatchingServer,
 		go readLoop(c, matchServer, player, wsHandlerSpan, waitc, playerMutex)
 		writeLoop(c, player, wsHandlerSpan, playerMutex)
 		<-waitc
-		log.Println("Websocketserver disconnecting from client")
+		log.Println("Websocketserver disconnecting from client: " + player.Name())
 	}
 	return http.HandlerFunc(handler)
 }
@@ -134,7 +134,11 @@ func writeLoop(c *websocket.Conn, player *matchserver.Player,
 		} else if response.WebsocketResponseType == matchserver.ResponseAsyncT &&
 			response.ResponseAsync.GameOver {
 			playerMutex.Lock()
-			log.Println("Websocketserver detects match is over, resetting player")
+			// The biggest potential delay here is the matchserver waiting up till
+			// timeout for a misbehaving client to read its gameover async response
+			// (match.go handleGameOver).  During this delay we are not writing ping
+			// messages, so if the matchserver waits too long for other clients this
+			// ws connection could die.
 			player.WaitForMatchOver()
 			player.Reset()
 			playerMutex.Unlock()
