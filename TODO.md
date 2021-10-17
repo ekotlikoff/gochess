@@ -3,6 +3,8 @@
     - [ ] More Prometheus metrics
       - [ ] Number of sessions
     - [ ] Improve logging
+* Client
+    - [ ] Display loading icon while wasm is getting delivered
 * Server
     - [ ] Create http server objects to use for graceful shutdowns
       - use https://pkg.go.dev/net/http#Server.Shutdown to shut down without
