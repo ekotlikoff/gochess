@@ -2,6 +2,8 @@
 * Observability
     - [ ] More Prometheus metrics
     - [ ] Improve logging
+* Client
+    - [ ] Display loading icon while wasm is getting delivered
 * Server
     - [ ] Create http server objects to use for graceful shutdowns
       - use https://pkg.go.dev/net/http#Server.Shutdown to shut down without
@@ -12,6 +14,7 @@
     - [ ] Support some mechanism for a user cancelling their matchmaking
       - Probably would require a matching redesign, right now matchmaking is handled from a channel which doesn't support adhoc removal
     - http server sessions
+      - [ ] currently we have global rate limiting - consider per session limits
       - [ ] user auth?
 * Hosting
     - [ ] Write a build script to simplify setup for client pkges, they can just
@@ -26,6 +29,7 @@
     - [x] Restructure to enable other repos depending on this as a library
 * Observability
     - Prometheus metrics
+        - [x] Number of sessions
         - [x] gauge for number of live games
         - [x] gauge for number of players matching
         - [x] counter for request count split by status
@@ -79,6 +83,7 @@
           - [x] websocket
           - [x] engine
     - [x] Max matching time, after which we match the player with a chess engine (if connected)
+    - [x] Rate limiting at the gateway - naive for now, not per session at all just a global max, this is an acceptable first step because those already in a websocket connection should be un affected by a DOS unless they refresh the page.
 * Client
     - [x] Golang WebAssembly web client
     - [x] Ensure that webclient can enter matchmaking successfully after a gameover

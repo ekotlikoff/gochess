@@ -1,4 +1,4 @@
-// +build webclient
+//go:build wasm && js && webclient
 
 package main
 
@@ -23,6 +23,7 @@ var (
 
 type Configuration struct {
 	BackendType   BackendType
+	TLS           bool
 	ClientTimeout string
 }
 
@@ -40,7 +41,7 @@ func main() {
 		game: game, playerColor: model.White,
 		document: js.Global().Get("document"),
 		board: js.Global().Get("document").Call(
-			"getElementById", "board-layout-chessboard"),
+			"getElementById", "board-layout-chessboard"), tls: config.TLS,
 		backendType: config.BackendType, client: client, gameType: Local,
 		origin: js.Global().Get("window").Get("location").Get("host").String(),
 	}

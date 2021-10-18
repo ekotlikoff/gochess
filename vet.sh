@@ -45,7 +45,7 @@ if [[ "$1" = "-install" ]]; then
     popd
 
     if [[ "${TRAVIS}" = "true" ]]; then
-        PROTOBUF_VERSION=3.14.0
+        PROTOBUF_VERSION=3.17.3
         PROTOC_FILENAME=protoc-${PROTOBUF_VERSION}-linux-x86_64.zip
         pushd /home/travis
         wget https://github.com/google/protobuf/releases/download/v${PROTOBUF_VERSION}/${PROTOC_FILENAME}
@@ -80,6 +80,6 @@ for MOD_FILE in $(find . -name 'go.mod'); do
 done
 
 SC_OUT="$(mktemp)"
-staticcheck -go 1.16 -checks 'inherit,-ST1015' ./... > "${SC_OUT}" || true
+staticcheck -go 1.17 -checks 'inherit,-ST1015' ./... > "${SC_OUT}" || true
 # Error if anything other than deprecation warnings are printed.
 not grep -v "is deprecated:.*SA1019" "${SC_OUT}"

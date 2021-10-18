@@ -41,6 +41,8 @@ func NewTTLMap(ln int, maxTTL int, gcFrequencySecs int) (m *TTLMap) {
 
 // Len returns the length of the map
 func (m *TTLMap) Len() int {
+	m.l.Lock()
+	defer m.l.Unlock()
 	return len(m.m)
 }
 

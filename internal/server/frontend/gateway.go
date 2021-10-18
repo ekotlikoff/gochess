@@ -21,17 +21,52 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+const (
+	acceptableRequestPeriodMS   = 100
+	maxBurstOfRequests          = 10
+	maxTimeToWaitForRateLimiter = 2 * time.Second
+)
+
 var (
 	sessionCache *TTLMap
 
+	rateLimiter = make(chan time.Time, maxBurstOfRequests)
+
 	//go:embed static
 	webStaticFS embed.FS
+
+	gatewayRateLimiterMetric = prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Namespace: "gochess",
+			Subsystem: "gateway",
+			Name:      "rate_limiter_length",
+			Help:      "Length of the rateLimiter channel.",
+		},
+		func() float64 {
+			return float64(len(rateLimiter))
+		},
+	)
+
+	gatewaySessionMetric = prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Namespace: "gochess",
+			Subsystem: "gateway",
+			Name:      "session_count",
+			Help:      "Total number of sessions in the cache.",
+		},
+		func() float64 {
+			if sessionCache == nil {
+				return 0
+			}
+			return float64(sessionCache.Len())
+		},
+	)
 
 	gatewayResponseMetric = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "gochess",
 			Subsystem: "gateway",
-			Name:      "gateway_request_total",
+			Name:      "request_total",
 			Help:      "Total number of requests serviced.",
 		},
 		[]string{"uri", "method", "status"},
@@ -41,7 +76,7 @@ var (
 		prometheus.HistogramOpts{
 			Namespace: "gochess",
 			Subsystem: "gateway",
-			Name:      "gateway_request_duration",
+			Name:      "request_duration",
 			Help:      "Duration of requests serviced.",
 			Buckets: []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1,
 				2.5, 5, 10},
@@ -54,6 +89,8 @@ func init() {
 	sessionCache = NewTTLMap(50, 1800, 10)
 	prometheus.MustRegister(gatewayResponseMetric)
 	prometheus.MustRegister(gatewayResponseDurationMetric)
+	prometheus.MustRegister(gatewaySessionMetric)
+	prometheus.MustRegister(gatewayRateLimiterMetric)
 }
 
 type (
@@ -74,6 +111,8 @@ type (
 
 // Serve static files and proxy to the different backends
 func (gw *Gateway) Serve() {
+	cleanupChan := make(chan struct{})
+	setupRateLimiter(cleanupChan)
 	httpBackendProxy := httputil.NewSingleHostReverseProxy(gw.HTTPBackend)
 	wsBackendProxy := httputil.NewSingleHostReverseProxy(gw.WSBackend)
 	wsBackendProxy.ModifyResponse = func(res *http.Response) error {
@@ -86,23 +125,44 @@ func (gw *Gateway) Serve() {
 	if len(bp) > 0 && (bp[len(bp)-1:] == "/" || bp[0:1] != "/") {
 		panic("Invalid gateway base path")
 	}
-	mux.Handle(bp+"/", prometheusMiddleware(http.HandlerFunc(gw.handleWebRoot)))
-	mux.Handle(bp+"/gochessclient.wasm", prometheusMiddleware(http.HandlerFunc(
+	middleware := func(handler http.Handler) http.HandlerFunc {
+		return prometheusMiddleware(rateLimiterMiddleware(handler))
+	}
+	mux.Handle(bp+"/", middleware(http.HandlerFunc(gw.handleWebRoot)))
+	mux.Handle(bp+"/gochessclient.wasm", middleware(http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, os.Getenv("HOME")+"/bin/gochessclient.wasm")
 		})))
-	mux.Handle(bp+"/session", prometheusMiddleware(http.HandlerFunc(Session)))
+	mux.Handle(bp+"/session", middleware(http.HandlerFunc(Session)))
 	// HTTP backend proxying
-	mux.Handle(bp+"/http/match", prometheusMiddleware(httpBackendProxy))
-	mux.Handle(bp+"/http/sync", prometheusMiddleware(httpBackendProxy))
-	mux.Handle(bp+"/http/async", prometheusMiddleware(httpBackendProxy))
+	mux.Handle(bp+"/http/match", middleware(httpBackendProxy))
+	mux.Handle(bp+"/http/sync", middleware(httpBackendProxy))
+	mux.Handle(bp+"/http/async", middleware(httpBackendProxy))
 	// Websocket backend proxying
 	mux.Handle(bp+"/ws", wsBackendProxy)
 	// Prometheus metrics endpoint
-	mux.Handle(bp+"/metrics", prometheusMiddleware(
+	mux.Handle(bp+"/metrics", middleware(
 		promhttp.Handler()))
 	log.Println("Gateway server listening on port", gw.Port, "...")
 	http.ListenAndServe(":"+strconv.Itoa(gw.Port), mux)
+	close(cleanupChan)
+}
+
+func setupRateLimiter(cleanupChan chan struct{}) {
+	for i := 0; i < maxBurstOfRequests; i++ {
+		rateLimiter <- time.Now()
+	}
+	go func() {
+		ticker := time.NewTicker(acceptableRequestPeriodMS * time.Millisecond)
+		defer ticker.Stop()
+		for t := range ticker.C {
+			select {
+			case rateLimiter <- t:
+			case <-cleanupChan:
+				return
+			}
+		}
+	}()
 }
 
 func (gw *Gateway) handleWebRoot(w http.ResponseWriter, r *http.Request) {
@@ -307,6 +367,21 @@ type statusWriter struct {
 func (w *statusWriter) WriteHeader(status int) {
 	w.status = status
 	w.ResponseWriter.WriteHeader(status)
+}
+
+// rateLimiterMiddleware handles the request by first blocking until the rate
+// limiter says it is acceptable to proceed.
+func rateLimiterMiddleware(handler http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-rateLimiter:
+			handler.ServeHTTP(w, r)
+		case <-time.After(maxTimeToWaitForRateLimiter):
+			// TODO once we add per-session rate limiting we should consider a
+			// different status code for this global rate limiting.
+			w.WriteHeader(429)
+		}
+	}
 }
 
 // prometheusMiddleware handles the request by passing it to the real

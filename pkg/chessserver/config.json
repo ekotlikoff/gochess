@@ -5,7 +5,7 @@
     "BasePath": "/chess",
     "EnableBotMatching": true,
     "EngineConnectionTimeout": "1s",
-    "EngineAddr": "localhost:50051",
+    "EngineAddr": "[::1]:50051",
     "GatewayPort": 8000,
     "HTTPPort": 8001,
     "WSPort": 8002,

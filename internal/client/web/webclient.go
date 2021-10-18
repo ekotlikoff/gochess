@@ -1,4 +1,4 @@
-// +build webclient
+//go:build wasm && js && webclient
 
 package main
 
@@ -36,6 +36,7 @@ type (
 		playerName               string
 		hasSession               bool
 		wsConn                   js.Value
+		tls                      bool
 		gameMutex                sync.RWMutex
 		game                     *model.Game
 		remoteMatchModel         RemoteMatchModel

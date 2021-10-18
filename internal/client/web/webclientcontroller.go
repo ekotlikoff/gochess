@@ -1,4 +1,4 @@
-// +build webclient
+//go:build wasm && js && webclient
 
 package main
 
@@ -608,7 +608,11 @@ func (cm *ClientModel) wsMatch() error {
 
 func (cm *ClientModel) wsConnect() error {
 	pathname := js.Global().Get("location").Get("pathname").String()
-	u := "ws://" + cm.origin + pathname + "ws"
+	scheme := "ws"
+	if cm.tls {
+		scheme = "wss"
+	}
+	u := scheme + "://" + cm.origin + pathname + "ws"
 	ws := js.Global().Get("WebSocket").New(u)
 	retries := 0
 	maxRetries := 100

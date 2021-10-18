@@ -7,6 +7,7 @@ clean:
 	go clean -i github.com/Ekotlikoff/gochess/...
 
 proto:
+	rm -f api/*pb.go
 	protoc --go_out=. --go_opt=paths=source_relative \
 		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
 		api/chessengine.proto

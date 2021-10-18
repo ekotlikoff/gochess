@@ -1,4 +1,4 @@
-// +build webclient
+//go:build wasm && js && webclient
 
 package main
 

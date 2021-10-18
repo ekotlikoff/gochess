@@ -359,10 +359,7 @@ func (matchingServer *MatchingServer) matchAndPlay(
 				matchingServer.matchingQueueLengthMetric.Sub(2)
 				player1.SetMatch(&match)
 				player2.SetMatch(&match)
-				matchingServer.mutex.Lock()
-				matchingServer.liveMatches =
-					append(matchingServer.liveMatches, &match)
-				matchingServer.mutex.Unlock()
+				matchingServer.addMatch(&match)
 				matchingServer.pendingMatch.Unlock()
 				player1.startMatch()
 				player2.startMatch()
@@ -421,9 +418,9 @@ func (matchingServer *MatchingServer) StartCustomMatchServers(
 }
 
 func (matchingServer *MatchingServer) removeMatch(matchToRemove *Match) {
-	liveMatches := matchingServer.liveMatches
 	matchingServer.mutex.Lock()
 	defer matchingServer.mutex.Unlock()
+	liveMatches := matchingServer.liveMatches
 	for i, match := range liveMatches {
 		if match == matchToRemove {
 			if len(liveMatches) == 1 {
@@ -435,6 +432,12 @@ func (matchingServer *MatchingServer) removeMatch(matchToRemove *Match) {
 			}
 		}
 	}
+}
+
+func (matchingServer *MatchingServer) addMatch(match *Match) {
+	matchingServer.mutex.Lock()
+	defer matchingServer.mutex.Unlock()
+	matchingServer.liveMatches = append(matchingServer.liveMatches, match)
 }
 
 // MatchPlayer queues the player for matching
