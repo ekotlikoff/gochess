@@ -153,7 +153,9 @@ func setupRateLimiter(cleanupChan chan struct{}) {
 		rateLimiter <- time.Now()
 	}
 	go func() {
-		for t := range time.Tick(acceptableRequestPeriodMS * time.Millisecond) {
+		ticker := time.NewTicker(acceptableRequestPeriodMS * time.Millisecond)
+		defer ticker.Stop()
+		for t := range ticker.C {
 			select {
 			case rateLimiter <- t:
 			case <-cleanupChan:
