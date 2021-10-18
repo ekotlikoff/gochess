@@ -251,9 +251,9 @@ license that can be found in the LICENSE file.
       }
       const go = new Go();
       WebAssembly.instantiateStreaming(fetch("gochessclient.wasm"), go.importObject).then((result) => {
-          document.getElementById("loading_page").style.display = "none"
-          document.getElementById("game_page").style.display = ""
-          go.run(result.instance);
+        document.getElementById("loading_page").style.display = "none"
+        document.getElementById("game_page").style.display = ""
+        go.run(result.instance);
       });
 	</script>
 
