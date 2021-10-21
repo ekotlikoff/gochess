@@ -19,6 +19,9 @@ license that can be found in the LICENSE file.
         }
         .board-layout-chessboard {
             position: relative;
+            width: 450px;
+            height: 450px;
+            margin-left: 32px;
         }
         .board {
             background-repeat: no-repeat;
@@ -217,9 +220,10 @@ license that can be found in the LICENSE file.
         }
 
         .pageloader {
-            position: fixed;
-            left: 50%;
-            top: 35%;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            margin-top: 15%;
             border: 16px solid #f3f3f3; /* Light grey */
             border-top: 16px solid #3498db; /* Blue */
             border-radius: 50%;
@@ -270,8 +274,7 @@ license that can be found in the LICENSE file.
         <h3 id="matchdetails_opponent_name" class="matchdetails_opponent_name"></h3>
         <h3 id="matchdetails_opponent_remainingtime" class="matchdetails_opponent_remainingtime"></h3>
         <h3 id="matchdetails_opponent_points" class="matchdetails_opponent_points"></h3>
-        <div id="board-layout-chessboard" class="board-layout-chessboard
-          board-board" style="width: 450px; height: 450px; padding-bottom: 0px;">
+        <div id="board-layout-chessboard" class="board-layout-chessboard board-board">
             <chess-board class="board" id="board-game">
                 <svg viewBox="0 0 100 100" class="coordinates" />
             </chess-board>
