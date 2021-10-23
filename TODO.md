@@ -1,9 +1,7 @@
 ### Todo
 * Observability
-    - [ ] More Prometheus metrics
-    - [ ] Improve logging
-* Client
-    - [ ] Display loading icon while wasm is getting delivered
+    - [ ] Improve logging: standardize, levels
+    - [ ] Productionize tracing: flag to enable/disable
 * Server
     - [ ] Create http server objects to use for graceful shutdowns
       - use https://pkg.go.dev/net/http#Server.Shutdown to shut down without
@@ -19,7 +17,7 @@
 * Hosting
     - [ ] Write a build script to simplify setup for client pkges, they can just
       run the script and not bother with the go build command
-    - [ ] Publish gochess binary in a git release
+    - [ ] Publish gochess/wasm binaries in a git release?
 
 ### Done
 * Hosting
@@ -97,6 +95,7 @@
     - [x] Display point advantage/captured pieces
     - [x] Play local match vs begin matchmaking
     - [x] Mobile support
+    - [x] Display loading icon while wasm is getting delivered
 * General
     - [x] Travis CI test
     - [x] Fix race conditions
