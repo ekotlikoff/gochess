@@ -1,8 +1,8 @@
 A chess server where players can match and play with others using their web browser.
 
 ## Build
-* [Install protoc](https://grpc.io/docs/protoc-installation/)
-* [Install Golang](https://golang.org/doc/install)
+* Install [protoc](https://grpc.io/docs/protoc-installation/)
+* Install [Golang](https://golang.org/doc/install)
 * Run `make`
 
 ## Observability
