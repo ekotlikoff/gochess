@@ -14,10 +14,10 @@ A chess server where players can match and play with others using their web brow
 * Frontend gateway which serves static files and proxies calls to a backend server
 * Interchangeable HTTP and WebSocket web servers communicate with the web client and forwards requests to the match server
 * Client agnostic match server orchestrates a match
-* Backend chess matching server with the ability to match a player with a remote chess engine
+* Matching server with the ability to match a player with a remote chess engine
 * Chess model for pieces, moves, the board, and a game
 
 ## Usage as a package
-* `go get github.com/Ekotlikoff/gochess/pkg/chessserver`
-*	`GOARCH=wasm GOOS=js go build -o ~/bin/gochessclient.wasm -tags webclient github.com/Ekotlikoff/gochess/internal/client/web`
+* `go get github.com/ekotlikoff/gochess/pkg/chessserver`
+*	`GOARCH=wasm GOOS=js go build -o ~/bin/gochessclient.wasm -tags webclient github.com/ekotlikoff/gochess/internal/client/web`
 * `go chessserver.RunServer()`
