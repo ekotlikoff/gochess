@@ -6,8 +6,10 @@ A chess server where players can match and play with others using their web brow
 * Run `make`
 
 ## Observability
-* Run jaeger all-in-one to collect traces
-* Run prometheus and scrape /metrics to collect metrics
+* Run [jaeger
+  all-in-one](https://www.jaegertracing.io/docs/1.27/getting-started/#all-in-one) to collect traces
+* Run
+  [prometheus](https://prometheus.io/docs/prometheus/latest/getting_started/) and scrape /metrics to collect metrics
 
 ## Components
 * [Web client](internal/client/web/main.go) compiled from Golang with WebAssembly
