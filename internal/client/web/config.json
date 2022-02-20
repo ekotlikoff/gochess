@@ -1,5 +1,5 @@
 {
     "BackendType": "websocket",
-    "TLS": true,
+    "TLS": false,
     "ClientTimeout": "15s"
 }
