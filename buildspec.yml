@@ -1,0 +1,33 @@
+version: 0.2
+
+env:
+  shell: bash
+  variables:
+    CODEBUILD: 1
+    VET: 1
+
+phases:
+  install:
+    runtime-versions:
+      golang: 1.14
+  install:
+    commands:
+      # AWS Codebuild Go images use /go for the $GOPATH so let's copy our
+      # application source code into that directory structure.
+      - mkdir -p "/go/src/$(dirname ${PACKAGE})"
+      - ln -s "${CODEBUILD_SRC_DIR}" "/go/src/${PACKAGE}"
+      # Print all environment variables (handy for AWS CodeBuild logs)
+      - env
+      - if [[ -n "${VET}" ]]; then ./vet.sh -install; fi
+  pre_build:
+    commands:
+      - cd "/go/src/${PACKAGE}"
+      - go get -t ./...
+      - if [[ -n "${VET}" ]]; then ./vet.sh; fi
+      - if [[ -n "${RACE}" ]]; then make testrace; exit 0; fi
+  build:
+    commands:
+      - GOARCH=wasm GOOS=js /usr/local/go/bin/go build -o gochessclient.wasm -tags webclient github.com/Ekotlikoff/gochess/internal/client/web
+
+artifacts:
+  file: gochessclient.wasm

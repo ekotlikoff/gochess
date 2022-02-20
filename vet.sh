@@ -44,7 +44,7 @@ if [[ "$1" = "-install" ]]; then
       google.golang.org/grpc/cmd/protoc-gen-go-grpc
     popd
 
-    if [[ "${TRAVIS}" = "true" ]]; then
+    if [[ "${TRAVIS}" = "true" || "${CODEBUILD}" = 1 ]]; then
         PROTOBUF_VERSION=3.17.3
         PROTOC_FILENAME=protoc-${PROTOBUF_VERSION}-linux-x86_64.zip
         pushd /home/travis
