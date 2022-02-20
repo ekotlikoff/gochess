@@ -19,10 +19,9 @@ phases:
     commands:
       - cd "/go/src/${PACKAGE}"
       - go get -t ./...
-      - if [[ -n "${RACE}" ]]; then make testrace; exit 0; fi
   build:
     commands:
-      - GOARCH=wasm GOOS=js go build -o gochessclient.wasm -tags webclient github.com/Ekotlikoff/gochess/internal/client/web
+      - GOARCH=wasm GOOS=js go build -o gochessclient.wasm -tags webclient ./internal/client/web
 
 artifacts:
   file: gochessclient.wasm
