@@ -1,4 +1,4 @@
-module github.com/Ekotlikoff/gochess
+module github.com/ekotlikoff/gochess
 
 go 1.17
 

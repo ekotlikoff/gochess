@@ -1,4 +1,4 @@
-module github.com/Ekotlikoff/gochess/test/tools
+module github.com/ekotlikoff/gochess/test/tools
 
 go 1.17
 

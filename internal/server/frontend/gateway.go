@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"time"
 
-	model "github.com/Ekotlikoff/gochess/internal/model"
-	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	model "github.com/ekotlikoff/gochess/internal/model"
+	matchserver "github.com/ekotlikoff/gochess/internal/server/backend/match"
 	"github.com/gofrs/uuid"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"

@@ -12,7 +12,7 @@ import (
 	"syscall/js"
 	"time"
 
-	"github.com/Ekotlikoff/gochess/internal/model"
+	"github.com/ekotlikoff/gochess/internal/model"
 )
 
 var (

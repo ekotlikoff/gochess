@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Ekotlikoff/gochess/internal/model"
-	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
-	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
+	"github.com/ekotlikoff/gochess/internal/model"
+	matchserver "github.com/ekotlikoff/gochess/internal/server/backend/match"
+	gateway "github.com/ekotlikoff/gochess/internal/server/frontend"
 )
 
 // HTTPBackend handles http requests

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/Ekotlikoff/gochess/api";
+option go_package = "github.com/ekotlikoff/gochess/api";
 
 package rustchess;
 
