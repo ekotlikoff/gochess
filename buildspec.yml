@@ -2,9 +2,6 @@ version: 0.2
 
 env:
   shell: bash
-  variables:
-    CODEBUILD: 1
-    VET: 1
 
 phases:
   install:
@@ -18,12 +15,10 @@ phases:
       - ln -s "${CODEBUILD_SRC_DIR}" "/go/src/${PACKAGE}"
       # Print all environment variables (handy for AWS CodeBuild logs)
       - env
-      - if [[ -n "${VET}" ]]; then ./vet.sh -install; fi
   pre_build:
     commands:
       - cd "/go/src/${PACKAGE}"
       - go get -t ./...
-      - if [[ -n "${VET}" ]]; then ./vet.sh; fi
       - if [[ -n "${RACE}" ]]; then make testrace; exit 0; fi
   build:
     commands:
