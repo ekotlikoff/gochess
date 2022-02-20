@@ -2,6 +2,9 @@ version: 0.2
 
 env:
   shell: bash
+  variables:
+    PACKAGE: "github.com/ekotlikoff/gochess"
+
 
 phases:
   install:
@@ -21,7 +24,7 @@ phases:
       - go get -t ./...
   build:
     commands:
-      - GOARCH=wasm GOOS=js go build -o gochessclient.wasm -tags webclient ./internal/client/web
+      - GOARCH=wasm GOOS=js go build -o gochessclient.wasm -tags webclient github.com/ekotlikoff/gochess/internal/client/web
 
 artifacts:
   file: gochessclient.wasm

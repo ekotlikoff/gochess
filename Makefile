@@ -1,10 +1,10 @@
-webclient_package := github.com/Ekotlikoff/gochess/internal/client/web
-run_local_package := github.com/Ekotlikoff/gochess/cmd/gochess
+webclient_package := github.com/ekotlikoff/gochess/internal/client/web
+run_local_package := github.com/ekotlikoff/gochess/cmd/gochess
 
 all: vet proto web test testrace
 
 clean:
-	go clean -i github.com/Ekotlikoff/gochess/...
+	go clean -i github.com/ekotlikoff/gochess/...
 
 proto:
 	rm -f api/*pb.go
@@ -17,10 +17,10 @@ vet:
 	./vet.sh
 
 test:
-	go test -cpu 1,4 -timeout 7m github.com/Ekotlikoff/gochess/...
+	go test -cpu 1,4 -timeout 7m github.com/ekotlikoff/gochess/...
 
 testrace:
-	go test -race -cpu 1,4 -timeout 7m github.com/Ekotlikoff/gochess/...
+	go test -race -cpu 1,4 -timeout 7m github.com/ekotlikoff/gochess/...
 
 web:
 	GOARCH=wasm GOOS=js go build \
