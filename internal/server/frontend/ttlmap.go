@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
+	matchserver "github.com/ekotlikoff/gochess/internal/server/backend/match"
 )
 
 type item struct {

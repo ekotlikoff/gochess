@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/Ekotlikoff/gochess/internal/model"
+	"github.com/ekotlikoff/gochess/internal/model"
 
-	pb "github.com/Ekotlikoff/gochess/api"
+	pb "github.com/ekotlikoff/gochess/api"
 	"google.golang.org/grpc"
 )
 

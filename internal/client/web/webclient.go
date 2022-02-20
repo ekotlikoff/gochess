@@ -7,7 +7,7 @@ import (
 	"sync"
 	"syscall/js"
 
-	"github.com/Ekotlikoff/gochess/internal/model"
+	"github.com/ekotlikoff/gochess/internal/model"
 )
 
 const (

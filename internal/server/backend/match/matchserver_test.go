@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Ekotlikoff/gochess/internal/model"
+	"github.com/ekotlikoff/gochess/internal/model"
 )
 
 func TestMatchingServer(t *testing.T) {

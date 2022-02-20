@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
-	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
+	matchserver "github.com/ekotlikoff/gochess/internal/server/backend/match"
+	gateway "github.com/ekotlikoff/gochess/internal/server/frontend"
 	"github.com/gorilla/websocket"
 	opentracing "github.com/opentracing/opentracing-go"
 	opentracinglog "github.com/opentracing/opentracing-go/log"

@@ -14,10 +14,10 @@ import (
 	// Blank import to embed config.json
 	_ "embed"
 
-	httpserver "github.com/Ekotlikoff/gochess/internal/server/backend/http"
-	matchserver "github.com/Ekotlikoff/gochess/internal/server/backend/match"
-	websocketserver "github.com/Ekotlikoff/gochess/internal/server/backend/websocket"
-	gateway "github.com/Ekotlikoff/gochess/internal/server/frontend"
+	httpserver "github.com/ekotlikoff/gochess/internal/server/backend/http"
+	matchserver "github.com/ekotlikoff/gochess/internal/server/backend/match"
+	websocketserver "github.com/ekotlikoff/gochess/internal/server/backend/websocket"
+	gateway "github.com/ekotlikoff/gochess/internal/server/frontend"
 	"github.com/uber/jaeger-client-go"
 	jaegercfg "github.com/uber/jaeger-client-go/config"
 	jaegerlog "github.com/uber/jaeger-client-go/log"

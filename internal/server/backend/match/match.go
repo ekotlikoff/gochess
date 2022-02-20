@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Ekotlikoff/gochess/internal/model"
+	"github.com/ekotlikoff/gochess/internal/model"
 )
 
 const clientGameoverNotifGracePeriod = 1 * time.Second

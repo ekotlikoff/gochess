@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	pb "github.com/Ekotlikoff/gochess/api"
-	"github.com/Ekotlikoff/gochess/internal/model"
+	pb "github.com/ekotlikoff/gochess/api"
+	"github.com/ekotlikoff/gochess/internal/model"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 )
