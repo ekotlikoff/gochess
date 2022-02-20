@@ -4,21 +4,21 @@ env:
   shell: bash
   variables:
     PACKAGE: "github.com/ekotlikoff/gochess"
-
+    GO_VERSION: "1.17"
 
 phases:
   install:
-    runtime-versions:
-      golang: 1.16
-  install:
     commands:
+      - cd $HOME/.goenv && git pull --ff-only && cd -
+      - goenv install "$GO_VERSION"
+      - goenv local "$GO_VERSION"
+      - go version
       # AWS Codebuild Go images use /go for the $GOPATH so let's copy our
       # application source code into that directory structure.
       - mkdir -p "/go/src/$(dirname ${PACKAGE})"
       - ln -s "${CODEBUILD_SRC_DIR}" "/go/src/${PACKAGE}"
       # Print all environment variables (handy for AWS CodeBuild logs)
       - env
-      - go version
   pre_build:
     commands:
       - cd "/go/src/${PACKAGE}"
