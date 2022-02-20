@@ -37,4 +37,5 @@ runweb: web
 	runweb \
 	test \
 	testrace \
+	web \
 	vet \

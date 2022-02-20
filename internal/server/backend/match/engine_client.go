@@ -114,6 +114,19 @@ func engineReceiveLoop(
 }
 
 func moveToPB(move model.MoveRequest) pb.GameMessage {
+	promotePiece := pb.PromotePiece{}
+	if move.PromoteTo != nil {
+		switch *move.PromoteTo {
+		case model.Queen:
+			promotePiece = pb.PromotePiece{Piece: pb.PromotePiece_QUEEN}
+		case model.Rook:
+			promotePiece = pb.PromotePiece{Piece: pb.PromotePiece_ROOK}
+		case model.Bishop:
+			promotePiece = pb.PromotePiece{Piece: pb.PromotePiece_BISHOP}
+		case model.Knight:
+			promotePiece = pb.PromotePiece{Piece: pb.PromotePiece_KNIGHT}
+		}
+	}
 	return pb.GameMessage{
 		Request: &pb.GameMessage_ChessMove{
 			ChessMove: &pb.ChessMove{
@@ -125,6 +138,7 @@ func moveToPB(move model.MoveRequest) pb.GameMessage {
 					File: uint32(int8(move.Position.File) + move.Move.X),
 					Rank: uint32(int8(move.Position.Rank) + move.Move.Y),
 				},
+				PromotePiece: &promotePiece,
 			},
 		},
 	}
