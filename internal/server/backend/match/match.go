@@ -153,7 +153,7 @@ func (match *Match) handleTurn() {
 	timer := time.AfterFunc(time.Duration(timeRemaining)*time.Millisecond,
 		match.handleTimeout(opponent))
 	defer timer.Stop()
-	request := model.MoveRequest{}
+	var request model.MoveRequest
 	select {
 	case request = <-player.requestChanSync:
 	case <-match.gameOverChan:
