@@ -14,10 +14,6 @@
     - http server sessions
       - [ ] currently we have global rate limiting - consider per session limits
       - [ ] user auth?
-* Hosting
-    - [ ] Write a build script to simplify setup for client pkges, they can just
-      run the script and not bother with the go build command
-    - [ ] Publish gochess/wasm binaries in a git release?
 
 ### Done
 * Hosting
