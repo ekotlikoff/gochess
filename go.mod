@@ -1,6 +1,6 @@
 module github.com/ekotlikoff/gochess
 
-go 1.18
+go 1.22
 
 require (
 	github.com/gofrs/uuid v4.2.0+incompatible
