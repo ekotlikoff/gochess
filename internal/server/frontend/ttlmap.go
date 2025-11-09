@@ -49,29 +49,28 @@ func (m *TTLMap) Len() int {
 // Put puts key k and value v
 func (m *TTLMap) Put(k string, v *matchserver.Player) error {
 	m.l.Lock()
+	defer m.l.Unlock()
 	_, ok := m.m[k]
-	var it item
 	if !ok {
 		it := &item{value: v}
+		it.lastAccess = time.Now().Unix()
 		m.m[k] = it
 	} else {
 		return errors.New("failed to put key: " + k + ", value: " + v.Name())
 	}
-	it.lastAccess = time.Now().Unix()
-	m.l.Unlock()
 	return nil
 }
 
 // Get gets value for key k
 func (m *TTLMap) Get(k string) (v *matchserver.Player, err error) {
 	m.l.Lock()
+	defer m.l.Unlock()
 	if it, ok := m.m[k]; ok {
 		v = it.value
 		it.lastAccess = time.Now().Unix()
 	} else {
 		err = errors.New("failed to get")
 	}
-	m.l.Unlock()
 	return
 
 }
@@ -79,6 +78,7 @@ func (m *TTLMap) Get(k string) (v *matchserver.Player, err error) {
 // Refresh updates the key k to newk
 func (m *TTLMap) Refresh(k, newk string) error {
 	m.l.Lock()
+	defer m.l.Unlock()
 	it, ok := m.m[k]
 	if ok {
 		it.lastAccess = time.Now().Unix()
@@ -89,6 +89,5 @@ func (m *TTLMap) Refresh(k, newk string) error {
 	} else {
 		return errors.New("failed to refresh key")
 	}
-	m.l.Unlock()
 	return nil
 }
